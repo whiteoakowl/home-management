@@ -55,6 +55,9 @@ const OPTIONS: Option[] = [
   { label: "Announcement", icon: Megaphone, href: "/?announce=1", module: null, parentOnly: true, phase: 1 },
 ];
 
+/** Highest build phase that is live. Quick-add entries from later phases show "Soon". */
+const BUILT_PHASE = 2;
+
 /** Universal "+ Add". `editable` = modules the viewer can edit. */
 export function QuickAdd({
   editable,
@@ -103,7 +106,7 @@ export function QuickAdd({
       <Modal open={open} onClose={() => setOpen(false)} title="Quick add" description="What would you like to add?">
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {options.map((o) => {
-            const live = o.phase <= 1;
+            const live = o.phase <= BUILT_PHASE;
             const inner = (
               <>
                 <span className={cn("flex size-11 items-center justify-center rounded-full", live ? "bg-primary-50 text-primary-600" : "bg-sunken text-muted")}>

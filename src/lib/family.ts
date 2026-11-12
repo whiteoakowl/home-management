@@ -59,7 +59,7 @@ export async function addMember(opts: {
     let userId: string | null = null;
     if (opts.login) {
       const existing = await tx.select({ id: users.id }).from(users).where(eq(users.email, opts.login.email)).limit(1);
-      if (existing.length) throw new MemberError("That email already has a Vanderbilt Family Home account.");
+      if (existing.length) throw new MemberError("That email already has a Vanderbilt Family account.");
       const [u] = await tx
         .insert(users)
         .values({ email: opts.login.email, name: opts.displayName, passwordHash: await hashPassword(opts.login.password) })
@@ -87,7 +87,7 @@ export async function addMember(opts: {
 export async function grantLogin(opts: { familyId: string; memberId: string; email: string; password: string }) {
   return db.transaction(async (tx) => {
     const existing = await tx.select({ id: users.id }).from(users).where(eq(users.email, opts.email)).limit(1);
-    if (existing.length) throw new MemberError("That email already has a Vanderbilt Family Home account.");
+    if (existing.length) throw new MemberError("That email already has a Vanderbilt Family account.");
     const [m] = await tx
       .select()
       .from(familyMembers)

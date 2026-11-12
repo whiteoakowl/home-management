@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Vanderbilt Family Home mark: a house with a leaf growing from the hearth. */
+/** Vanderbilt Family mark: a house with a leaf growing from the hearth. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 40 40" className={cn("size-9", className)} aria-hidden>
@@ -19,7 +19,7 @@ export function Brand({ className, compact }: { className?: string; compact?: bo
       <BrandMark />
       <span className="flex flex-col leading-none">
         <span className="font-display text-[20px] font-semibold tracking-tight text-ink">Vanderbilt</span>
-        {!compact && <span className="mt-0.5 text-[11px] font-medium tracking-[0.18em] text-muted uppercase">Family Home</span>}
+        {!compact && <span className="mt-0.5 text-[11px] font-medium tracking-[0.18em] text-muted uppercase">Family</span>}
       </span>
     </span>
   );

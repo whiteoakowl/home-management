@@ -33,7 +33,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <PageHeader title="Settings" description={`Customize ${f.name} Family Home.`} />
+      <PageHeader title="Settings" description={`Customize the ${f.name} Family.`} />
       <Card>
         <CardHeader title="Family details" />
         <FamilyDetailsForm

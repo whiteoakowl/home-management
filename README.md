@@ -1,4 +1,4 @@
-# Vanderbilt Family Home
+# Vanderbilt Family
 
 A family home-management app: chores, calendar, kitchen, meals, garden, farm, budget, goals,
 fitness and journal in one connected place, with per-member portals and parent-controlled

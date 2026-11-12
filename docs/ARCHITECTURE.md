@@ -1,6 +1,6 @@
-# Hearth — Family Home Management App: Architecture
+# Vanderbilt Family — Architecture
 
-> Working name: **Hearth**. One cohesive app for running a family household: chores, calendar,
+> **Vanderbilt Family**. One cohesive app for running a family household: chores, calendar,
 > kitchen, garden, farm, budget, goals, fitness and journal, all connected.
 
 This document is the source of truth for how the app is structured. Every phase builds on it, and

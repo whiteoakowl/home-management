@@ -19,7 +19,7 @@ import {
 } from "@/db/schema";
 import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { MEMBER_COLOR_KEYS } from "@/lib/colors";
-import { getFamilyMember, getMembership, requireParent, getViewer } from "@/lib/dal";
+import { getFamilyMember, getMembership, requireParent } from "@/lib/dal";
 import {
   addMember,
   createFamilyForUser,
@@ -332,4 +332,3 @@ export async function deleteAnnouncement(formData: FormData) {
   revalidatePath("/");
 }
 
-export { getViewer };

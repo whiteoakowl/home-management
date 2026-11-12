@@ -24,13 +24,13 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
     <div className="flex flex-col gap-6">
       {welcome && (
         <div className="rounded-[var(--radius-card)] border border-primary-200 bg-primary-50 px-5 py-4 text-[15px] text-primary-800">
-          <strong>Welcome to {viewer.family.name} Family Home!</strong> Your family is set up. Each area fills in as you
+          <strong>Welcome to the {viewer.family.name} Family!</strong> Your family is set up. Each area fills in as you
           start using it; use <strong>+ Add</strong> anytime.
         </div>
       )}
       <div className="flex items-center justify-between gap-3">
         <h1 className="sr-only">Dashboard</h1>
-        <p className="text-sm font-medium text-muted">{viewer.family.name} Family Home</p>
+        <p className="text-sm font-medium text-muted">The {viewer.family.name} Family</p>
         <DashboardCustomizer layout={layout} titles={titles} />
       </div>
       <WidgetGrid

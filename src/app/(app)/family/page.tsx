@@ -17,7 +17,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
   return (
     <>
       <PageHeader
-        eyebrow={`${viewer.family.name} Family Home`}
+        eyebrow={`The ${viewer.family.name} Family`}
         title="Family"
         description="Everyone in your household. Open someone's home to see their chores, events and goals."
         actions={viewer.isParent ? <AddMemberButton defaultOpen={openNew === "1"} /> : undefined}

@@ -68,8 +68,11 @@ export const sessions = pgTable(
 
 export type FamilyTheme = { accent?: string };
 export type FamilySettings = {
+  /** Automation switches (see src/lib/automation.ts AUTOMATIONS). Missing = on. */
   automations?: Record<string, boolean>;
   weekStartsOn?: 0 | 1;
+  /** ISO date the daily automation last ran for this family. */
+  lastAutomationOn?: string;
 };
 
 export const families = pgTable("families", {

@@ -1,5 +1,5 @@
 /**
- * Member colour palette, drawn from the Vanderbilt Family Home palette.
+ * Member colour palette, drawn from the Vanderbilt Family palette.
  * Used consistently on avatars, events, chores and reports.
  */
 export const MEMBER_COLORS = {

@@ -80,7 +80,9 @@ export const getViewer = cache(async (opts?: { allowOnboarding?: boolean }): Pro
   };
 });
 
-export class AuthorizationError extends Error {}
+export class AuthorizationError extends Error {
+  readonly userFacing = true;
+}
 
 export async function requireParent() {
   const viewer = await getViewer({ allowOnboarding: true });

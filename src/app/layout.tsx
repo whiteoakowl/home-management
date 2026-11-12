@@ -6,7 +6,7 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["SOFT", "opsz"] });
 
 export const metadata: Metadata = {
-  title: { default: "Vanderbilt Family Home", template: "%s · Vanderbilt Family Home" },
+  title: { default: "Vanderbilt Family", template: "%s · Vanderbilt Family" },
   description: "Your family's home, organised in one place.",
 };
 

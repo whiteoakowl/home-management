@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Vanderbilt Family Home design tokens. Warm neutral base, plum primary, wine & olive accents.
+ * Vanderbilt Family design tokens. Warm neutral base, plum primary, wine & olive accents.
  * Every component reads from these; never hard-code colours in features.
  */
 @theme {
@@ -9,7 +9,7 @@
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 
   /*
-   * Vanderbilt Family Home palette
+   * Vanderbilt Family palette
    *   aubergine #2d0f26 · plum #6a2d5e · orchid #8e4e7b · mauve #a2748f · lilac #c991c4
    *   wine #4d1c2b · gray-violet #7d7586 · khaki #bcb79c · dark olive #3f3f1e · olive-black #2a2a24
    */

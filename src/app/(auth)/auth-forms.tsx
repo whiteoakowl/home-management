@@ -11,7 +11,7 @@ export function LoginForm({ next }: { next?: string }) {
     <form action={action} className="flex flex-col gap-4" noValidate>
       <div className="mb-2 flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Welcome home</h1>
-        <p className="text-sm text-muted">Sign in to Vanderbilt Family Home.</p>
+        <p className="text-sm text-muted">Sign in to Vanderbilt Family.</p>
       </div>
       <FormMessage message={state?.message} />
       {next && <input type="hidden" name="next" value={next} />}

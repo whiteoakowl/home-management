@@ -6,9 +6,12 @@ import { buildNav } from "@/components/shell/nav";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { runDailyAutomation } from "@/lib/automation";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer();
+  // Recurring chores, reminders, low-stock → shopping… (once per family per day).
+  await runDailyAutomation(viewer.family);
   const [members, [unread]] = await Promise.all([
     listFamilyMembers(viewer.family.id),
     db
