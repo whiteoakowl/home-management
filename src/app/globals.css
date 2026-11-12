@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/*
+ * Vanderbilt Family Home design tokens. Warm neutral base, plum primary, wine & olive accents.
+ * Every component reads from these; never hard-code colours in features.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  /*
+   * Vanderbilt Family Home palette
+   *   aubergine #2d0f26 · plum #6a2d5e · orchid #8e4e7b · mauve #a2748f · lilac #c991c4
+   *   wine #4d1c2b · gray-violet #7d7586 · khaki #bcb79c · dark olive #3f3f1e · olive-black #2a2a24
+   */
+  --color-canvas: #f6f3ef;
+  --color-surface: #fffdfb;
+  --color-sunken: #efe9e6;
+  --color-line: #e6dee0;
+  --color-line-strong: #d3c7cc;
+  --color-ink: #2a1a26;
+  --color-ink-soft: #4a3946;
+  --color-muted: #7d7586;
+
+  /* Primary: plum → orchid → lilac */
+  --color-primary-50: #f8f0f6;
+  --color-primary-100: #f0dfec;
+  --color-primary-200: #e2c1db;
+  --color-primary-300: #c991c4;
+  --color-primary-400: #a2748f;
+  --color-primary-500: #8e4e7b;
+  --color-primary-600: #6a2d5e;
+  --color-primary-700: #55234b;
+  --color-primary-800: #2d0f26;
+
+  /* Wine: overdue / destructive (soft, never alarming) */
+  --color-wine-50: #f8edf0;
+  --color-wine-100: #efd8de;
+  --color-wine-400: #94505f;
+  --color-wine-500: #7a2e44;
+  --color-wine-700: #4d1c2b;
+
+  /* Olive & khaki: "coming up" states, nature accents */
+  --color-olive-50: #f4f3eb;
+  --color-olive-100: #e7e4d2;
+  --color-olive-400: #bcb79c;
+  --color-olive-500: #6d6a3c;
+  --color-olive-700: #3f3f1e;
+
+  /* Mist: gray-violet informational tone */
+  --color-mist-50: #f1eff3;
+  --color-mist-500: #7d7586;
+  --color-mist-700: #4c4555;
+
+  --radius-control: 0.75rem;
+  --radius-card: 1.25rem;
+
+  --shadow-card: 0 1px 2px rgb(45 15 38 / 0.04), 0 4px 16px -6px rgb(45 15 38 / 0.1);
+  --shadow-pop: 0 12px 40px -12px rgb(45 15 38 / 0.32);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display text-ink;
+    font-optical-sizing: auto;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+  ::selection {
+    @apply bg-primary-200;
+  }
+}
+
+/* Subtle botanical backdrop used on auth & onboarding screens. */
+.bg-hearth {
+  background-color: var(--color-canvas);
+  background-image:
+    radial-gradient(circle at 12% 18%, rgb(201 145 196 / 0.3), transparent 42%),
+    radial-gradient(circle at 88% 8%, rgb(188 183 156 / 0.35), transparent 38%),
+    radial-gradient(circle at 70% 92%, rgb(142 78 123 / 0.18), transparent 40%);
+}
+
+dialog::backdrop {
+  background: rgb(45 15 38 / 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
