@@ -44,7 +44,7 @@ export default async function SeedsPage() {
               </div>
               {canEdit && (
                 <>
-                  <SeedFormModal plants={opts} seed={s} triggerContent={<Pencil className="mx-auto size-4" />} />
+                  <SeedFormModal plants={opts} seed={s} triggerAriaLabel={`Edit ${s.name}`} triggerContent={<Pencil className="mx-auto size-4" />} />
                   <DeleteButton action={deleteSeed} fields={{ id: s.id }} what={s.name} />
                 </>
               )}

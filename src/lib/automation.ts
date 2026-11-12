@@ -29,6 +29,7 @@ import {
 } from "@/db/schema";
 
 type Family = typeof families.$inferSelect;
+import { materializeRecurringTransactions } from "./budget";
 import { addDays, todayIn } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { MODULE_META } from "./modules";
@@ -46,6 +47,7 @@ export const AUTOMATIONS = [
   { key: "workoutReminders", label: "Workout reminders", description: "Notify people about workouts scheduled today." },
   { key: "workoutCalendar", label: "Workouts on calendar", description: "Show scheduled workouts on the family calendar." },
   { key: "budgetAlerts", label: "Budget alerts", description: "Notify parents when a category goes over its monthly limit." },
+  { key: "recurringTransactions", label: "Recurring bills & income", description: "Record repeating expenses and income automatically when they come due." },
 ] as const;
 export type AutomationKey = (typeof AUTOMATIONS)[number]["key"];
 
@@ -258,6 +260,10 @@ export async function runDailyAutomation(family: Family, force = false) {
         await notify(fid, [s.memberId], { kind: "fitness_reminder", title: `Workout today: ${s.name}`, href: "/fitness" }, today);
       }
     }
+  }
+
+  if (on("recurringTransactions") && enabled("budget")) {
+    await materializeRecurringTransactions(fid, today);
   }
 
   if (on("budgetAlerts") && enabled("budget")) {

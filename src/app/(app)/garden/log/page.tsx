@@ -54,7 +54,7 @@ export default async function GardenLogPage() {
                     </p>
                   </div>
                   <Badge tone={STATUS_TONE[p.status]}>{p.status}</Badge>
-                  {canEdit && <PlantingModal planting={p} triggerContent={<Pencil className="size-4" aria-label="Update planting" />} />}
+                  {canEdit && <PlantingModal planting={p} triggerAriaLabel="Update planting" triggerContent={<Pencil className="size-4" />} />}
                 </li>
               ))}
             </ul>

@@ -81,12 +81,14 @@ export function LogGardenModal({ plantings, plants, canKitchen, defaultKind = "h
 export function PlantingModal({
   planting,
   triggerContent,
+  triggerAriaLabel,
 }: {
   planting: { id: string; status: string; plantedOn: string | null; expectedHarvestOn: string | null; quantity: number; notes: string | null };
   triggerContent: ReactNode;
+  triggerAriaLabel?: string;
 }) {
   return (
-    <FormModal title="Update planting" action={updatePlanting} size="sm" triggerContent={triggerContent} triggerClassName="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm font-medium text-ink-soft hover:bg-sunken">
+    <FormModal title="Update planting" action={updatePlanting} size="sm" triggerContent={triggerContent} triggerAriaLabel={triggerAriaLabel} triggerClassName="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm font-medium text-ink-soft hover:bg-sunken">
       <input type="hidden" name="id" value={planting.id} />
       <FormRow>
         <SelectField
@@ -106,13 +108,15 @@ export function PlantingModal({
 
 export type PlantDefaults = Partial<Record<string, string | number | null | string[]>> & { id?: string };
 
-export function PlantFormModal({ defaults, triggerLabel = "Add plant", triggerContent, title, defaultOpen }: { defaults?: PlantDefaults; triggerLabel?: string; triggerContent?: ReactNode; title?: string; defaultOpen?: boolean }) {
+export function PlantFormModal({ defaults, triggerLabel = "Add plant", triggerContent, triggerAriaLabel, title, defaultOpen }: { defaults?: PlantDefaults; triggerLabel?: string; triggerContent?: ReactNode;
+  triggerAriaLabel?: string; title?: string; defaultOpen?: boolean }) {
   const d = (k: string) => {
     const v = defaults?.[k];
     return Array.isArray(v) ? v.join(", ") : (v ?? "");
   };
   return (
-    <FormModal title={title ?? (defaults?.id ? "Edit plant" : "Add a plant")} triggerLabel={triggerLabel} triggerContent={triggerContent} triggerClassName="inline-flex h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-4 text-[15px] font-medium hover:bg-sunken" action={savePlant} submitLabel="Save plant" size="lg" defaultOpen={defaultOpen}>
+    <FormModal title={title ?? (defaults?.id ? "Edit plant" : "Add a plant")} triggerLabel={triggerLabel} triggerContent={triggerContent}
+      triggerAriaLabel={triggerAriaLabel} triggerClassName="inline-flex h-11 items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-4 text-[15px] font-medium hover:bg-sunken" action={savePlant} submitLabel="Save plant" size="lg" defaultOpen={defaultOpen}>
       {defaults?.id && <input type="hidden" name="id" value={defaults.id} />}
       {typeof defaults?.imageUrl === "string" && defaults.imageUrl.startsWith("emoji:") && !defaults.id && <input type="hidden" name="emojiImage" value={defaults.imageUrl} />}
       <FormRow>
@@ -155,9 +159,9 @@ export function PlantFormModal({ defaults, triggerLabel = "Add plant", triggerCo
   );
 }
 
-export function SeedFormModal({ plants, seed, triggerContent }: { plants: PlantOpt[]; seed?: { id: string; name: string; plantId: string | null; quantity: string | null; source: string | null; packedFor: string | null; purchasedOn: string | null; notes: string | null }; triggerContent?: ReactNode }) {
+export function SeedFormModal({ plants, seed, triggerContent, triggerAriaLabel }: { plants: PlantOpt[]; seed?: { id: string; name: string; plantId: string | null; quantity: string | null; source: string | null; packedFor: string | null; purchasedOn: string | null; notes: string | null }; triggerContent?: ReactNode; triggerAriaLabel?: string }) {
   return (
-    <FormModal title={seed ? "Edit seeds" : "Add seeds"} triggerLabel="Add seeds" action={saveSeed} triggerContent={triggerContent} triggerClassName="size-9 rounded-full text-muted hover:bg-sunken">
+    <FormModal title={seed ? "Edit seeds" : "Add seeds"} triggerLabel="Add seeds" action={saveSeed} triggerContent={triggerContent} triggerAriaLabel={triggerAriaLabel} triggerClassName="size-9 rounded-full text-muted hover:bg-sunken">
       {seed && <input type="hidden" name="id" value={seed.id} />}
       <TextField name="name" label="Seeds" required defaultValue={seed?.name} placeholder="Sungold tomato" />
       <FormRow>
