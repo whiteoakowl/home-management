@@ -344,3 +344,27 @@ export function FieldError({ name }: { name: string }) {
     </p>
   );
 }
+
+/** Toggleable chips for any options; posts repeated `name` values. */
+export function ChipSelect({ name, options, defaultValue = [] }: { name: string; options: { value: string; label: string }[]; defaultValue?: string[] }) {
+  const [selected, setSelected] = useState<string[]>(defaultValue);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const on = selected.includes(o.value);
+        return (
+          <button
+            type="button"
+            key={o.value}
+            aria-pressed={on}
+            onClick={() => setSelected((s) => (on ? s.filter((x) => x !== o.value) : [...s, o.value]))}
+            className={cn("h-9 rounded-full border px-3.5 text-sm transition-colors", on ? "border-primary-500 bg-primary-50 text-primary-700" : "border-line-strong text-ink-soft hover:bg-sunken")}
+          >
+            {o.label}
+            {on && <input type="hidden" name={name} value={o.value} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

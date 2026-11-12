@@ -50,7 +50,7 @@ export function MobileNav({
     <>
       <nav
         aria-label="Primary"
-        className="pb-safe fixed inset-x-0 bottom-0 z-30 flex items-end border-t border-line bg-surface/95 px-2 pt-1 backdrop-blur sm:hidden"
+        className="pb-safe fixed inset-x-0 bottom-0 z-30 flex items-end border-t border-line bg-surface/95 px-2 pt-1 backdrop-blur sm:hidden print:hidden"
       >
         {tab("/", "Home", <LayoutDashboard className="size-6" />)}
         {tab("/calendar", "Calendar", <CalendarDays className="size-6" />, canCalendar)}

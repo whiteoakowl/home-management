@@ -15,7 +15,7 @@ export function isActive(pathname: string, href: string) {
 export function Sidebar({ sections, familyName }: { sections: NavSection[]; familyName: string }) {
   const pathname = usePathname();
   return (
-    <aside className="hidden shrink-0 border-r border-line bg-surface/70 sm:block sm:w-[76px] lg:w-64">
+    <aside className="hidden shrink-0 border-r border-line bg-surface/70 sm:block sm:w-[76px] lg:w-64 print:hidden">
       <div className="sticky top-0 flex h-dvh flex-col">
       <div className="flex h-16 items-center px-4 lg:px-5">
         <Link href="/" aria-label={`${familyName} Family`} className="hidden lg:block">

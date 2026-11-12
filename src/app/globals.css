@@ -97,3 +97,12 @@ dialog::backdrop {
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
 }
+
+@media print {
+  body {
+    background: white;
+  }
+  .print-page {
+    break-after: page;
+  }
+}
