@@ -10,7 +10,14 @@ import { cn } from "@/lib/utils";
 export const SERIES_COLORS = ["#8e4e7b", "#7c7f22"] as const;
 
 type Fmt = (n: number) => string;
-const defaultFmt: Fmt = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+/** Serializable value formatting (charts are used from Server Components). */
+export type ValueFormat = { currency?: boolean; suffix?: string };
+function makeFmt(v?: ValueFormat): Fmt {
+  return (n) =>
+    v?.currency
+      ? n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+      : `${n.toLocaleString("en-US", { maximumFractionDigits: 1 })}${v?.suffix ? ` ${v.suffix}` : ""}`;
+}
 
 function niceMax(max: number) {
   if (max <= 0) return 1;
@@ -74,15 +81,16 @@ export function BarChart({
   data,
   series,
   height = 220,
-  format = defaultFmt,
+  valueFormat,
   label,
 }: {
   data: BarDatum[];
   series: { name: string }[];
   height?: number;
-  format?: Fmt;
+  valueFormat?: ValueFormat;
   label: string;
 }) {
+  const format = makeFmt(valueFormat);
   const [hover, setHover] = useState<number | null>(null);
   const colored = series.map((s, i) => ({ ...s, color: SERIES_COLORS[i % SERIES_COLORS.length]! }));
   const max = niceMax(Math.max(0, ...data.flatMap((d) => d.values)));
@@ -160,16 +168,17 @@ export function BarChart({
 export function LineChart({
   data,
   height = 200,
-  format = defaultFmt,
+  valueFormat,
   label,
   seriesName,
 }: {
   data: { label: string; value: number }[];
   height?: number;
-  format?: Fmt;
+  valueFormat?: ValueFormat;
   label: string;
   seriesName: string;
 }) {
+  const format = makeFmt(valueFormat);
   const [hover, setHover] = useState<number | null>(null);
   const gid = useId().replace(/:/g, "");
   const color = SERIES_COLORS[0];
@@ -259,13 +268,14 @@ export function LineChart({
 /** Horizontal bars for category breakdowns (single series, sorted by caller). */
 export function HBarList({
   data,
-  format = defaultFmt,
+  valueFormat,
   max: maxOverride,
 }: {
   data: { label: string; value: number; limit?: number | null }[];
-  format?: Fmt;
+  valueFormat?: ValueFormat;
   max?: number;
 }) {
+  const format = makeFmt(valueFormat);
   const max = maxOverride ?? Math.max(1, ...data.map((d) => Math.max(d.value, d.limit ?? 0)));
   return (
     <ul className="flex flex-col gap-3">

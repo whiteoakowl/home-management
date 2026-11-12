@@ -56,7 +56,7 @@ const OPTIONS: Option[] = [
 ];
 
 /** Highest build phase that is live. Quick-add entries from later phases show "Soon". */
-const BUILT_PHASE = 4;
+const BUILT_PHASE = 5;
 
 /** Universal "+ Add". `editable` = modules the viewer can edit. */
 export function QuickAdd({
