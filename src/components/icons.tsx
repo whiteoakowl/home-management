@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ListChecks,
   NotebookPen,
+  PawPrint,
   Refrigerator,
   Settings,
   ShoppingBasket,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
+  PawPrint,
   BookOpen,
   CalendarDays,
   ChartColumn,

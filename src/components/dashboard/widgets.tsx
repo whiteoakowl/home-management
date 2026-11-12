@@ -29,6 +29,8 @@ import { memberColor } from "@/lib/colors";
 import { formatCents, plural } from "@/lib/utils";
 import { getWeather } from "@/lib/weather";
 import { AnnouncementComposer } from "./announcement-composer";
+import { setOccurrenceDone } from "@/app/actions/chores";
+import { CheckCircle } from "@/components/forms/inline";
 
 const ic = "size-4";
 
@@ -88,11 +90,13 @@ export async function TodayWidget({ scope, name }: { scope: Scope; name: string 
           </p>
         </div>
         {chores && chores.total > 0 && (
+          <div className="hidden sm:block">
           <ProgressRing value={chores.done} max={chores.total} size={72}>
             <span className="text-white">
               {chores.done}/{chores.total}
             </span>
           </ProgressRing>
+          </div>
         )}
       </div>
       {stats.length > 0 && (
@@ -123,7 +127,7 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
       <CardHeader
         title={isTask ? "Tasks" : scope.subjectId ? "Chores" : "Today's chores"}
         icon={isTask ? <ClipboardCheck className={ic} /> : <CheckCircle2 className={ic} />}
-        href="/house/chores"
+        href={isTask ? "/house/tasks" : "/house/chores"}
       />
       {!isTask && s.total > 0 && (
         <div className="mb-4 flex items-center gap-3">
@@ -145,7 +149,7 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
                 ? "One-off tasks with due dates will show up here."
                 : "Create recurring chores and assign them to family members."
           }
-          action={s.total === 0 && scope.viewer.can("chores", "edit") ? <ButtonLink href="/house/chores" size="sm" variant="soft">Set up chores</ButtonLink> : undefined}
+          action={s.total === 0 && scope.viewer.can("chores", "edit") ? <ButtonLink href={isTask ? "/house/tasks?new=task" : "/house/chores?new=1"} size="sm" variant="soft">{isTask ? "Add a task" : "Set up chores"}</ButtonLink> : undefined}
         />
       ) : (
         <ul className="flex flex-col">
@@ -153,9 +157,11 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
             const due = dueLabel(scope.today, c.dueDate);
             return (
               <li key={c.id}>
-                <Row href="/house/chores">
-                  <span className="size-5 shrink-0 rounded-md border-2 border-line-strong" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-[15px]">{c.title}</span>
+                <Row>
+                  <CheckCircle action={setOccurrenceDone} id={c.id} done={false} label={`Mark "${c.title}" done`} size="sm" />
+                  <Link href={isTask ? "/house/tasks" : "/house/chores"} className="min-w-0 flex-1 truncate text-[15px] hover:underline">
+                    {c.title}
+                  </Link>
                   {due && due.tone !== "olive" && <Badge tone={due.tone}>{due.text}</Badge>}
                   {c.assigneeName && !scope.subjectId && <Avatar name={c.assigneeName} color={c.assigneeColor} size="xs" />}
                 </Row>

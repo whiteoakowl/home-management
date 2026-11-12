@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, LogOut, Settings, UserRound } from "lucide-react";
+import { Bell, LogOut, Search, Settings, UserRound } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { BrandMark } from "@/components/brand";
 import { Avatar } from "@/components/ui/display";
@@ -41,7 +41,17 @@ export function TopBar({
         </div>
       )}
 
-      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+      <form action="/search" role="search" className="relative ml-auto hidden max-w-xs flex-1 lg:block">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden />
+        <label htmlFor="topbar-search" className="sr-only">
+          Search
+        </label>
+        <input id="topbar-search" name="q" placeholder="Search everything…" className="h-10 w-full rounded-full border border-line bg-surface pr-3 pl-9 text-sm focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none" />
+      </form>
+      <div className="ml-auto flex items-center gap-1 sm:gap-2 lg:ml-0">
+        <Link href="/search" aria-label="Search" className="inline-flex size-11 items-center justify-center rounded-full text-ink-soft hover:bg-sunken lg:hidden">
+          <Search className="size-5" />
+        </Link>
         <div className="hidden sm:block">
           <QuickAdd editable={editable} isParent={isParent} />
         </div>

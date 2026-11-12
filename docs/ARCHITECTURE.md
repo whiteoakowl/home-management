@@ -312,10 +312,31 @@ terracotta and honey accents, soft shadows, generous radius.
 
 | Phase | Scope | Status |
 |---|---|---|
-| **1. Foundation** | Auth, onboarding, family & members, permissions, dashboard shell & widgets, navigation, design system, full DB schema | **This build** |
-| 2. Household | House, cleaning, chores (+ recurrence materialiser), tasks, lists, calendar | Next |
-| 3. Kitchen | Inventory, barcode scanning, expiration alerts, recipes, meal planning, shopping lists | |
-| 4. Garden & Farm | Plant DB, garden blueprint, garden log, animals, production, farm blueprint | |
-| 5. Personal | Journal, goals, fitness, food journal | |
-| 6. Financial | Budget, income, expenses, savings goals | |
-| 7. Advanced | Reports, automation toggles, analytics, advanced dashboard customisation, global search | |
+| 1. Foundation | Auth, onboarding, family & members, permissions, dashboard & widgets, navigation, design system, full DB schema | ✅ Done |
+| 2. Household | House overview, cleaning (daily → annual + custom), chores with per-person checklists & history, maintenance, tasks, projects, documents, important info, lists (checklist/bullet/numbered/to-do), calendar (month/week/day/agenda, per-event visibility) | ✅ Done |
+| 3. Kitchen | Inventory (pantry/fridge/freezer/supplies), barcode scanning, expiration groups & used/discarded/donated/replaced, recipes with collections & printable books, weekly meal planner with pantry check, shopping lists by aisle | ✅ Done |
+| 4. Garden & Farm | Plant database (36 reference plants + custom), drag-and-drop garden & farm blueprints, plantings & garden log, harvests → kitchen, animals, health, feed, production → kitchen | ✅ Done |
+| 5. Personal | Journal (private/shared, moods, photos, timeline/calendar/search), goals & savings with milestones, fitness plans/logs/PRs/metrics, food journal | ✅ Done |
+| 6. Financial | Budget categories & limits, income sources, transactions (recurring), savings transfers → goals, shopping trip → expense | ✅ Done |
+| 7. Advanced | Reports (cleaning, garden, farm, kitchen waste, budget, fitness, goals), automation engine with per-family switches, notifications + preferences, global search, dashboard customization, category manager | ✅ Done |
+
+## 11. How the areas connect (implemented)
+
+* **Kitchen → Recipes → Meal plan → Shopping → Inventory**: recipe ingredients are parsed
+  (`src/lib/ingredients.ts`) and compared with active inventory; missing items go to the main
+  shopping list; checked items are “put away” back into inventory.
+* **Garden → Harvest → Kitchen** and **Farm → Production → Kitchen**: `addToInventory` merges produce
+  into kitchen stock and records an `inventory_events` row with the source.
+* **Chores → Calendar → Notifications**: occurrences are materialised daily, shown as a calendar layer
+  and announced via `notify()`.
+* **Budget → Savings → Goals**: savings transfers create goal contributions, tick milestones and mark goals
+  achieved.
+* **Fitness → Calendar**: weekly workout schedules appear as a calendar layer.
+* **Everything → Activity feed & Search**: actions log to `activity_log`; `src/lib/search.ts` searches every
+  area with the same permission rules as the pages.
+
+## 12. Testing
+
+* `npm test`: unit tests for the recurrence engine, timezone maths and ingredient parsing/matching.
+* `npm run typecheck`, `npm run lint`, `npm run build`.
+* `npm run db:seed`: demo Vanderbilt family covering every area.

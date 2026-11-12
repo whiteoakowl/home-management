@@ -17,7 +17,7 @@ import {
   type AccessLevel,
   type Module,
 } from "@/db/schema";
-import { fieldErrors, type ActionState } from "@/lib/action-state";
+import { fieldErrors, guard, type ActionState } from "@/lib/action-state";
 import { MEMBER_COLOR_KEYS } from "@/lib/colors";
 import { getFamilyMember, getMembership, requireParent } from "@/lib/dal";
 import {
@@ -29,6 +29,8 @@ import {
   setMemberPermissions,
 } from "@/lib/family";
 import { LAST_STEP, ONBOARDING_STEPS, TIMEZONES } from "@/lib/onboarding";
+import { AUTOMATIONS } from "@/lib/automation";
+import { deleteFamilyFile, saveUpload } from "@/lib/files";
 
 // ─── Family ──────────────────────────────────────────────────────────────────
 
@@ -332,3 +334,54 @@ export async function deleteAnnouncement(formData: FormData) {
   revalidatePath("/");
 }
 
+
+// ─── Settings: automations, week start, categories ───────────────────────────
+
+export async function saveAutomationSettings(_: ActionState, formData: FormData): Promise<ActionState> {
+  const viewer = await requireParent();
+  const automations = Object.fromEntries(AUTOMATIONS.map((a) => [a.key, formData.get(`auto:${a.key}`) === "on"]));
+  const weekStartsOn = formData.get("weekStartsOn") === "1" ? 1 : 0;
+  await db
+    .update(families)
+    .set({ settings: { ...viewer.family.settings, automations, weekStartsOn } })
+    .where(eq(families.id, viewer.family.id));
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Automation settings saved." };
+}
+
+const CATEGORY_DOMAINS = ["chore", "calendar", "budget", "list", "garden", "farm", "recipe", "household", "inventory"] as const;
+
+export async function saveCategory(_: ActionState, formData: FormData): Promise<ActionState> {
+  const viewer = await requireParent();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 60);
+  const domain = String(formData.get("domain")) as (typeof CATEGORY_DOMAINS)[number];
+  if (!name) return { ok: false, errors: { name: ["Name the category."] } };
+  if (!CATEGORY_DOMAINS.includes(domain)) return { ok: false, message: "Unknown area." };
+  const color = String(formData.get("color") ?? "") || null;
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await db.update(categories).set({ name, color }).where(and(eq(categories.id, id), eq(categories.familyId, viewer.family.id)));
+  } else {
+    await db.insert(categories).values({ familyId: viewer.family.id, domain, name, color, sortOrder: 999 });
+  }
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function deleteCategory(formData: FormData) {
+  const viewer = await requireParent();
+  await db.delete(categories).where(and(eq(categories.id, String(formData.get("id"))), eq(categories.familyId, viewer.family.id)));
+  revalidatePath("/", "layout");
+}
+
+export async function uploadFamilyImage(_: ActionState, formData: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireParent();
+    const id = await saveUpload(viewer, formData.get("image"));
+    if (!id && formData.get("removeImage") !== "1") return { ok: false, errors: { image: ["Choose a photo."] } };
+    await db.update(families).set({ imageFileId: id ?? null }).where(eq(families.id, viewer.family.id));
+    if (viewer.family.imageFileId) await deleteFamilyFile(viewer.family.id, viewer.family.imageFileId);
+    revalidatePath("/", "layout");
+    return { ok: true, message: "Family photo updated." };
+  });
+}
