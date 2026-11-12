@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { inventoryItems, listItems, recipeIngredients, recipes } from "@/db/schema";
+import { inventoryEvents, inventoryItems, listItems, recipeIngredients, recipes } from "@/db/schema";
 import { mainShoppingListId } from "./automation";
 import { checkIngredients, formatQty, normalizeName } from "./ingredients";
 
@@ -89,3 +89,32 @@ export async function recipeServings(ids: string[]) {
 }
 
 export { formatQty };
+
+/**
+ * Add produce to the kitchen (garden harvest, farm production, shopping):
+ * merges with an active item of the same name & unit, else creates one.
+ */
+export async function addToInventory(
+  familyId: string,
+  item: { name: string; quantity: number; unit: string | null; location: (typeof inventoryItems.$inferInsert)["location"]; today: string },
+  meta: { source: "garden_harvest" | "farm_production" | "shopping" | "manual"; sourceId: string | null; memberId: string | null },
+) {
+  const current = await db
+    .select()
+    .from(inventoryItems)
+    .where(and(eq(inventoryItems.familyId, familyId), isNull(inventoryItems.archivedAt)));
+  const match = current.find((c) => normalizeName(c.name) === normalizeName(item.name) && (c.unit ?? "") === (item.unit ?? ""));
+  let itemId: string;
+  if (match) {
+    await db.update(inventoryItems).set({ quantity: String(Number(match.quantity) + item.quantity), purchasedOn: item.today }).where(eq(inventoryItems.id, match.id));
+    itemId = match.id;
+  } else {
+    const [row] = await db
+      .insert(inventoryItems)
+      .values({ familyId, name: item.name, quantity: String(item.quantity), unit: item.unit, location: item.location ?? "pantry", purchasedOn: item.today })
+      .returning({ id: inventoryItems.id });
+    itemId = row!.id;
+  }
+  await db.insert(inventoryEvents).values({ familyId, itemId, kind: "added", quantityDelta: String(item.quantity), source: meta.source, sourceId: meta.sourceId, memberId: meta.memberId });
+  return itemId;
+}

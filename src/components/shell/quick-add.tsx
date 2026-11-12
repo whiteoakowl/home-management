@@ -44,8 +44,8 @@ const OPTIONS: Option[] = [
   { label: "Inventory item", icon: Refrigerator, href: "/kitchen?new=1", module: "kitchen", phase: 3 },
   { label: "Recipe", icon: BookOpen, href: "/recipes?new=1", module: "recipes", phase: 3 },
   { label: "Meal", icon: UtensilsCrossed, href: "/meals", module: "meals", phase: 3 },
-  { label: "Garden plant", icon: Sprout, href: "/garden?new=1", module: "garden", phase: 4 },
-  { label: "Farm animal", icon: PawPrint, href: "/farm?new=1", module: "farm", phase: 4 },
+  { label: "Garden plant", icon: Sprout, href: "/garden/plants?new=1", module: "garden", phase: 4 },
+  { label: "Farm animal", icon: PawPrint, href: "/farm/animals?new=1", module: "farm", phase: 4 },
   { label: "Journal entry", icon: NotebookPen, href: "/journal?new=1", module: "journal", phase: 5 },
   { label: "Goal", icon: Target, href: "/goals?new=1", module: "goals", phase: 5 },
   { label: "Workout", icon: Dumbbell, href: "/fitness?new=1", module: "fitness", phase: 5 },
@@ -56,7 +56,7 @@ const OPTIONS: Option[] = [
 ];
 
 /** Highest build phase that is live. Quick-add entries from later phases show "Soon". */
-const BUILT_PHASE = 3;
+const BUILT_PHASE = 4;
 
 /** Universal "+ Add". `editable` = modules the viewer can edit. */
 export function QuickAdd({

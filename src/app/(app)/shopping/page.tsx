@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -27,7 +28,7 @@ export default async function ShoppingPage({ searchParams }: PageProps<"/shoppin
       <PageHeader eyebrow="Kitchen" title="Shopping lists" description="Grouped by aisle, built from recipes, meal plans and low stock." actions={canEdit ? add : undefined} />
       {lists.length === 0 ? (
         <Card>
-          <EmptyState icon={<ShoppingBasket />} title="No shopping lists" description="Create a list per store, or one for everything." action={canEdit ? add : undefined} />
+          <EmptyState icon={<ShoppingBasket />} title="No shopping lists" description="Create a list per store, or one for everything." action={canEdit ? cloneElement(add, { defaultOpen: false }) : undefined} />
         </Card>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -130,7 +131,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
             title={copy.title}
             description={copy.desc}
             example={copy.example || undefined}
-            action={canEdit && view !== "expiring" ? add : undefined}
+            action={canEdit && view !== "expiring" ? cloneElement(add, { defaultOpen: false }) : undefined}
           />
         </Card>
       ) : (

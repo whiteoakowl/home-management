@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Wrench } from "lucide-react";
@@ -59,7 +60,7 @@ export default async function MaintenancePage({ searchParams }: PageProps<"/hous
               title="No maintenance tasks yet"
               description="Track recurring upkeep so nothing gets forgotten."
               example="“Replace HVAC filter”: every 3 months · “Clean gutters”: spring & fall"
-              action={canManage ? form : undefined}
+              action={canManage ? cloneElement(form, { defaultOpen: false }) : undefined}
             />
           </Card>
         }

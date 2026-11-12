@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ClipboardCheck } from "lucide-react";
@@ -52,7 +53,7 @@ export default async function TasksPage({ searchParams }: PageProps<"/house/task
             title={show === "done" ? "No completed tasks yet" : "No open tasks"}
             description="Tasks are one-time jobs. Give them a due date and an owner."
             example="“Schedule furnace inspection”, due Friday, Dad"
-            action={canManage && show === "open" ? form : undefined}
+            action={canManage && show === "open" ? cloneElement(form, { defaultOpen: false }) : undefined}
           />
         </Card>
       ) : (

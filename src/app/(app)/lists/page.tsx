@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -48,7 +49,7 @@ export default async function ListsPage({ searchParams }: PageProps<"/lists">) {
             title={archived ? "No archived lists" : "No lists yet"}
             description="Create a checklist, to-do list, bullet or numbered list. Keep it private or share it."
             example="“Camping packing list” · “Summer bucket list” · “Weekend to-dos”"
-            action={canEdit && !archived ? add : undefined}
+            action={canEdit && !archived ? cloneElement(add, { defaultOpen: false }) : undefined}
           />
         </Card>
       ) : (

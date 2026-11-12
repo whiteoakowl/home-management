@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -71,7 +72,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
             title={q || cat || favorites ? "No recipes match" : "No recipes yet"}
             description={q || cat || favorites ? "Try a different search or filter." : "Start building your family's recipe collection."}
             example={q || cat || favorites ? undefined : "Paste ingredients one per line. We'll check them against your pantry."}
-            action={canEdit && !q ? add : undefined}
+            action={canEdit && !q ? cloneElement(add, { defaultOpen: false }) : undefined}
           />
         </Card>
       ) : (

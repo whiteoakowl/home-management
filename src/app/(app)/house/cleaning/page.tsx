@@ -1,3 +1,4 @@
+import { cloneElement } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Sparkles } from "lucide-react";
@@ -59,7 +60,7 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
               title="No cleaning schedule yet"
               description="Add daily, weekly, seasonal and annual cleaning with checklists, and assign steps to different people."
               example="“Kitchen deep clean”: clean fridge, oven, cabinets, mop floor…"
-              action={canManage ? form : undefined}
+              action={canManage ? cloneElement(form, { defaultOpen: false }) : undefined}
             />
           </Card>
         }
