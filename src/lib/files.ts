@@ -1,51 +1,18 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import sharp from "sharp";
 import { db } from "@/db";
 import { files } from "@/db/schema";
 import type { Viewer } from "./dal";
+import { storage } from "./storage";
 
-/**
- * Storage adapter. On Netlify (where the server's disk isn't kept between
- * requests) files go to Netlify Blobs; elsewhere to local disk (STORAGE_DIR,
- * default ./storage). STORAGE_DRIVER=blobs|disk forces one or the other.
- */
-const ROOT = process.env.STORAGE_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "storage");
-
-const onNetlify = () =>
-  process.env.STORAGE_DRIVER === "blobs" ||
-  (process.env.STORAGE_DRIVER !== "disk" && !!((globalThis as { netlifyBlobsContext?: unknown }).netlifyBlobsContext || process.env.NETLIFY_BLOBS_CONTEXT));
-
-const blobStore = async () => (await import("@netlify/blobs")).getStore({ name: "uploads", consistency: "strong" });
-
-const storage = {
-  async put(key: string, data: Buffer) {
-    if (onNetlify()) {
-      await (await blobStore()).set(key, new Uint8Array(data).buffer as ArrayBuffer);
-      return;
-    }
-    const full = path.join(/*turbopackIgnore: true*/ ROOT, key);
-    await mkdir(path.dirname(full), { recursive: true });
-    await writeFile(full, data);
-  },
-  async get(key: string): Promise<Buffer> {
-    if (onNetlify()) {
-      const ab = await (await blobStore()).get(key, { type: "arrayBuffer" });
-      if (!ab) throw new Error("File not found");
-      return Buffer.from(ab);
-    }
-    return readFile(/*turbopackIgnore: true*/ path.join(ROOT, key));
-  },
-  async remove(key: string) {
-    if (onNetlify()) {
-      await (await blobStore()).delete(key).catch(() => undefined);
-      return;
-    }
-    await unlink(/*turbopackIgnore: true*/ path.join(ROOT, key)).catch(() => undefined);
-  },
+// Uploads are stored via src/lib/storage.ts (Supabase Storage, Netlify Blobs or local disk).
+const store = {
+  put: (key: string, data: Buffer, type = "application/octet-stream") => storage().put(key, data, type),
+  get: (key: string) => storage().get(key),
+  remove: (key: string) => storage().remove(key),
 };
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif", "image/avif"];
@@ -74,7 +41,7 @@ export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null
 
   if (!isImage) {
     const key = `${base}${path.extname(file.name) || ".bin"}`;
-    await storage.put(key, input);
+    await store.put(key, input, file.type);
     await db.insert(files).values({
       id,
       familyId: viewer.family.id,
@@ -96,8 +63,8 @@ export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null
   } catch {
     throw new UploadError("That image couldn't be read. Try a JPG or PNG.");
   }
-  await storage.put(`${base}.webp`, main.data);
-  await storage.put(`${base}.thumb.webp`, thumb);
+  await store.put(`${base}.webp`, main.data, "image/webp");
+  await store.put(`${base}.thumb.webp`, thumb, "image/webp");
   await db.insert(files).values({
     id,
     familyId: viewer.family.id,
@@ -118,7 +85,7 @@ export async function readFamilyFile(familyId: string, id: string, thumb: boolea
   if (!row) return null;
   const key = thumb && row.thumbnailKey ? row.thumbnailKey : row.storageKey;
   try {
-    return { data: await storage.get(key), mime: row.mimeType, name: row.originalName };
+    return { data: await store.get(key), mime: row.mimeType, name: row.originalName };
   } catch {
     return null;
   }
@@ -128,8 +95,8 @@ export async function deleteFamilyFile(familyId: string, id: string | null | und
   if (!id) return;
   const [row] = await db.delete(files).where(and(eq(files.id, id), eq(files.familyId, familyId))).returning();
   if (row) {
-    await storage.remove(row.storageKey);
-    if (row.thumbnailKey) await storage.remove(row.thumbnailKey);
+    await store.remove(row.storageKey);
+    if (row.thumbnailKey) await store.remove(row.thumbnailKey);
   }
 }
 

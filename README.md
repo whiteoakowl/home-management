@@ -79,22 +79,29 @@ The service worker (`public/sw.js`) caches only static app files and shows an of
 connection. Family data, pages and uploaded files are never cached on the device. Icons are generated
 from the brand mark with `node scripts/generate-icons.mjs`.
 
-## Deploying (Netlify)
+## Deploying (Netlify + Supabase)
 
-The app needs a PostgreSQL database. Without one, sign-in shows "The app can't reach its database".
+**Database (required).** Create a Supabase project, open **Connect**, copy the **Session pooler**
+connection string (password filled in), and add it in Netlify as `DATABASE_URL`. Netlify DB
+(`NETLIFY_DB_URL`) or any other Postgres also works. Every deploy runs `npm run db:setup`
+(`netlify.toml`): migrations, plus the demo family on a brand-new empty database only. It never resets
+existing data. Set `SEED_DEMO=0` to skip the demo family.
 
-1. **Add a database.** In Netlify: your site → **Extensions** → **Neon** (Netlify DB) → add a database to the
-   site. That sets `NETLIFY_DB_URL` (older setups: `NETLIFY_DATABASE_URL`) automatically. Any other Postgres
-   works too: set `DATABASE_URL` under **Site configuration → Environment variables**.
-2. **Redeploy** (Deploys → Trigger deploy → *Clear cache and deploy site*). `netlify.toml` runs
-   `npm run db:setup` before the build: it applies migrations and, on a brand-new empty database only,
-   loads the demo family. It never resets a database that already has data. Set `SEED_DEMO=0` to skip
-   the demo family.
-3. **Sign in** with `sarah@vanderbilt.family` / `vanderbilt123`, then create your own accounts and change or
-   remove the demo ones before adding real information.
+**File uploads (optional, recommended with Supabase).** Add in Netlify:
 
-Uploaded photos and documents are stored in **Netlify Blobs** automatically when running on Netlify
-(the server's disk is not kept there). Elsewhere they go to `STORAGE_DIR` (default `./storage`).
+| Variable | Value |
+|---|---|
+| `SUPABASE_URL` | Project URL, e.g. `https://abcd1234.supabase.co` |
+| `SUPABASE_SECRET_KEY` | A **secret** key (`sb_secret_…`) or the legacy `service_role` key |
+
+Photos and documents then go to a **private** Supabase Storage bucket named `uploads` (created
+automatically; override with `SUPABASE_BUCKET`). The app serves files itself after checking family
+membership and medical privacy, so the bucket stays private and the key never reaches a browser.
+Without these, uploads use Netlify Blobs on Netlify, or `./storage` locally. `STORAGE_DRIVER` =
+`supabase` | `blobs` | `disk` forces a choice.
+
+Then redeploy and sign in with `sarah@vanderbilt.family` / `vanderbilt123`. Create your own accounts and
+change or remove the demo ones before adding real information.
 
 ## Project layout
 
