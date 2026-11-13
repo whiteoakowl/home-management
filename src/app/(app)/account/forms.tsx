@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { changeEmail, changePassword, resetMemberPassword } from "@/app/actions/account";
+import { changeEmail, changePassword, resetMemberPassword, setMemberEmail } from "@/app/actions/account";
 import { Field, FormMessage, Input, SubmitButton } from "@/components/ui/form";
 
 export function ChangePasswordForm() {
@@ -61,6 +61,22 @@ export function ResetPasswordForm({ memberId, name }: { memberId: string; name: 
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Resetting…">Reset password</SubmitButton>
       </div>
+    </form>
+  );
+}
+
+export function MemberEmailForm({ memberId, name, email }: { memberId: string; name: string; email: string }) {
+  const [state, action] = useActionState(setMemberEmail, undefined);
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
+      <input type="hidden" name="memberId" value={memberId} />
+      <Field label={`${name}'s sign-in email`} htmlFor="member-email" error={state?.errors?.email}>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input id="member-email" name="email" type="email" autoComplete="off" defaultValue={email} className="sm:flex-1" required />
+          <SubmitButton pendingLabel="Saving…">Save email</SubmitButton>
+        </div>
+      </Field>
     </form>
   );
 }

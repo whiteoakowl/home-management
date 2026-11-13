@@ -65,3 +65,22 @@ export async function resetMemberPassword(_: ActionState, fd: FormData): Promise
   await logActivity(db, viewer.family.id, viewer.member.id, "member.password_reset", `reset ${target.displayName}'s password`);
   return { ok: true, message: `Password reset. Share the new password with ${target.displayName}; they've been signed out on their devices.` };
 }
+
+const SetMemberEmail = z.object({ memberId: z.uuid(), email: z.email("Please enter a valid email.").trim().toLowerCase() });
+
+/** A parent sets a family member's sign-in email (same rules as password reset). */
+export async function setMemberEmail(_: ActionState, fd: FormData): Promise<ActionState> {
+  const viewer = await requireParent();
+  const parsed = SetMemberEmail.safeParse(Object.fromEntries(fd));
+  if (!parsed.success) return fieldErrors(parsed.error);
+  const target = await getFamilyMember(viewer, parsed.data.memberId);
+  if (!target?.userId) return { ok: false, message: "That family member doesn't have a login yet. Create one first." };
+  if (target.id === viewer.member.id) return { ok: false, message: "Change your own email from your Account page." };
+  if (target.role === "parent" && viewer.family.ownerMemberId !== viewer.member.id) return { ok: false, message: "Only the family's owner can change another parent's email." };
+  const [taken] = await db.select({ id: users.id }).from(users).where(and(eq(users.email, parsed.data.email), ne(users.id, target.userId)));
+  if (taken) return { ok: false, errors: { email: ["That email is already used by another account."] } };
+  await db.update(users).set({ email: parsed.data.email }).where(eq(users.id, target.userId));
+  await logActivity(db, viewer.family.id, viewer.member.id, "member.email_changed", `updated ${target.displayName}'s sign-in email`);
+  revalidatePath(`/family/${target.id}/manage`);
+  return { ok: true, message: `${target.displayName} now signs in with ${parsed.data.email}. Their password hasn't changed.` };
+}

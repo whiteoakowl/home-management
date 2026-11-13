@@ -11,7 +11,10 @@ import { MODULES } from "@/db/schema/_shared";
 import { getFamilyMember, requireParent } from "@/lib/dal";
 import { getStoredPermissions } from "@/lib/family";
 import { LoginForm, PermissionsForm } from "./forms";
-import { ResetPasswordForm } from "../../../account/forms";
+import { MemberEmailForm, ResetPasswordForm } from "../../../account/forms";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export const metadata: Metadata = { title: "Profile & access" };
 
@@ -24,6 +27,7 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
   const isOwner = member.id === viewer.family.ownerMemberId;
   const stored = (await getStoredPermissions([member.id])).get(member.id) ?? {};
   const modules = MODULES.filter((m) => viewer.family.enabledModules.includes(m));
+  const loginEmail = member.userId ? (await db.select({ email: users.email }).from(users).where(eq(users.id, member.userId)))[0]?.email : null;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -64,7 +68,12 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
               .
             </p>
           ) : member.role !== "parent" || viewer.family.ownerMemberId === viewer.member.id ? (
-            <ResetPasswordForm memberId={member.id} name={member.displayName} />
+            <div className="flex flex-col gap-6">
+              <MemberEmailForm memberId={member.id} name={member.displayName} email={loginEmail ?? ""} />
+              <div className="border-t border-line pt-5">
+                <ResetPasswordForm memberId={member.id} name={member.displayName} />
+              </div>
+            </div>
           ) : (
             <p className="text-[15px] text-muted">{member.displayName} signs in with their own account. Only the family&apos;s owner can reset another parent&apos;s password.</p>
           )
