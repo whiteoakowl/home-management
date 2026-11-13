@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Medical calendar" };
 
 export default async function MedicalCalendarPage({ searchParams }: PageProps<"/medical/calendar">) {
   const viewer = await medicalViewer();
-  const sp = (await searchParams) as { past?: string };
+  const sp = (await searchParams) as { past?: string; new?: string };
   const today = todayIn(viewer.family.timezone);
   const startToday = zonedToUtc(today, "00:00", viewer.family.timezone);
   const [members, all, meds, conds, docs] = await Promise.all([
@@ -42,7 +42,7 @@ export default async function MedicalCalendarPage({ searchParams }: PageProps<"/
         eyebrow="Medical"
         title="Medical calendar"
         description="Appointments, follow-ups, refills and expirations. Appointments also appear on the family calendar for the people allowed to see them."
-        actions={viewer.can("medical", "edit") && <AppointmentModal members={members} />}
+        actions={viewer.can("medical", "edit") && <AppointmentModal members={members} defaultOpen={sp.new === "1"} />}
       />
       <MedicalTabs active="calendar" />
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">

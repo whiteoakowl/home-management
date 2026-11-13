@@ -17,7 +17,7 @@ export async function petsViewer() {
 
 type Pet = { id: string; name: string; species: string; breed: string | null; birthday: string | null; imageFileId: string | null; status: string; [k: string]: unknown };
 
-export function PetModal({ members, pet }: { members: MemberOption[]; pet?: Pet }) {
+export function PetModal({ members, pet, defaultOpen }: { members: MemberOption[]; pet?: Pet; defaultOpen?: boolean }) {
   const defaults: Record<string, FieldValue | undefined> = pet
     ? Object.fromEntries(PET_FIELDS.map((f) => [f.name, f.name === "weight" ? (pet.weight === null ? null : Number(pet.weight)) : (pet[f.name] as FieldValue)]))
     : { status: "active", species: "dog", weightUnit: "lb" };
@@ -32,6 +32,7 @@ export function PetModal({ members, pet }: { members: MemberOption[]; pet?: Pet 
       hidden={pet ? { id: pet.id } : {}}
       members={members}
       imageUrls={{ image: pet ? fileUrl(pet.imageFileId) : null }}
+      defaultOpen={defaultOpen}
     />
   );
 }

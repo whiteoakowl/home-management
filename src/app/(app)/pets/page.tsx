@@ -15,8 +15,9 @@ import { PetCard, PetModal, petsViewer } from "./shared";
 
 export const metadata: Metadata = { title: "Pets" };
 
-export default async function PetsDashboard() {
+export default async function PetsDashboard({ searchParams }: PageProps<"/pets">) {
   const viewer = await petsViewer();
+  const sp = await searchParams;
   const today = todayIn(viewer.family.timezone);
   const canEdit = viewer.can("pets", "edit");
   const [members, list] = await Promise.all([memberOptions(viewer), listPets(viewer)]);
@@ -31,7 +32,7 @@ export default async function PetsDashboard() {
   const low = supplies.filter(({ item }) => item.lowStockThreshold !== null && Number(item.quantity) <= Number(item.lowStockThreshold));
   return (
     <>
-      <PageHeader eyebrow="Care" title="Pets" description="Profiles, health, preventatives, food, care schedules and memories for every animal in the family." actions={canEdit && <PetModal members={members} />} />
+      <PageHeader eyebrow="Care" title="Pets" description="Profiles, health, preventatives, food, care schedules and memories for every animal in the family." actions={canEdit && <PetModal members={members} defaultOpen={sp.new === "1"} />} />
       <PetsTabs active="dashboard" />
       {list.length === 0 ? (
         <Card>

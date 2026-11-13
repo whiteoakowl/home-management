@@ -4,6 +4,14 @@ import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
   animalHealthRecords,
+  homeDocuments,
+  homeProjects,
+  homeRepairs,
+  petMedicalRecords,
+  petPreventatives,
+  pets,
+  projectStages,
+  sabbatSettings,
   animals,
   calendarEvents,
   categories,
@@ -23,8 +31,10 @@ import { automationOn } from "./automation";
 import { visibleTo, type Viewer } from "./dal";
 import { addDays, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
+import { phasesBetween } from "./astro";
+import { wheelForYear } from "./sabbats";
 
-export const LAYERS = ["events", "chores", "workouts", "meals", "garden", "farm"] as const;
+export const LAYERS = ["events", "chores", "workouts", "meals", "garden", "farm", "pets", "home", "moon"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -130,7 +140,7 @@ export async function getCalendarItems(
     }
   }
 
-  if (want("chores") && (viewer.can("chores") || viewer.can("house"))) {
+  if (want("chores") && (viewer.can("chores") || viewer.can("house") || viewer.can("maintenance"))) {
     const a = alias(familyMembers, "a");
     const rows = await db
       .select({ id: choreOccurrences.id, choreId: chores.id, title: chores.title, date: choreOccurrences.dueDate, status: choreOccurrences.status, assigneeId: choreOccurrences.assigneeId, color: a.color })
@@ -197,6 +207,53 @@ export async function getCalendarItems(
       .where(and(eq(animals.familyId, fid), gte(animalHealthRecords.nextDueOn, from), lte(animalHealthRecords.nextDueOn, to)));
     for (const r of rows) {
       out.push({ key: `f:${r.id}`, id: r.id, layer: "farm", title: `${r.name}: ${r.kind}`, date: r.date!, startMin: null, endMin: null, color: "olive", href: `/farm/animals/${r.animalId}`, people: [] });
+    }
+  }
+
+  if (want("pets") && viewer.can("pets")) {
+    const prev = await db
+      .select({ id: petPreventatives.id, date: petPreventatives.nextDueOn, product: petPreventatives.productName, pet: pets.name, petId: pets.id, assigneeId: petPreventatives.assigneeId })
+      .from(petPreventatives)
+      .innerJoin(pets, eq(pets.id, petPreventatives.petId))
+      .where(and(eq(pets.familyId, fid), eq(pets.status, "active"), gte(petPreventatives.nextDueOn, from), lte(petPreventatives.nextDueOn, to), subject ? eq(petPreventatives.assigneeId, subject) : undefined));
+    for (const r of prev) out.push({ key: `pp:${r.id}`, id: r.id, layer: "pets", title: `${r.pet}: ${r.product}`, date: r.date!, startMin: null, endMin: null, color: "mauve", href: `/pets/${r.petId}`, people: r.assigneeId ? [r.assigneeId] : [] });
+    if (!subject) {
+      const vet = await db
+        .select({ id: petMedicalRecords.id, date: petMedicalRecords.nextDueOn, title: petMedicalRecords.title, pet: pets.name, petId: pets.id })
+        .from(petMedicalRecords)
+        .innerJoin(pets, eq(pets.id, petMedicalRecords.petId))
+        .where(and(eq(pets.familyId, fid), gte(petMedicalRecords.nextDueOn, from), lte(petMedicalRecords.nextDueOn, to)));
+      for (const r of vet) out.push({ key: `pv:${r.id}`, id: r.id, layer: "pets", title: `${r.pet}: ${r.title} due`, date: r.date!, startMin: null, endMin: null, color: "mauve", href: `/pets/${r.petId}`, people: [] });
+    }
+  }
+
+  if (want("home") && viewer.can("maintenance") && !subject) {
+    const [reps, stages, docs] = await Promise.all([
+      db.select().from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), gte(homeRepairs.scheduledOn, from), lte(homeRepairs.scheduledOn, to))),
+      db
+        .select({ s: projectStages, title: homeProjects.title })
+        .from(projectStages)
+        .innerJoin(homeProjects, eq(homeProjects.id, projectStages.projectId))
+        .where(and(eq(homeProjects.familyId, fid), gte(projectStages.dueOn, from), lte(projectStages.dueOn, to))),
+      db.select().from(homeDocuments).where(and(eq(homeDocuments.familyId, fid), gte(homeDocuments.expiresOn, from), lte(homeDocuments.expiresOn, to))),
+    ]);
+    for (const r of reps) out.push({ key: `hr:${r.id}`, id: r.id, layer: "home", title: `Repair: ${r.title}`, date: r.scheduledOn!, startMin: null, endMin: null, color: "wine", href: `/maintenance/repairs/${r.id}`, people: [], done: r.status === "completed" });
+    for (const r of stages) out.push({ key: `hs:${r.s.id}`, id: r.s.id, layer: "home", title: `${r.title}: ${r.s.name}`, date: r.s.dueOn!, startMin: null, endMin: null, color: "wine", href: `/maintenance/projects/${r.s.projectId}`, people: [], done: r.s.done });
+    for (const r of docs) out.push({ key: `hd:${r.id}`, id: r.id, layer: "home", title: `Expires: ${r.title}`, date: r.expiresOn!, startMin: null, endMin: null, color: "wine", href: "/maintenance/documents", people: [] });
+  }
+
+  if (want("moon") && viewer.can("witchcraft") && !subject) {
+    const tz = viewer.family.timezone;
+    const NAMES = { new: "🌑 New Moon", first_quarter: "🌓 First Quarter", full: "🌕 Full Moon", last_quarter: "🌗 Last Quarter" } as const;
+    for (const e of phasesBetween(zonedToUtc(from, "00:00", tz), zonedToUtc(addDays(to, 1), "00:00", tz))) {
+      const z = utcToZoned(e.at, tz);
+      out.push({ key: `mo:${e.at.toISOString()}`, id: e.at.toISOString(), layer: "moon", title: NAMES[e.phase], date: z.date, startMin: z.minutes, endMin: null, color: "lilac", href: `/witchcraft/moon?month=${z.date.slice(0, 7)}`, people: [] });
+    }
+    const overrides = Object.fromEntries((await db.select().from(sabbatSettings).where(eq(sabbatSettings.familyId, fid))).map((r) => [r.key, r.monthDay]));
+    for (let y = Number(from.slice(0, 4)); y <= Number(to.slice(0, 4)); y++) {
+      for (const x of wheelForYear(y, { tz, southern: (viewer.family.latitude ?? 1) < 0, overrides })) {
+        if (x.date >= from && x.date <= to) out.push({ key: `sb:${x.key}:${y}`, id: x.key, layer: "moon", title: `${x.s.emoji} ${x.s.name}`, date: x.date, startMin: null, endMin: null, color: "orchid", href: `/witchcraft/wheel/${x.key}`, people: [] });
+      }
     }
   }
 

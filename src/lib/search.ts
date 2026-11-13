@@ -2,6 +2,17 @@ import "server-only";
 import { and, eq, ilike, inArray, isNull, or, sql, ne } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  allergies,
+  celebrations,
+  craftItems,
+  foodRestrictions,
+  homeProjects,
+  homeRepairs,
+  medicalConditions,
+  medicalDocuments,
+  medications,
+  pets,
+  rooms,
   animals,
   calendarEvents,
   chores,
@@ -22,6 +33,8 @@ import {
 } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
 import { utcToZoned } from "./dates";
+import { craftVisible } from "./craft";
+import { medicalVisible } from "./medical";
 
 export type SearchHit = { id: string; title: string; subtitle?: string | null; href: string };
 export type SearchGroup = { key: string; label: string; icon: string; hits: SearchHit[] };
@@ -50,8 +63,8 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: x.role === "parent" ? "Parent" : "Family member", href: `/family/${x.id}` }))),
   );
 
-  if (viewer.can("chores") || viewer.can("house")) {
-    const kinds = [...(viewer.can("chores") ? ["chore", "task"] : []), ...(viewer.can("house") ? ["cleaning", "maintenance"] : [])] as ("chore" | "task" | "cleaning" | "maintenance")[];
+  if (viewer.can("chores") || viewer.can("house") || viewer.can("maintenance")) {
+    const kinds = [...(viewer.can("chores") ? ["chore", "task"] : []), ...(viewer.can("house") ? ["cleaning"] : []), ...(viewer.can("maintenance") ? ["maintenance"] : [])] as ("chore" | "task" | "cleaning" | "maintenance")[];
     group(
       "chores",
       "Chores & tasks",
@@ -242,18 +255,18 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
     );
   }
 
-  if (viewer.can("house")) {
+  if (viewer.can("house") || viewer.can("maintenance")) {
     group(
       "house",
       "Household info & documents",
       "House",
       Promise.all([
-        db
+        !viewer.can("house") ? Promise.resolve([]) : db
           .select({ id: householdInfo.id, title: householdInfo.title })
           .from(householdInfo)
           .where(and(eq(householdInfo.familyId, fid), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info"), or(ilike(householdInfo.title, like), ilike(householdInfo.body, like))))
           .limit(4),
-        db
+        !viewer.can("maintenance") ? Promise.resolve([]) : db
           .select({ id: homeDocuments.id, title: homeDocuments.title })
           .from(homeDocuments)
           .where(and(eq(homeDocuments.familyId, fid), visibleTo(viewer, { id: homeDocuments.id, visibility: homeDocuments.visibility, author: homeDocuments.createdByMemberId }, "document"), or(ilike(homeDocuments.title, like), ilike(homeDocuments.notes, like))))
@@ -261,6 +274,96 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       ]).then(([i, d]) => [
         ...i.map((x) => ({ id: x.id, title: x.title, subtitle: "Important info", href: "/house/info" })),
         ...d.map((x) => ({ id: x.id, title: x.title, subtitle: "Document", href: "/maintenance/documents" })),
+      ]),
+    );
+  }
+
+  if (viewer.can("medical")) {
+    // Only records the viewer may see; titles only (no clinical details in results).
+    const kinds = [
+      ["allergy", allergies, allergies.name, "Allergy", "/medical/allergies"],
+      ["restriction", foodRestrictions, foodRestrictions.title, "Food restriction", "/medical/diet"],
+      ["condition", medicalConditions, medicalConditions.name, "Condition", "/medical/conditions"],
+      ["medication", medications, medications.name, "Medication", "/medical/medications"],
+      ["document", medicalDocuments, medicalDocuments.title, "Medical document", "/medical/documents"],
+    ] as const;
+    group(
+      "medical",
+      "Medical",
+      "HeartPulse",
+      Promise.all(
+        kinds.map(([, t, col, label, href]) =>
+          db
+            .select({ id: t.id, title: col, member: familyMembers.displayName })
+            .from(t)
+            .innerJoin(familyMembers, eq(familyMembers.id, t.memberId))
+            .where(and(eq(t.familyId, fid), medicalVisible(viewer, t), ilike(col, like)))
+            .limit(3)
+            .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${label} · ${x.member}`, href }))),
+        ),
+      ).then((g) => g.flat().slice(0, LIMIT)),
+    );
+  }
+
+  if (viewer.can("pets")) {
+    group(
+      "pets",
+      "Pets",
+      "PawPrint",
+      db
+        .select({ id: pets.id, title: pets.name, species: pets.species, breed: pets.breed })
+        .from(pets)
+        .where(and(eq(pets.familyId, fid), or(ilike(pets.name, like), ilike(pets.breed, like), ilike(pets.notes, like))))
+        .limit(LIMIT)
+        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: [x.species, x.breed].filter(Boolean).join(" · "), href: `/pets/${x.id}` }))),
+    );
+  }
+
+  if (viewer.can("witchcraft")) {
+    group(
+      "craft",
+      "Witchcraft",
+      "Moon",
+      Promise.all([
+        db
+          .select({ id: craftItems.id, title: craftItems.name, kind: craftItems.kind })
+          .from(craftItems)
+          .where(and(craftVisible(viewer), or(ilike(craftItems.name, like), ilike(craftItems.description, like))))
+          .limit(6),
+        db
+          .select({ id: journalEntries.id, title: journalEntries.title, body: journalEntries.body })
+          .from(journalEntries)
+          .where(
+            and(
+              eq(journalEntries.familyId, fid),
+              eq(journalEntries.book, "grimoire"),
+              visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
+              or(ilike(journalEntries.title, like), ilike(journalEntries.body, like)),
+            ),
+          )
+          .limit(3),
+        db.select({ id: celebrations.id, title: celebrations.name, date: celebrations.date }).from(celebrations).where(and(eq(celebrations.familyId, fid), ilike(celebrations.name, like))).limit(3),
+      ]).then(([items, gr, cel]) => [
+        ...items.map((x) => ({ id: x.id, title: x.title, subtitle: x.kind[0]!.toUpperCase() + x.kind.slice(1), href: `/witchcraft/item/${x.id}` })),
+        ...gr.map((x) => ({ id: x.id, title: x.title ?? x.body.slice(0, 60), subtitle: "Grimoire", href: "/witchcraft/grimoire" })),
+        ...cel.map((x) => ({ id: x.id, title: x.title, subtitle: `Celebration · ${x.date}`, href: `/witchcraft/celebrations/${x.id}` })),
+      ]),
+    );
+  }
+
+  if (viewer.can("maintenance")) {
+    group(
+      "home",
+      "Home maintenance",
+      "Hammer",
+      Promise.all([
+        db.select({ id: rooms.id, title: rooms.name, kind: rooms.kind }).from(rooms).where(and(eq(rooms.familyId, fid), or(ilike(rooms.name, like), ilike(rooms.description, like)))).limit(3),
+        db.select({ id: homeRepairs.id, title: homeRepairs.title }).from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), or(ilike(homeRepairs.title, like), ilike(homeRepairs.problem, like), ilike(homeRepairs.contractor, like)))).limit(4),
+        db.select({ id: homeProjects.id, title: homeProjects.title }).from(homeProjects).where(and(eq(homeProjects.familyId, fid), or(ilike(homeProjects.title, like), ilike(homeProjects.description, like)))).limit(4),
+      ]).then(([r, rep, pr]) => [
+        ...r.map((x) => ({ id: x.id, title: x.title, subtitle: x.kind === "system" ? "Home system" : "Room", href: `/maintenance/rooms/${x.id}` })),
+        ...rep.map((x) => ({ id: x.id, title: x.title, subtitle: "Repair", href: `/maintenance/repairs/${x.id}` })),
+        ...pr.map((x) => ({ id: x.id, title: x.title, subtitle: "Project", href: `/maintenance/projects/${x.id}` })),
       ]),
     );
   }

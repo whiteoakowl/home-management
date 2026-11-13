@@ -33,15 +33,19 @@ feels like 16 equal-weight tools:
 | Group | Areas |
 |---|---|
 | **Today** | Home (dashboard), Calendar |
-| **Household** | Family, House (cleaning, chores, maintenance, projects, documents), Lists |
+| **Household** | Family, House (cleaning, chores, tasks, info), Lists, Home Maintenance |
+| **Care** | Medical, Pets |
 | **Kitchen** | Kitchen (pantry/fridge/freezer/supplies), Meals, Recipes |
 | **Land** | Garden, Farm |
 | **Personal** | Journal, Goals, Fitness |
+| **Spirit** | Witchcraft |
 | **Money** | Budget |
 | **Admin** | Reports, Settings |
 
 * **Desktop (≥1024px):** persistent left sidebar with grouped icon + label nav; top bar with the
   member switcher, notifications, and the universal **+ Add** button.
+* Medical, Pets, Witchcraft and Home Maintenance show their **submenu** under the active item in the
+  sidebar, and as scrollable section tabs on every one of their pages (all screen sizes).
 * **Tablet (640–1023px):** collapsible sidebar (icon rail).
 * **Mobile (<640px):** bottom tab bar with **Home · Calendar · [+] · Lists · More**. "More" opens a
   full-screen sheet with every area. The centre **+** opens Quick Add.
@@ -234,6 +238,41 @@ Shopping lists are lists with `kind = 'shopping'`: one list engine.
 * `transactions`: kind `expense | income | transfer_to_savings`, amount_cents, category, date,
   recurrence_rule_id, goal_id (savings), shopping_list_id link, notes
 
+### Medical (`medical.ts`), add-on
+* `medical_profiles` (one per member), `allergies` (type, severity, ingredient `triggers[]`, file),
+  `food_restrictions` (kind, `foods[]`), `medical_conditions`, `medications` (refills), `medical_documents`.
+* Every row: `member_id`, `visibility` (default **private** = patient + parents), `created_by_member_id`;
+  sharing via `record_access(entity_type='medical')`. Attachments are served only to people who may
+  see the record (`canReadMedicalFile` in `/api/files/[id]`).
+* Appointments are `calendar_events` with `source='medical'`, `source_id = patient`.
+
+### Pets (`pets.ts`), add-on
+* `pets`, `pet_photos`, `pet_medical_records`, `pet_preventatives` (interval, next due, assignee),
+  `pet_care_notes`, `pet_supplies` (→ `inventory_items` with `location='pets'`).
+* Care schedules are `chores.pet_id`; memories are `journal_entries` with `book='pet'`, `linked_id = pet`.
+
+### Witchcraft (`craft.ts`), add-on
+* `craft_items` (kind spell | ritual | crystal | herb | tool | wellness; `family_id NULL` = built-in
+  reference from `src/db/craft-data.ts`; kind-specific `fields` JSONB; `plant_id` → garden plant),
+  `craft_collection`, `craft_item_supplies` (→ inventory, `location='craft'`), `sabbat_settings`
+  (date overrides & notes), `celebrations` (+ `celebration_links` to recipes / rituals, calendar event,
+  shopping list, budget via `transactions.celebration_id`).
+* Grimoire = `journal_entries` with `book='grimoire'` (excluded from the family journal).
+* Astronomy (`src/lib/astro.ts`): Meeus ch. 49 lunar phases, ch. 47 lunar longitude (moon sign),
+  ch. 27 equinoxes/solstices; `src/lib/sabbats.ts` builds the Wheel of the Year (hemisphere-aware).
+
+### Home maintenance (`maintenance.ts` + `household.ts`), add-on
+* `rooms` gained `kind` (room | area | system), description, notes, image.
+* Maintenance schedules are `chores(kind='maintenance')` with `estimated_cost_cents`;
+  `chore_occurrences.actual_cost_cents` records what each one cost.
+* `home_repairs` (status, cost, contractor, warranty), `home_photos` (before / after / receipt /
+  inspiration / progress / plan for repairs, projects and rooms).
+* `home_projects` (status idea → planning → budgeting → ready → in_progress → on_hold → completed)
+  with `project_stages`, `project_materials`, tasks (`chores.project_id`), expenses
+  (`transactions.project_id`), documents (`home_documents.project_id`) and a materials shopping list.
+* `home_documents` gained `doc_type`, room, project, appliance; House's old project/document pages
+  redirect here (one set of records).
+
 ### Key relationships (the "interconnected" principle)
 
 ```
@@ -245,11 +284,16 @@ chores ─< chore_occurrences >─ family_members ──> notifications, activit
 workouts(schedule) ──generates──> calendar_events(source='workout')
 transactions(transfer_to_savings) ──> goal_contributions ──> goals.current_amount
 list_items(shopping, purchased) ──optional──> transactions(expense)
+allergies.triggers / food_restrictions.foods ──flag──> recipes, meal_plan_entries (never "safe")
+pet_supplies / craft supplies ──are──> inventory_items(location pets|craft) ──low stock──> shopping
+pet / repair / project / celebration costs ──> transactions (linked, recorded once)
+craft_items(herb).plant_id ──> plants ;  celebrations ──> calendar_events, lists(shopping), recipes
+chores.pet_id / chores.project_id ──> pet care & project tasks on everyone's chore lists
 ```
 
 ---
 
-## 5. Automation engine (Phase 7, designed now)
+## 5. Automation engine
 
 All recurring things reference `recurrence_rules`. A single **materialiser** (`src/lib/automation`)
 expands rules into concrete rows (chore occurrences, event instances, workout calendar entries)
@@ -319,6 +363,10 @@ terracotta and honey accents, soft shadows, generous radius.
 | 5. Personal | Journal (private/shared, moods, photos, timeline/calendar/search), goals & savings with milestones, fitness plans/logs/PRs/metrics, food journal | ✅ Done |
 | 6. Financial | Budget categories & limits, income sources, transactions (recurring), savings transfers → goals, shopping trip → expense | ✅ Done |
 | 7. Advanced | Reports (cleaning, garden, farm, kitchen waste, budget, fitness, goals), automation engine with per-family switches, notifications + preferences, global search, dashboard customization, category manager | ✅ Done |
+| 8a. Medical | Health profiles, allergies, food restrictions, conditions, medications (refills), documents, medical calendar, privacy per record, allergy & diet warnings in recipes and meal plans | ✅ Done |
+| 8b. Pets | Pet profiles & galleries, medical records, preventatives with reminders, food & supplies (inventory → shopping), care schedules (chores), special care, memories (journal) | ✅ Done |
+| 8c. Witchcraft | Accurate moon phases & signs, Wheel of the Year with detail pages and custom dates, celebration planner, spells, rituals, printable grimoire, crystals & collection, herbs (safety-first, garden-linked), tools, magical wellness, supplies | ✅ Done |
+| 8d. Home maintenance | Rooms & systems, preventative schedules with costs & history, repair log with photos & warranties, remodeling projects (stages, tasks, materials, budget, photos), to-do lists, documents & warranties, 12-month calendar | ✅ Done |
 
 ## 11. How the areas connect (implemented)
 
@@ -332,11 +380,21 @@ terracotta and honey accents, soft shadows, generous radius.
 * **Budget → Savings → Goals**: savings transfers create goal contributions, tick milestones and mark goals
   achieved.
 * **Fitness → Calendar**: weekly workout schedules appear as a calendar layer.
+* **Medical → Recipes & Meals**: food allergies and restrictions (expanded through allergen groups in
+  `src/lib/allergen-groups.ts`, e.g. cheese → mozzarella) flag recipe ingredients and planned meals.
+  Without a match the app only says no recorded conflicts were found.
+* **Pets / Witchcraft → Inventory → Shopping**: supplies live in the shared inventory (`location` pets,
+  craft); low stock is added to the shopping list automatically.
+* **Pets, Maintenance, Celebrations → Budget**: costs are recorded once as linked transactions.
+* **Calendar layers**: medical appointments and celebrations are events; pets (preventatives & vet dates),
+  home projects (repairs, stages, warranties) and moon & sabbats are optional layers.
 * **Everything → Activity feed & Search**: actions log to `activity_log`; `src/lib/search.ts` searches every
   area with the same permission rules as the pages.
 
 ## 12. Testing
 
-* `npm test`: unit tests for the recurrence engine, timezone maths and ingredient parsing/matching.
+* `npm test`: unit tests for the recurrence engine, timezone maths, ingredient parsing/matching,
+  allergen matching, moon phases/signs (against published USNO times), equinoxes/solstices and the
+  Wheel of the Year (both hemispheres, overrides).
 * `npm run typecheck`, `npm run lint`, `npm run build`.
 * `npm run db:seed`: demo Vanderbilt family covering every area.

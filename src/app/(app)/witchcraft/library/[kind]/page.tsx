@@ -22,7 +22,7 @@ export default async function LibraryPage({ params, searchParams }: PageProps<"/
   const { kind: k } = await params;
   if (!CRAFT_KINDS.includes(k as CraftKind)) notFound();
   const kind = k as CraftKind;
-  const sp = (await searchParams) as { q?: string; category?: string; fav?: string; moon?: string; mine?: string };
+  const sp = (await searchParams) as { q?: string; category?: string; fav?: string; moon?: string; mine?: string; new?: string };
   const viewer = await craftViewer();
   const meta = CRAFT_META[kind];
   const canEdit = viewer.can("witchcraft", "edit");
@@ -36,7 +36,7 @@ export default async function LibraryPage({ params, searchParams }: PageProps<"/
   const coll = kind === "crystal" || kind === "tool" ? await collectionFor(viewer, rows.map((r) => r.id)) : [];
   const owned = (id: string) => coll.filter((c) => c.c.itemId === id && c.c.status === "owned").reduce((s, c) => s + c.c.quantity, 0);
   const categories = CRAFT_FIELDS[kind].find((f) => f.name === "category")?.options ?? [];
-  const add = canEdit ? <CraftItemModal kind={kind} members={members} supplies={supplies} plants={plantRows} /> : undefined;
+  const add = canEdit ? <CraftItemModal kind={kind} members={members} supplies={supplies} plants={plantRows} defaultOpen={sp.new === "1"} /> : undefined;
   const sel = "h-10 rounded-full border border-line-strong bg-surface px-3 text-sm";
   return (
     <>
@@ -101,7 +101,7 @@ export default async function LibraryPage({ params, searchParams }: PageProps<"/
         </div>
       ) : (
         <Card>
-          <EmptyState icon={<Sparkles />} title={sp.q || sp.category || sp.fav || sp.moon ? "Nothing matches" : `No ${meta.plural.toLowerCase()} yet`} description={sp.q ? "Try a different search." : meta.blurb} action={!sp.q && add} />
+          <EmptyState icon={<Sparkles />} title={sp.q || sp.category || sp.fav || sp.moon ? "Nothing matches" : `No ${meta.plural.toLowerCase()} yet`} description={sp.q ? "Try a different search." : meta.blurb} action={!sp.q && canEdit && <CraftItemModal kind={kind} members={members} supplies={supplies} plants={plantRows} />} />
         </Card>
       )}
     </>

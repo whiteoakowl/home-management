@@ -24,7 +24,7 @@ export default async function RepairsPage({ searchParams }: PageProps<"/maintena
   const shown = rows.filter((r) => (!sp.status || r.status === sp.status) && (!sp.room || r.roomId === sp.room) && (!q || `${r.title} ${r.problem} ${r.contractor} ${r.notes}`.toLowerCase().includes(q)));
   const total = shown.reduce((s, r) => s + (r.costCents ?? 0), 0);
   const canEdit = viewer.can("maintenance", "edit");
-  const add = canEdit ? <RepairModal rooms={rooms} canBudget={viewer.can("budget", "edit")} today={today} /> : undefined;
+  const add = canEdit ? <RepairModal rooms={rooms} canBudget={viewer.can("budget", "edit")} today={today} defaultOpen={(sp as { new?: string }).new === "1"} /> : undefined;
   const sel = "h-10 rounded-full border border-line-strong bg-surface px-3 text-sm";
   return (
     <>
@@ -73,7 +73,7 @@ export default async function RepairsPage({ searchParams }: PageProps<"/maintena
         </Card>
       ) : (
         <Card>
-          <EmptyState icon={<Hammer />} title={rows.length ? "No repairs match" : "No repairs logged"} description="Log what broke, how it was fixed and what it cost, so you have the history when you need it." action={!rows.length && add} />
+          <EmptyState icon={<Hammer />} title={rows.length ? "No repairs match" : "No repairs logged"} description="Log what broke, how it was fixed and what it cost, so you have the history when you need it." action={!rows.length && canEdit && <RepairModal rooms={rooms} canBudget={viewer.can("budget", "edit")} today={today} />} />
         </Card>
       )}
     </>

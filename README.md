@@ -46,10 +46,14 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 
 | Area | Highlights |
 |---|---|
-| Home | Today-first dashboard with 17 customizable widgets, announcements, family activity |
+| Home | Today-first dashboard with 21 customizable widgets, announcements, family activity |
 | Family | Member portals (“Emma's Home”), roles, logins, per-area permissions |
-| Calendar | Month / week / day / agenda, recurring events, per-event visibility, layers for chores, workouts, meals, harvests and animal care |
-| House | Cleaning (daily → annual), chores with per-person checklists, maintenance, tasks, projects, documents, important info |
+| Calendar | Month / week / day / agenda, recurring events, per-event visibility, layers for chores, workouts, meals, harvests, animal care, pets, home projects and moon & sabbats |
+| House | Cleaning (daily → annual), chores with per-person checklists, tasks, important info |
+| Home Maintenance | Rooms & systems, maintenance schedules with costs, repair log with photos & warranties, remodeling projects, to-do lists, documents & warranties, calendar |
+| Medical | Private health profiles, allergies & food restrictions (flagged in recipes and meal plans), conditions, medications with refill reminders, documents, appointments |
+| Pets | Pet profiles & photos, vet records, flea/tick/heartworm reminders, food & supplies, care chores, memories |
+| Witchcraft | Moon phases, Wheel of the Year, celebrations, spells, rituals, printable grimoire, crystals, herbs (with safety notes), tools, wellness, supplies |
 | Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared |
 | Kitchen | Pantry / fridge / freezer / supplies, gentle expiration alerts, barcode scanning, waste tracking |
 | Meals & recipes | Recipe book with pantry check and printable books, weekly planner, auto-built shopping lists |

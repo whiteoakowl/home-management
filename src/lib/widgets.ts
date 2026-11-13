@@ -29,6 +29,10 @@ export const WIDGETS: WidgetDef[] = [
   { id: "goals", title: "Goals", module: "goals", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "fitness", title: "Fitness", module: "fitness", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "journal", title: "Journal", module: "journal", defaultSize: "sm", defaultVisible: true, personal: true },
+  { id: "health", title: "Health", module: "medical", defaultSize: "sm", defaultVisible: true, personal: true },
+  { id: "pets", title: "Pets", module: "pets", defaultSize: "sm", defaultVisible: true, personal: true },
+  { id: "home", title: "Home upkeep", module: "maintenance", defaultSize: "sm", defaultVisible: true, personal: true },
+  { id: "moon", title: "Moon & Wheel", module: "witchcraft", defaultSize: "sm", defaultVisible: true },
   { id: "activity", title: "Family activity", module: null, defaultSize: "md", defaultVisible: true },
 ];
 

@@ -25,6 +25,7 @@ export function CraftItemModal({
   supplyIds,
   plants,
   label,
+  defaultOpen,
 }: {
   kind: CraftKind;
   item?: Item;
@@ -33,6 +34,7 @@ export function CraftItemModal({
   supplyIds?: string[];
   plants?: { id: string; name: string }[];
   label?: string;
+  defaultOpen?: boolean;
 }) {
   const meta = CRAFT_META[kind];
   return (
@@ -47,6 +49,7 @@ export function CraftItemModal({
       members={members}
       imageUrls={{ image: item ? fileUrl(item.imageFileId) : null }}
       visibility={{ defaultValue: item?.visibility ?? "family", privateLabel: "Only me" }}
+      defaultOpen={defaultOpen}
       extra={
         <>
           {(kind === "spell" || kind === "ritual") && supplies && (

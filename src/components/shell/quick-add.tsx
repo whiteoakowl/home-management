@@ -8,7 +8,9 @@ import {
   CheckSquare,
   ClipboardList,
   Dumbbell,
+  Hammer,
   HandCoins,
+  HeartPulse,
   ListPlus,
   Megaphone,
   NotebookPen,
@@ -16,6 +18,7 @@ import {
   Plus,
   Receipt,
   Refrigerator,
+  Sparkles,
   Sprout,
   Target,
   UserPlus,
@@ -51,12 +54,17 @@ const OPTIONS: Option[] = [
   { label: "Workout", icon: Dumbbell, href: "/fitness?new=1", module: "fitness", phase: 5 },
   { label: "Expense", icon: Receipt, href: "/budget?new=expense", module: "budget", phase: 6 },
   { label: "Income", icon: HandCoins, href: "/budget?new=income", module: "budget", phase: 6 },
+  { label: "Pet", icon: PawPrint, href: "/pets?new=1", module: "pets", phase: 8 },
+  { label: "Medical appointment", icon: HeartPulse, href: "/medical/calendar?new=1", module: "medical", phase: 8 },
+  { label: "Home repair", icon: Hammer, href: "/maintenance/repairs?new=1", module: "maintenance", phase: 8 },
+  { label: "Home project", icon: Hammer, href: "/maintenance/projects?new=1", module: "maintenance", phase: 8 },
+  { label: "Spell or ritual", icon: Sparkles, href: "/witchcraft/library/spell?new=1", module: "witchcraft", phase: 8 },
   { label: "Family member", icon: UserPlus, href: "/family?new=1", module: null, parentOnly: true, phase: 1 },
   { label: "Announcement", icon: Megaphone, href: "/?announce=1", module: null, parentOnly: true, phase: 1 },
 ];
 
 /** Highest build phase that is live. Quick-add entries from later phases show "Soon". */
-const BUILT_PHASE = 7;
+const BUILT_PHASE = 8;
 
 /** Universal "+ Add". `editable` = modules the viewer can edit. */
 export function QuickAdd({

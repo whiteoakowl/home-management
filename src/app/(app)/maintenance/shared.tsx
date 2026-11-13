@@ -38,7 +38,7 @@ export function RoomModal({ room, defaultKind }: { room?: typeof rooms.$inferSel
   );
 }
 
-export function ProjectModal({ p, rooms, members, defaults }: { p?: typeof homeProjects.$inferSelect; rooms: Opt[]; members: MemberOption[]; defaults?: Record<string, FieldValue> }) {
+export function ProjectModal({ p, rooms, members, defaults, defaultOpen }: { p?: typeof homeProjects.$inferSelect; rooms: Opt[]; members: MemberOption[]; defaults?: Record<string, FieldValue>; defaultOpen?: boolean }) {
   return (
     <RecordModal
       title={p ? "Edit project" : "New remodeling project"}
@@ -50,11 +50,12 @@ export function ProjectModal({ p, rooms, members, defaults }: { p?: typeof homeP
       hidden={p ? { id: p.id } : {}}
       members={members}
       imageUrls={{ image: p ? fileUrl(p.coverFileId) : null }}
+      defaultOpen={defaultOpen}
     />
   );
 }
 
-export function RepairModal({ r, rooms, canBudget, today, defaults }: { r?: typeof homeRepairs.$inferSelect; rooms: Opt[]; canBudget: boolean; today: string; defaults?: Record<string, FieldValue> }) {
+export function RepairModal({ r, rooms, canBudget, today, defaults, defaultOpen }: { r?: typeof homeRepairs.$inferSelect; rooms: Opt[]; canBudget: boolean; today: string; defaults?: Record<string, FieldValue>; defaultOpen?: boolean }) {
   const budget: FieldDef[] = canBudget && !r?.costCents ? [{ name: "addToBudget", label: "Record the cost in the budget (Home repairs)", type: "checkbox" }] : [];
   return (
     <RecordModal
@@ -65,6 +66,7 @@ export function RepairModal({ r, rooms, canBudget, today, defaults }: { r?: type
       fields={[...withOptions(REPAIR_FIELDS, { roomId: rooms }), ...budget]}
       defaults={r ? pick(REPAIR_FIELDS, r) : { status: "open", reportedOn: today, ...defaults }}
       hidden={r ? { id: r.id } : {}}
+      defaultOpen={defaultOpen}
     />
   );
 }

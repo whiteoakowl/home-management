@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Calendar" };
 
 const VIEWS = ["month", "week", "day", "agenda"] as const;
 type View = (typeof VIEWS)[number];
-const LAYER_LABEL: Record<Layer, string> = { events: "Events", chores: "Chores", workouts: "Workouts", meals: "Meals", garden: "Garden", farm: "Farm" };
+const LAYER_LABEL: Record<Layer, string> = { events: "Events", chores: "Chores", workouts: "Workouts", meals: "Meals", garden: "Garden", farm: "Farm", pets: "Pets", home: "Home projects", moon: "Moon & sabbats" };
 
 export default async function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   const viewer = await getViewer();
@@ -59,7 +59,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
         ? new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })
         : `${new Date(`${range.from}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${new Date(`${range.to}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   const toggleLayer = (l: Layer) => (layers.includes(l) ? layers.filter((x) => x !== l) : [...layers, l]).join(",");
-  const availableLayers = LAYERS.filter((l) => ({ events: true, chores: viewer.can("chores") || viewer.can("house"), workouts: viewer.can("fitness"), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm") })[l]);
+  const availableLayers = LAYERS.filter((l) => ({ events: true, chores: viewer.can("chores") || viewer.can("house") || viewer.can("maintenance"), workouts: viewer.can("fitness"), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft") })[l]);
   const canEdit = viewer.can("calendar", "edit");
 
   return (

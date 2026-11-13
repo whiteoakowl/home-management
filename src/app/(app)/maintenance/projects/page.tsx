@@ -16,8 +16,9 @@ import { ProjectModal, maintViewer } from "../shared";
 
 export const metadata: Metadata = { title: "Remodeling projects" };
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: PageProps<"/maintenance/projects">) {
   const viewer = await maintViewer();
+  const sp = await searchParams;
   const [members, rooms, rows] = await Promise.all([
     memberOptions(viewer),
     roomOpts(viewer),
@@ -33,14 +34,14 @@ export default async function ProjectsPage() {
       .orderBy(asc(homeProjects.targetDate)),
   ]);
   const canEdit = viewer.can("maintenance", "edit");
-  const add = canEdit ? <ProjectModal rooms={rooms} members={members} /> : undefined;
+  const add = canEdit ? <ProjectModal rooms={rooms} members={members} defaultOpen={sp.new === "1"} /> : undefined;
   return (
     <>
       <PageHeader eyebrow="Home Maintenance" title="Remodeling projects" description="From idea to completed: stages, tasks, materials, budget, expenses and photos." actions={add} />
       <MaintenanceTabs active="projects" />
       {rows.length === 0 ? (
         <Card>
-          <EmptyState icon={<ClipboardList />} title="No projects yet" description="Capture ideas early; move them through planning and budgeting when you're ready." action={add} />
+          <EmptyState icon={<ClipboardList />} title="No projects yet" description="Capture ideas early; move them through planning and budgeting when you're ready." action={canEdit && <ProjectModal rooms={rooms} members={members} />} />
         </Card>
       ) : (
         <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-4">

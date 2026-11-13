@@ -5,7 +5,7 @@ import { DateField, FormRow, MemberSelect, NumberField, SelectField, TextAreaFie
 
 export type ApptDefaults = { id?: string; title?: string; memberId?: string; date?: string; time?: string; duration?: number; location?: string | null; description?: string | null; notes?: string | null; reminderMinutes?: number | null; visibility?: "family" | "selected"; selected?: string[] };
 
-export function AppointmentModal({ members, d = {}, edit }: { members: MemberOption[]; d?: ApptDefaults; edit?: boolean }) {
+export function AppointmentModal({ members, d = {}, edit, defaultOpen }: { members: MemberOption[]; d?: ApptDefaults; edit?: boolean; defaultOpen?: boolean }) {
   return (
     <FormModal
       title={edit ? "Edit appointment" : "Schedule appointment"}
@@ -18,6 +18,7 @@ export function AppointmentModal({ members, d = {}, edit }: { members: MemberOpt
       triggerContent={edit ? <Pencil className="mx-auto size-4" /> : undefined}
       triggerAriaLabel={edit ? "Edit appointment" : undefined}
       triggerClassName={edit ? "size-9 rounded-full text-muted hover:bg-sunken" : undefined}
+      defaultOpen={defaultOpen}
       description="Added to the family calendar. Private to the patient and parents unless you share it."
     >
       {d.id && <input type="hidden" name="id" value={d.id} />}
