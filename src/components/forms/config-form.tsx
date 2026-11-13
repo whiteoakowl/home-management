@@ -116,6 +116,7 @@ export function RecordModal({
   size = "lg",
   defaultOpen,
   triggerVariant,
+  extra,
 }: {
   title: string;
   action: FormAction;
@@ -132,6 +133,8 @@ export function RecordModal({
   size?: "sm" | "md" | "lg";
   defaultOpen?: boolean;
   triggerVariant?: "primary" | "secondary" | "soft" | "ghost";
+  /** Extra inputs rendered after the configured fields. */
+  extra?: ReactNode;
 }) {
   return (
     <FormModal
@@ -151,6 +154,7 @@ export function RecordModal({
         <input key={k} type="hidden" name={k} value={v} />
       ))}
       <ConfigFields fields={fields} defaults={defaults} members={members} imageUrls={imageUrls} />
+      {extra}
       {visibility && members && <VisibilityField members={members} defaultValue={visibility.defaultValue} defaultSelected={visibility.selected} privateLabel={visibility.privateLabel} />}
     </FormModal>
   );

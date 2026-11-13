@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { eq, inArray, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { CRAFT_REFERENCE } from "./craft-data";
 import { referencePlantRows } from "./plant-data";
 import * as s from "./schema";
 
@@ -464,6 +465,73 @@ async function main() {
   const [walk] = await db.insert(s.chores).values({ familyId: fid, kind: "chore", title: "Walk Biscuit", petId: biscuit!.id, defaultAssigneeId: emma!.id, createdByMemberId: sarah!.id, estimatedMinutes: 30 }).returning();
   const [walkRule] = await db.insert(s.recurrenceRules).values({ familyId: fid, freq: "daily", interval: 1, startsOn: day(0) }).returning();
   await db.update(s.chores).set({ recurrenceRuleId: walkRule!.id }).where(eq(s.chores.id, walk!.id));
+
+  // ── Witchcraft ──
+  if (!(await db.select({ id: s.craftItems.id }).from(s.craftItems).where(isNull(s.craftItems.familyId)).limit(1)).length) {
+    const refPlants = await db.select({ id: s.plants.id, name: s.plants.name }).from(s.plants).where(isNull(s.plants.familyId));
+    await db.insert(s.craftItems).values(
+      CRAFT_REFERENCE.map((r) => ({ familyId: null, kind: r.kind, name: r.name, emoji: r.emoji, category: r.category, description: r.description, fields: r.fields, plantId: refPlants.find((p) => p.name === r.plantName)?.id ?? null, source: "Vanderbilt Family reference library" })),
+    );
+  }
+  const refItems = await db.select({ id: s.craftItems.id, name: s.craftItems.name }).from(s.craftItems).where(isNull(s.craftItems.familyId));
+  const ref = (n: string) => refItems.find((r) => r.name === n)!.id;
+  const craftSupplies = await db
+    .insert(s.inventoryItems)
+    .values([
+      { familyId: fid, name: "White chime candles", quantity: "6", unit: "candles", location: "craft", lowStockThreshold: "4", spot: "Altar cabinet" },
+      { familyId: fid, name: "Dried rosemary", quantity: "1", unit: "jar", location: "craft", lowStockThreshold: "1", spot: "Herb shelf" },
+      { familyId: fid, name: "Sea salt", quantity: "2", unit: "lb", location: "craft" },
+      { familyId: fid, name: "Small glass jars", quantity: "0", unit: "jars", location: "craft", lowStockThreshold: "2" },
+    ])
+    .returning();
+  const [jar, release] = await db
+    .insert(s.craftItems)
+    .values([
+      {
+        familyId: fid,
+        kind: "spell",
+        name: "Kitchen protection jar",
+        category: "protection",
+        emoji: "🫙",
+        moonPhase: "waxing",
+        description: "A simple jar to keep the heart of the home safe and peaceful.",
+        fields: { purpose: "Protect the kitchen and everyone who gathers there.", ingredients: "Small glass jar\nSea salt\nDried rosemary\nA bay leaf with your wish written on it", tools: "White candle", instructions: "Layer salt and rosemary in the jar while naming what you're protecting.\nAdd the bay leaf, seal the jar and drip a little candle wax on the lid.\nKeep it on a high kitchen shelf.", results: "Kitchen has felt calmer since Imbolc." },
+        createdByMemberId: sarah!.id,
+        isFavorite: true,
+      },
+      {
+        familyId: fid,
+        kind: "ritual",
+        name: "Full moon release",
+        category: "moon",
+        emoji: "🌕",
+        moonPhase: "full_moon",
+        description: "Write down what you're ready to let go of and release it under the full moon.",
+        fields: { purpose: "Release worry and old habits.", duration: "20 minutes", participants: "Family", materials: "Paper, pens, fire-safe cauldron, white candle", steps: "Light the candle and take three slow breaths together.\nEveryone writes what they're releasing.\nRead silently, then burn the papers safely in the cauldron.\nShare one thing you're grateful for.", closing: "Blow out the candle with thanks." },
+        createdByMemberId: sarah!.id,
+      },
+    ])
+    .returning();
+  await db.insert(s.craftItemSupplies).values([
+    { itemId: jar!.id, inventoryItemId: craftSupplies[1]!.id },
+    { itemId: jar!.id, inventoryItemId: craftSupplies[2]!.id },
+    { itemId: jar!.id, inventoryItemId: craftSupplies[3]!.id },
+    { itemId: release!.id, inventoryItemId: craftSupplies[0]!.id },
+  ]);
+  await db.insert(s.craftCollection).values([
+    { familyId: fid, itemId: ref("Amethyst"), quantity: 2, location: "Emma's nightstand", status: "owned" },
+    { familyId: fid, itemId: ref("Rose Quartz"), quantity: 1, location: "Living room altar", status: "owned" },
+    { familyId: fid, itemId: ref("Labradorite"), quantity: 1, status: "wishlist" },
+    { familyId: fid, itemId: ref("Cauldron"), quantity: 1, location: "Altar cabinet", status: "owned" },
+  ]);
+  const yuleYear = Number(day(0).slice(0, 4));
+  const [yuleEv] = await db.insert(s.calendarEvents).values({ familyId: fid, title: "🕯️ Family Yule night", startsAt: new Date(`${yuleYear}-12-21T05:00:00Z`), allDay: true, source: "celebration", createdByMemberId: sarah!.id }).returning();
+  await db.insert(s.celebrations).values({ calendarEventId: yuleEv!.id, familyId: fid, name: "Family Yule night", sabbat: "yule", date: `${yuleYear}-12-21`, guestList: "Grandma & Grandpa\nThe Ortiz family", decorations: "Dried orange garland\nEvergreen boughs\nGold candles", activities: "Decorate the Yule log\nWatch the sunrise", supplies: "Gold taper candles\nOranges\nCloves\nRed ribbon", budgetCents: 12000, createdByMemberId: sarah!.id });
+  await db.insert(s.sabbatSettings).values({ familyId: fid, key: "imbolc", monthDay: "02-02", notes: "We celebrate Imbolc on Feb 2 with Grandma's oat bread." });
+  await db.insert(s.journalEntries).values([
+    { familyId: fid, authorMemberId: sarah!.id, date: day(-3), title: "Waning moon reflection", body: "Cleared the hall closet and let go of the old worries about work. Feeling lighter.", book: "grimoire", category: "moon_log", moonPhase: "waning_crescent", visibility: "private" },
+    { familyId: fid, authorMemberId: sarah!.id, date: day(-20), title: "Protection jar results", body: "Made the kitchen jar on the waxing moon with Emma. Will check in at Yule.", book: "grimoire", category: "spell_log", linkedId: jar!.id, visibility: "family" },
+  ]);
 
   // ── Announcements & activity ──
   await db.insert(s.announcements).values([

@@ -284,7 +284,7 @@ export async function getJournal(s: Scope) {
   const [latest] = await db
     .select({ id: journalEntries.id, date: journalEntries.date, title: journalEntries.title })
     .from(journalEntries)
-    .where(and(eq(journalEntries.familyId, fid(s)), eq(journalEntries.authorMemberId, s.subjectId ?? s.viewer.member.id)))
+    .where(and(eq(journalEntries.familyId, fid(s)), eq(journalEntries.authorMemberId, s.subjectId ?? s.viewer.member.id), ne(journalEntries.book, "grimoire")))
     .orderBy(desc(journalEntries.date))
     .limit(1);
   return latest ?? null;

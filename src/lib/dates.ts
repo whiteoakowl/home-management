@@ -65,7 +65,7 @@ export function daysBetween(fromIso: string, toIso: string) {
 }
 
 /** Offset (ms) of `tz` from UTC at instant `at`. */
-function tzOffset(at: Date, tz: string) {
+export function tzOffset(at: Date, tz: string) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone: tz,

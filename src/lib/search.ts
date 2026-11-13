@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, or, sql, ne } from "drizzle-orm";
 import { db } from "@/db";
 import {
   animals,
@@ -182,6 +182,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         .where(
           and(
             eq(journalEntries.familyId, fid),
+            ne(journalEntries.book, "grimoire"),
             visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
             or(ilike(journalEntries.title, like), ilike(journalEntries.body, like), sql`${q.toLowerCase()} = any(${journalEntries.tags})`),
           ),

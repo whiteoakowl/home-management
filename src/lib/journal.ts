@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { familyMembers, journalEntries, journalEntryFiles, journalEntryMembers } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
@@ -17,9 +17,16 @@ export const MOODS = [
 ];
 export const moodOf = (k: string | null) => MOODS.find((m) => m.key === k);
 
-/** Journal visibility: private entries are author-only (parents too). */
+/**
+ * Journal visibility: private entries are author-only (parents too). The
+ * family journal holds 'journal' and 'pet' entries; grimoire entries live in
+ * the Witchcraft module.
+ */
 const visible = (viewer: Viewer) =>
-  visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false });
+  and(
+    ne(journalEntries.book, "grimoire"),
+    visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
+  )!;
 
 export async function listEntries(viewer: Viewer, opts: { from?: string; to?: string; q?: string; tag?: string; limit?: number } = {}) {
   const rows = await db
