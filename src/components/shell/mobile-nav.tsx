@@ -8,6 +8,7 @@ import type { Module } from "@/db/schema/_shared";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
+import { InstallAppButton } from "@/components/pwa/install-app";
 import type { NavSection } from "./nav";
 import { QuickAdd } from "./quick-add";
 import { isActive } from "./sidebar";
@@ -65,6 +66,10 @@ export function MobileNav({
       </nav>
       <Modal open={more} onClose={() => setMore(false)} title="Everything" size="lg">
         <div className="flex flex-col gap-5">
+          <InstallAppButton
+            label="Install the Vanderbilt Family app"
+            className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-[15px] font-semibold text-white hover:bg-primary-700"
+          />
           {sections.map((s) => (
             <div key={s.group}>
               <p className="mb-2 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">{s.group}</p>

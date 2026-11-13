@@ -66,6 +66,19 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Reports | Cleaning, garden, farm, kitchen, budget, fitness and goal history |
 | Everywhere | Global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
 
+## Install as an app
+
+Vanderbilt Family is an installable web app (PWA):
+
+* **Android (Chrome) and desktop Chrome/Edge:** tap **Install app** (Home banner, phone "More" menu, or the
+  sidebar on desktop) and confirm. It opens full-screen with its own icon.
+* **iPhone/iPad (Safari):** tap **How to** on the Home banner (or **Install** in "More") for the
+  Share → **Add to Home Screen** steps. Only Safari can add apps to the iPhone Home Screen.
+
+The service worker (`public/sw.js`) caches only static app files and shows an offline page with no
+connection. Family data, pages and uploaded files are never cached on the device. Icons are generated
+from the brand mark with `node scripts/generate-icons.mjs`.
+
 ## Deploying (Netlify)
 
 The app needs a PostgreSQL database. Without one, sign-in shows "The app can't reach its database".

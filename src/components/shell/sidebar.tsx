@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Brand, BrandMark } from "@/components/brand";
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { InstallAppButton } from "@/components/pwa/install-app";
 import type { NavSection } from "./nav";
 
 export function isActive(pathname: string, href: string) {
@@ -71,6 +72,12 @@ export function Sidebar({ sections, familyName }: { sections: NavSection[]; fami
           </div>
         ))}
       </nav>
+      <div className="border-t border-line p-3">
+        <InstallAppButton
+          label="Install app"
+          className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-ink-soft hover:bg-primary-50 hover:text-primary-700 max-lg:justify-center max-lg:[&>span]:sr-only"
+        />
+      </div>
       </div>
     </aside>
   );

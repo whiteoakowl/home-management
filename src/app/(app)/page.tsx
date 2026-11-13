@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { dashboardLayouts } from "@/db/schema";
 import { DashboardCustomizer } from "@/components/dashboard/customizer";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
+import { InstallBanner } from "@/components/pwa/install-app";
 import { getViewer } from "@/lib/dal";
 import { makeScope } from "@/lib/dashboard-data";
 import { resolveLayout, WIDGETS, widgetDef } from "@/lib/widgets";
@@ -28,6 +29,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           start using it; use <strong>+ Add</strong> anytime.
         </div>
       )}
+      <InstallBanner />
       <div className="flex items-center justify-between gap-3">
         <h1 className="sr-only">Dashboard</h1>
         <p className="text-sm font-medium text-muted">The {viewer.family.name} Family</p>
