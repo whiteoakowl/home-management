@@ -16,6 +16,7 @@ export type OccurrenceView = {
   instructions: string | null;
   priority: "low" | "normal" | "high";
   estimatedMinutes: number | null;
+  points?: number | null;
   roomName: string | null;
   dueDate: string;
   status: "pending" | "done" | "skipped" | "missed";
@@ -106,6 +107,7 @@ function Row({
             </Link>
             <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
               {o.roomName && <span>{o.roomName}</span>}
+              {o.points ? <span className="font-medium text-olive-700">★ {o.points}</span> : null}
               {o.estimatedMinutes ? (
                 <span className="inline-flex items-center gap-1">
                   <Clock className="size-3.5" aria-hidden />

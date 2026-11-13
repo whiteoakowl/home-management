@@ -92,6 +92,8 @@ export const listItems = pgTable(
     unit: text("unit"),
     shoppingCategory: shoppingCategory("shopping_category"),
     store: text("store"),
+    /** Price per item/line as entered while shopping. */
+    priceCents: integer("price_cents"),
     source: listItemSource("source").notNull().default("manual"),
     /** recipe id / meal_plan_entry id / inventory_item id depending on source */
     sourceId: uuid("source_id"),

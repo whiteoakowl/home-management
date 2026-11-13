@@ -17,7 +17,7 @@ import { Badge, PageHeader } from "@/components/ui/display";
 import { listChoreTemplates } from "@/lib/chores";
 import { todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
-import { photosFor, projectOpts, roomOpts, visibleDocs } from "@/lib/maintenance";
+import { photosFor, projectOpts, roomOpts, vendorOpts, visibleDocs } from "@/lib/maintenance";
 import { PROJECT_STATUSES, PROJECT_STATUS_TONE, ROOM_KINDS } from "@/lib/maintenance-config";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
 import { DocModal, DocRow, ProjectModal, RepairModal, RoomModal, maintViewer } from "../../shared";
@@ -32,7 +32,8 @@ export default async function RoomPage({ params }: PageProps<"/maintenance/rooms
   if (!room) notFound();
   const today = todayIn(viewer.family.timezone);
   const canEdit = viewer.can("maintenance", "edit");
-  const [members, rOpts, pOpts, choreRooms, cats, templates, repairs, projects, docs, photos, todo] = await Promise.all([
+  const [vendors, members, rOpts, pOpts, choreRooms, cats, templates, repairs, projects, docs, photos, todo] = await Promise.all([
+    vendorOpts(viewer),
     memberOptions(viewer),
     roomOpts(viewer),
     projectOpts(viewer),
@@ -84,7 +85,7 @@ export default async function RoomPage({ params }: PageProps<"/maintenance/rooms
 
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
-          <CardHeader title="Repairs" icon={<Hammer className="size-4" />} action={canEdit && <RepairModal rooms={rOpts} canBudget={viewer.can("budget", "edit")} today={today} defaults={{ roomId: room.id }} />} />
+          <CardHeader title="Repairs" icon={<Hammer className="size-4" />} action={canEdit && <RepairModal rooms={rOpts} vendors={vendors} canBudget={viewer.can("budget", "edit")} today={today} defaults={{ roomId: room.id }} />} />
           {repairs.length ? (
             <ul className="divide-y divide-line">
               {repairs.map((r) => (

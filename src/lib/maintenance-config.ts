@@ -47,6 +47,7 @@ export const REPAIR_FIELDS: FieldDef[] = [
   { name: "reportedOn", label: "Reported", type: "date", required: true },
   { name: "scheduledOn", label: "Scheduled", type: "date" },
   { name: "completedOn", label: "Completed", type: "date" },
+  { name: "vendorId", label: "Service provider", type: "select", hint: "From your service providers list." },
   { name: "contractor", label: "Contractor / who fixed it", type: "text" },
   { name: "costCents", label: "Cost ($)", type: "money" },
   { name: "problem", label: "Problem", type: "textarea", rows: 2 },
@@ -95,3 +96,37 @@ export function frequencyOf(rule: { freq: string; interval: number } | null): { 
   return { key: "custom", label: "One-time & custom" };
 }
 export const FREQUENCY_ORDER = ["weekly", "monthly", "quarterly", "biannual", "annual", "custom"];
+
+export const ITEM_CATEGORIES = opts("appliance", "electronics", "furniture", "jewelry", "art", "tools", "outdoor", ["instrument", "Musical instrument"], "sports", "collectible", "clothing", "other");
+
+export const ITEM_FIELDS: FieldDef[] = [
+  { name: "name", label: "Item", type: "text", required: true, placeholder: "Living room sofa" },
+  { name: "category", label: "Category", type: "select", options: ITEM_CATEGORIES, required: true },
+  { name: "roomId", label: "Room", type: "select" },
+  { name: "quantity", label: "Quantity", type: "number" },
+  { name: "brand", label: "Brand", type: "text" },
+  { name: "model", label: "Model", type: "text" },
+  { name: "serialNumber", label: "Serial number", type: "text" },
+  { name: "purchasedOn", label: "Purchased", type: "date" },
+  { name: "purchasedFrom", label: "Purchased from", type: "text" },
+  { name: "purchasePriceCents", label: "Purchase price ($)", type: "money" },
+  { name: "currentValueCents", label: "Current value ($)", type: "money", hint: "Used for the insurance report total." },
+  { name: "warrantyExpiresOn", label: "Warranty expires", type: "date" },
+  { name: "image", label: "Photo", type: "image" },
+  { name: "receipt", label: "Receipt (PDF or image)", type: "file" },
+  { name: "notes", label: "Notes", type: "textarea", rows: 2 },
+];
+
+export const VENDOR_TRADES = opts("plumber", "electrician", ["hvac", "HVAC"], "roofer", "handyman", ["general_contractor", "General contractor"], "landscaper", "cleaner", ["pest_control", "Pest control"], ["appliance_repair", "Appliance repair"], "painter", "locksmith", "veterinarian", "other");
+
+export const VENDOR_FIELDS: FieldDef[] = [
+  { name: "name", label: "Business or person", type: "text", required: true, placeholder: "Blue Ridge Plumbing" },
+  { name: "trade", label: "Trade", type: "select", options: VENDOR_TRADES },
+  { name: "contactName", label: "Contact", type: "text" },
+  { name: "phone", label: "Phone", type: "text" },
+  { name: "email", label: "Email", type: "text" },
+  { name: "website", label: "Website", type: "url" },
+  { name: "address", label: "Address", type: "text", full: true },
+  { name: "rating", label: "Our rating (1–5)", type: "select", options: opts(["5", "★★★★★"], ["4", "★★★★"], ["3", "★★★"], ["2", "★★"], ["1", "★"]) },
+  { name: "notes", label: "Notes", type: "textarea", rows: 2, placeholder: "Licensed & insured, quick to respond, ask for Dana" },
+];

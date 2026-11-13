@@ -8,6 +8,7 @@ import { RecipeFormModal } from "@/components/recipes/recipe-form";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
+import { ImportRecipeModal } from "@/components/recipes/import-modal";
 import { SegmentLinks } from "@/components/ui/tabs";
 import { getViewer } from "@/lib/dal";
 import { categoryOptions } from "@/lib/queries";
@@ -40,6 +41,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
         description="Your family's recipe book."
         actions={
           <>
+            {viewer.can("recipes", "edit") && <ImportRecipeModal defaultOpen={sp.import === "1"} />}
             <ButtonLink href="/recipes/collections" variant="secondary" icon={<Library className="size-4" />}>
               Collections
             </ButtonLink>

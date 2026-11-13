@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { files, homeDocuments, homePhotos, homeProjects, homeRepairs, projectMaterials, projectStages, rooms, transactions } from "@/db/schema";
+import { files, vendors, homeDocuments, homePhotos, homeProjects, homeRepairs, projectMaterials, projectStages, rooms, transactions } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
 
 export const roomOpts = async (viewer: Viewer) =>
@@ -9,6 +9,9 @@ export const roomOpts = async (viewer: Viewer) =>
     value: r.id,
     label: r.kind === "system" ? `${r.name} (system)` : r.name,
   }));
+
+export const vendorOpts = async (viewer: Viewer) =>
+  (await db.select({ id: vendors.id, name: vendors.name, trade: vendors.trade }).from(vendors).where(eq(vendors.familyId, viewer.family.id)).orderBy(asc(vendors.name))).map((v) => ({ value: v.id, label: v.trade ? `${v.name} (${v.trade.replace(/_/g, " ")})` : v.name }));
 
 export const projectOpts = async (viewer: Viewer) =>
   (await db.select({ id: homeProjects.id, title: homeProjects.title }).from(homeProjects).where(eq(homeProjects.familyId, viewer.family.id)).orderBy(asc(homeProjects.title))).map((p) => ({ value: p.id, label: p.title }));

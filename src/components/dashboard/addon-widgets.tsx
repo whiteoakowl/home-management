@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
-import { HeartPulse, Moon, PawPrint, Wrench } from "lucide-react";
+import { HeartPulse, Moon, PawPrint, Trophy, Wrench } from "lucide-react";
 import { MoonDisc } from "@/components/craft/moon-card";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Badge, EmptyState } from "@/components/ui/display";
+import { Badge, EmptyState, ProgressBar } from "@/components/ui/display";
 import { db } from "@/db";
 import { homeRepairs, petPreventatives, pets } from "@/db/schema";
 import { listOccurrences } from "@/lib/chores";
@@ -11,6 +11,7 @@ import { familyUpcomingSabbats, moonFor } from "@/lib/craft";
 import type { Scope } from "@/lib/dashboard-data";
 import { addDays, daysBetween, formatShortDate, todayIn, zonedToUtc } from "@/lib/dates";
 import { listMedical, medicalAppointments } from "@/lib/medical";
+import { pointBalances, rewardsFor } from "@/lib/rewards";
 
 const ic = "size-4";
 
@@ -146,3 +147,28 @@ export async function HealthWidget({ scope }: { scope: Scope }) {
   );
 }
 
+
+export async function PointsWidget({ scope }: { scope: Scope }) {
+  const who = scope.subjectId ?? scope.viewer.member.id;
+  const [balances, catalog] = await Promise.all([pointBalances(scope.viewer.family.id), rewardsFor(scope.viewer)]);
+  const bal = balances.get(who)?.balance ?? 0;
+  const next = catalog.filter((r) => r.active && (!r.forMemberIds.length || r.forMemberIds.includes(who)) && r.cost > bal).sort((a, b) => a.cost - b.cost)[0];
+  return (
+    <Card>
+      <CardHeader title="Points" icon={<Trophy className={ic} />} href="/house/rewards" />
+      <p className="font-display text-4xl font-semibold">
+        {bal} <span className="text-base font-normal text-muted">points</span>
+      </p>
+      {next ? (
+        <div className="mt-2">
+          <p className="text-sm text-ink-soft">
+            {next.emoji ?? "🎁"} {next.title}: {next.cost - bal} to go
+          </p>
+          <ProgressBar value={bal} max={next.cost} tone="olive" />
+        </div>
+      ) : (
+        <p className="mt-1 text-sm text-muted">Finish chores to earn points for rewards.</p>
+      )}
+    </Card>
+  );
+}

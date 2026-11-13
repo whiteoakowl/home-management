@@ -13,3 +13,4 @@ export * from "./medical";
 export * from "./pets";
 export * from "./craft";
 export * from "./maintenance";
+export * from "./extras";

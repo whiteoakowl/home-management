@@ -117,12 +117,12 @@ export function CategoryModal({ category, triggerContent, triggerAriaLabel }: { 
   );
 }
 
-export function ShoppingExpenseModal({ listId, categories, today, defaultCategory }: { listId: string; categories: Opt[]; today: string; defaultCategory?: string }) {
+export function ShoppingExpenseModal({ listId, categories, today, defaultCategory, defaultAmount }: { listId: string; categories: Opt[]; today: string; defaultCategory?: string; defaultAmount?: number }) {
   return (
     <FormModal title="Log this trip as an expense" triggerLabel="Log expense" triggerVariant="ghost" triggerSize="sm" action={logShoppingExpense} size="sm" submitLabel="Log expense">
       <input type="hidden" name="listId" value={listId} />
       <FormRow>
-        <NumberField name="amount" label="Receipt total ($)" required min={0} step="0.01" />
+        <NumberField name="amount" label="Receipt total ($)" required min={0} step="0.01" defaultValue={defaultAmount ? (defaultAmount / 100).toFixed(2) : ""} hint={defaultAmount ? "Pre-filled from checked item prices." : undefined} />
         <DateField name="date" label="Date" defaultValue={today} />
       </FormRow>
       <SelectField name="categoryId" label="Category" defaultValue={defaultCategory ?? ""} placeholder="Uncategorized" options={categories.map((c) => ({ value: c.id, label: c.name }))} />

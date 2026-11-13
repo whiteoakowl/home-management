@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
-import { ChevronLeft, ChevronRight, ShoppingBasket, UtensilsCrossed } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, ShoppingBasket, UtensilsCrossed } from "lucide-react";
 import { db } from "@/db";
 import { mealPlanEntries, recipes } from "@/db/schema";
-import { shopForWeek } from "@/app/actions/meals";
+import { copyMealWeek, shopForWeek } from "@/app/actions/meals";
 import { ActionButton } from "@/components/forms/inline";
 import { MealPlanner, type PlannedMeal } from "@/components/meals/meal-planner";
 import { ButtonLink } from "@/components/ui/button";
@@ -76,6 +76,11 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
           <Link href="/meals" className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-medium hover:bg-sunken">
             This week
           </Link>
+          {canEdit && (
+            <ActionButton action={copyMealWeek} fields={{ to: start, weeksBack: 1 }} confirm="Copy last week's meals into this week? Slots that already have a meal are kept." className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm font-medium hover:bg-sunken">
+              <Copy className="size-4" /> Copy last week
+            </ActionButton>
+          )}
           <h2 className="ml-2 text-xl font-semibold">
             {fmt(start)} – {fmt(end)}
           </h2>

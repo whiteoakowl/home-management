@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Check, Clock, Heart, Pencil, ShoppingBasket, Trash2, Users, X } from "lucide-react";
+import { ArrowLeft, Check, ChefHat, Clock, Heart, Pencil, ShoppingBasket, Trash2, Users, X } from "lucide-react";
 import { addRecipeToShopping, deleteRecipe, toggleFavorite } from "@/app/actions/recipes";
 import { ActionButton } from "@/components/forms/inline";
 import { PlanRecipeButton, PrintButton, StarRating } from "@/components/recipes/recipe-actions";
 import { RecipeFormModal } from "@/components/recipes/recipe-form";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Avatar, Badge } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
@@ -49,6 +50,11 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         <ArrowLeft className="size-4" /> Recipes
       </Link>
 
+      {sp.imported === "1" && (
+        <p className="rounded-xl bg-olive-50 px-4 py-3 text-sm text-olive-700 print:hidden">
+          Imported{r.source ? ` from ${(() => { try { return new URL(r.source).hostname; } catch { return "your text"; } })()}` : ""}. Check the ingredients and steps, then edit anything that needs it.
+        </p>
+      )}
       <div className="grid gap-6 md:grid-cols-[1.1fr_1fr] md:items-center">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-1.5">
@@ -90,6 +96,9 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
                 <Heart className={cn("size-4", r.isFavorite && "fill-current")} /> {r.isFavorite ? "Favorite" : "Mark favorite"}
               </ActionButton>
             )}
+            <ButtonLink href={`/recipes/${r.id}/cook${scale !== 1 ? `?servings=${servings}` : ""}`} variant="primary" icon={<ChefHat className="size-4" />}>
+              Cook mode
+            </ButtonLink>
             <PrintButton />
             {canEdit && (
               <>

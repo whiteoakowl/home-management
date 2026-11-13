@@ -79,6 +79,7 @@ async function itemValues(viewer: Viewer, fd: FormData, kind: Kind) {
     unit: kind === "shopping" ? f.str(fd, "unit") : null,
     shoppingCategory: kind === "shopping" ? ((SHOP_CATS as readonly string[]).includes(cat ?? "") ? (cat as (typeof SHOP_CATS)[number]) : guessShoppingCategory(f.str(fd, "text") ?? "")) : null,
     store: kind === "shopping" ? f.str(fd, "store") : null,
+    priceCents: kind === "shopping" ? f.cents(fd, "price") : null,
     notes: f.str(fd, "notes"),
   };
 }
@@ -102,9 +103,20 @@ export async function addItem(_: ActionState, fd: FormData): Promise<ActionState
       const rule = ruleFromForm(fd, base.dueDate ?? todayIn(viewer.family.timezone));
       ruleId = await upsertRule(db, viewer.family.id, rule);
     }
+    // Remember prices: new shopping items reuse the last price paid for the same thing.
+    const lastPrice = new Map<string, number>();
+    if (l.kind === "shopping" && base.priceCents === null) {
+      const prev = await db.execute<{ t: string; price: number }>(sql`
+        select distinct on (lower(i.text)) lower(i.text) as t, i.price_cents as price
+        from list_items i join lists ls on ls.id = i.list_id
+        where ls.family_id = ${viewer.family.id} and i.price_cents is not null and lower(i.text) in (${sql.join(lines.map((x) => sql`${x.toLowerCase()}`), sql`, `)})
+        order by lower(i.text), i.updated_at desc`);
+      for (const r of prev.rows) lastPrice.set(r.t, r.price);
+    }
     await db.insert(listItems).values(
       lines.map((text, i) => ({
         ...base,
+        priceCents: base.priceCents ?? lastPrice.get(text.toLowerCase()) ?? null,
         text: text.slice(0, 300),
         shoppingCategory: l.kind === "shopping" && !f.str(fd, "shoppingCategory") ? guessShoppingCategory(text) : base.shoppingCategory,
         listId: l.id,
@@ -211,4 +223,23 @@ function guessShoppingCategory(text: string): (typeof SHOP_CATS)[number] {
   if (has(["feed", "hay", "straw", "bedding", "layer pellet", "scratch"])) return "farm";
   if (has(["flour", "sugar", "rice", "pasta", "bean", "oil", "salt", "cereal", "bread", "sauce", "spice", "oat", "can", "coffee", "tea"])) return "pantry";
   return "other";
+}
+
+/** One-tap re-add of a frequently bought item. */
+export async function quickAddItem(fd: FormData) {
+  const viewer = await getViewer();
+  const l = await loadList(viewer, String(fd.get("listId")));
+  if (l.kind !== "shopping" || (!viewer.can(listModule(l.kind), "edit") && l.createdByMemberId !== viewer.member.id)) throw new AuthorizationError("You can't add to this list.");
+  const text = String(fd.get("text") ?? "").trim().slice(0, 300);
+  if (!text) return;
+  const [prev] = await db
+    .select({ unit: listItems.unit, cat: listItems.shoppingCategory, price: listItems.priceCents, store: listItems.store })
+    .from(listItems)
+    .innerJoin(lists, eq(lists.id, listItems.listId))
+    .where(and(eq(lists.familyId, viewer.family.id), sql`lower(${listItems.text}) = ${text.toLowerCase()}`))
+    .orderBy(desc(listItems.updatedAt))
+    .limit(1);
+  const [{ max } = { max: 0 }] = await db.select({ max: sql<number>`coalesce(max(${listItems.position}),0)::int` }).from(listItems).where(eq(listItems.listId, l.id));
+  await db.insert(listItems).values({ listId: l.id, text, unit: prev?.unit ?? null, shoppingCategory: prev?.cat ?? guessShoppingCategory(text), priceCents: prev?.price ?? null, store: prev?.store ?? null, position: max + 1 });
+  revalidateLists(l.kind);
 }

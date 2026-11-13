@@ -6,8 +6,10 @@ import {
   celebrations,
   craftItems,
   foodRestrictions,
+  homeItems,
   homeProjects,
   homeRepairs,
+  vendors,
   medicalConditions,
   medicalDocuments,
   medications,
@@ -360,10 +362,14 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         db.select({ id: rooms.id, title: rooms.name, kind: rooms.kind }).from(rooms).where(and(eq(rooms.familyId, fid), or(ilike(rooms.name, like), ilike(rooms.description, like)))).limit(3),
         db.select({ id: homeRepairs.id, title: homeRepairs.title }).from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), or(ilike(homeRepairs.title, like), ilike(homeRepairs.problem, like), ilike(homeRepairs.contractor, like)))).limit(4),
         db.select({ id: homeProjects.id, title: homeProjects.title }).from(homeProjects).where(and(eq(homeProjects.familyId, fid), or(ilike(homeProjects.title, like), ilike(homeProjects.description, like)))).limit(4),
-      ]).then(([r, rep, pr]) => [
+        db.select({ id: homeItems.id, title: homeItems.name, model: homeItems.model }).from(homeItems).where(and(eq(homeItems.familyId, fid), or(ilike(homeItems.name, like), ilike(homeItems.brand, like), ilike(homeItems.model, like), ilike(homeItems.serialNumber, like)))).limit(4),
+        db.select({ id: vendors.id, title: vendors.name, phone: vendors.phone }).from(vendors).where(and(eq(vendors.familyId, fid), or(ilike(vendors.name, like), ilike(vendors.trade, like), ilike(vendors.contactName, like)))).limit(4),
+      ]).then(([r, rep, pr, items, vs]) => [
         ...r.map((x) => ({ id: x.id, title: x.title, subtitle: x.kind === "system" ? "Home system" : "Room", href: `/maintenance/rooms/${x.id}` })),
         ...rep.map((x) => ({ id: x.id, title: x.title, subtitle: "Repair", href: `/maintenance/repairs/${x.id}` })),
         ...pr.map((x) => ({ id: x.id, title: x.title, subtitle: "Project", href: `/maintenance/projects/${x.id}` })),
+        ...items.map((x) => ({ id: x.id, title: x.title, subtitle: `Home inventory${x.model ? ` · ${x.model}` : ""}`, href: "/maintenance/inventory" })),
+        ...vs.map((x) => ({ id: x.id, title: x.title, subtitle: `Service provider${x.phone ? ` · ${x.phone}` : ""}`, href: "/maintenance/vendors" })),
       ]),
     );
   }

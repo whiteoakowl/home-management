@@ -6,7 +6,7 @@
  */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { CRAFT_REFERENCE } from "./craft-data";
@@ -566,6 +566,51 @@ async function main() {
   await db.insert(s.journalEntries).values([
     { familyId: fid, authorMemberId: sarah!.id, date: day(-3), title: "Waning moon reflection", body: "Cleared the hall closet and let go of the old worries about work. Feeling lighter.", book: "grimoire", category: "moon_log", moonPhase: "waning_crescent", visibility: "private" },
     { familyId: fid, authorMemberId: sarah!.id, date: day(-20), title: "Protection jar results", body: "Made the kitchen jar on the waxing moon with Emma. Will check in at Yule.", book: "grimoire", category: "spell_log", linkedId: jar!.id, visibility: "family" },
+  ]);
+
+  // ── Points, rewards, rotation ──
+  const setPoints = (title: string, points: number, extra: Partial<typeof s.chores.$inferInsert> = {}) =>
+    db.update(s.chores).set({ points, ...extra }).where(and(eq(s.chores.familyId, fid), eq(s.chores.title, title)));
+  await setPoints("Kitchen reset", 10);
+  await setPoints("Feed & water the chickens", 5);
+  await setPoints("Take out trash & recycling", 5);
+  await setPoints("Fold laundry", 8, { rotationMemberIds: [emma!.id, jack!.id] });
+  await setPoints("Walk Biscuit", 5);
+  await setPoints("Bathroom clean", 15);
+  await setPoints("Vacuum living room", 5);
+  await db.execute(sql`update chore_occurrences o set points_awarded = c.points from chores c where c.id = o.chore_id and o.status = 'done' and o.family_id = ${fid} and c.points is not null`);
+  await db.insert(s.rewards).values([
+    { familyId: fid, title: "Pick Friday's movie", emoji: "🎬", cost: 40, createdByMemberId: sarah!.id },
+    { familyId: fid, title: "30 minutes extra screen time", emoji: "📱", cost: 30, createdByMemberId: sarah!.id },
+    { familyId: fid, title: "$5 allowance", emoji: "💵", cost: 100, cashCents: 500, createdByMemberId: sarah!.id },
+    { familyId: fid, title: "Stay up 30 minutes later", emoji: "🌙", cost: 60, forMemberIds: [emma!.id], createdByMemberId: sarah!.id },
+  ]);
+  const [screen] = await db.select().from(s.rewards).where(and(eq(s.rewards.familyId, fid), eq(s.rewards.cost, 30)));
+  await db.insert(s.rewardRedemptions).values({ familyId: fid, rewardId: screen!.id, title: screen!.title, memberId: emma!.id, points: 30 });
+  await db.insert(s.pointAdjustments).values({ familyId: fid, memberId: jack!.id, points: 10, reason: "Helped unload the groceries", createdByMemberId: michael!.id });
+
+  // ── Shopping prices, vendors, home inventory ──
+  for (const [text, price] of [["Chicken", 899], ["Mozzarella", 449], ["Tomatoes", 329], ["Coffee", 1199]] as const) {
+    await db.update(s.listItems).set({ priceCents: price }).where(and(eq(s.listItems.listId, groceries!.id), eq(s.listItems.text, text)));
+  }
+  const [plumber, garageCo] = await db
+    .insert(s.vendors)
+    .values([
+      { familyId: fid, name: "Blue Ridge Plumbing", trade: "plumber", contactName: "Dana", phone: "828-555-0134", email: "office@blueridgeplumbing.example", rating: 5, isFavorite: true, notes: "Licensed & insured. Fast emergency service." },
+      { familyId: fid, name: "Overhead Door Co.", trade: "handyman", phone: "828-555-0161", rating: 4 },
+      { familyId: fid, name: "Mountain Air HVAC", trade: "hvac", phone: "828-555-0177", notes: "Annual heat pump service each October." },
+      { familyId: fid, name: "Sparkle Cleaners", trade: "cleaner", phone: "828-555-0188", rating: 4 },
+    ])
+    .returning();
+  await db.update(s.homeRepairs).set({ vendorId: plumber!.id }).where(and(eq(s.homeRepairs.familyId, fid), eq(s.homeRepairs.title, "Leaking kitchen faucet")));
+  await db.update(s.homeRepairs).set({ vendorId: garageCo!.id }).where(and(eq(s.homeRepairs.familyId, fid), eq(s.homeRepairs.title, "Garage door sticks")));
+  await db.insert(s.homeItems).values([
+    { familyId: fid, name: "Refrigerator", category: "appliance", roomId: room("Kitchen"), brand: "LG", model: "LRMVS3006S", serialNumber: "907KRCH1J442", purchasedOn: "2022-03-14", purchasedFrom: "Lowe's", purchasePriceCents: 279900, currentValueCents: 190000, warrantyExpiresOn: day(120) },
+    { familyId: fid, name: "Dishwasher", category: "appliance", roomId: room("Kitchen"), brand: "Bosch", model: "SHX78CM5N", serialNumber: "FD9912 04563", purchasedOn: "2021-06-02", purchasePriceCents: 109900, currentValueCents: 70000 },
+    { familyId: fid, name: "Washer", category: "appliance", roomId: room("Laundry"), brand: "Maytag", model: "MHW5630HW", purchasedOn: "2020-09-20", purchasePriceCents: 89900, currentValueCents: 45000 },
+    { familyId: fid, name: "Living room TV", category: "electronics", roomId: room("Living room"), brand: "Sony", model: "XR-65X90L", serialNumber: "4401872", purchasedOn: "2024-11-29", purchasePriceCents: 129900, currentValueCents: 110000 },
+    { familyId: fid, name: "Sectional sofa", category: "furniture", roomId: room("Living room"), purchasedFrom: "Local furniture store", purchasePriceCents: 240000, currentValueCents: 150000 },
+    { familyId: fid, name: "Upright piano", category: "instrument", roomId: room("Living room"), brand: "Yamaha", model: "U1", purchasePriceCents: 650000, currentValueCents: 700000, notes: "Tuned every spring." },
   ]);
 
   // ── Announcements & activity ──

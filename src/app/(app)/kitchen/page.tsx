@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import { AlarmClock, Refrigerator, ScanBarcode, ShoppingBasket } from "lucide-react";
+import { AlarmClock, Refrigerator, ChefHat, ScanBarcode, ShoppingBasket } from "lucide-react";
 import { db } from "@/db";
 import { categories, inventoryItems } from "@/db/schema";
 import { restockLowItems } from "@/app/actions/kitchen";
@@ -107,6 +107,11 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
         actions={
           canEdit ? (
             <>
+              {viewer.can("recipes") && (
+                <ButtonLink href="/kitchen/cook" variant="secondary" icon={<ChefHat className="size-4" />}>
+                  What can I cook?
+                </ButtonLink>
+              )}
               <ButtonLink href="/kitchen/scan" variant="secondary" icon={<ScanBarcode className="size-4" />}>
                 Scan
               </ButtonLink>

@@ -46,6 +46,7 @@ export async function loadListItems(listId: string) {
     unit: item.unit,
     shoppingCategory: item.shoppingCategory,
     store: item.store,
+    priceCents: item.priceCents,
     notes: item.notes,
     source: item.source,
     recurring: rule ? describeRule(rule as unknown as Rule) : null,
@@ -53,6 +54,22 @@ export async function loadListItems(listId: string) {
       ? { freq: rule.freq, interval: rule.interval, byWeekday: rule.byWeekday, byMonthDay: rule.byMonthDay, byMonth: rule.byMonth, until: rule.until }
       : null,
   }));
+}
+
+/**
+ * Frequently bought items (from every shopping list) that aren't open on this
+ * list, for one-tap re-adding. Most recent price is remembered.
+ */
+export async function frequentItems(familyId: string, listId: string, limit = 14) {
+  const rows = await db.execute<{ text: string; n: number }>(sql`
+    select min(i.text) as text, count(*)::int as n
+    from list_items i join lists l on l.id = i.list_id
+    where l.family_id = ${familyId} and l.kind = 'shopping'
+      and lower(i.text) not in (select lower(text) from list_items where list_id = ${listId} and not checked)
+    group by lower(i.text)
+    order by count(*) desc, max(i.created_at) desc
+    limit ${limit}`);
+  return rows.rows;
 }
 
 /** Lists index with open/total counts. */

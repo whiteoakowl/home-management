@@ -55,7 +55,7 @@ export function ProjectModal({ p, rooms, members, defaults, defaultOpen }: { p?:
   );
 }
 
-export function RepairModal({ r, rooms, canBudget, today, defaults, defaultOpen }: { r?: typeof homeRepairs.$inferSelect; rooms: Opt[]; canBudget: boolean; today: string; defaults?: Record<string, FieldValue>; defaultOpen?: boolean }) {
+export function RepairModal({ r, rooms, vendors = [], canBudget, today, defaults, defaultOpen }: { r?: typeof homeRepairs.$inferSelect; rooms: Opt[]; vendors?: Opt[]; canBudget: boolean; today: string; defaults?: Record<string, FieldValue>; defaultOpen?: boolean }) {
   const budget: FieldDef[] = canBudget && !r?.costCents ? [{ name: "addToBudget", label: "Record the cost in the budget (Home repairs)", type: "checkbox" }] : [];
   return (
     <RecordModal
@@ -63,7 +63,7 @@ export function RepairModal({ r, rooms, canBudget, today, defaults, defaultOpen 
       triggerLabel={r ? "Edit" : "Log repair"}
       triggerVariant={r ? "secondary" : "primary"}
       action={saveRepair}
-      fields={[...withOptions(REPAIR_FIELDS, { roomId: rooms }), ...budget]}
+      fields={[...withOptions(REPAIR_FIELDS, { roomId: rooms, vendorId: vendors }), ...budget]}
       defaults={r ? pick(REPAIR_FIELDS, r) : { status: "open", reportedOn: today, ...defaults }}
       hidden={r ? { id: r.id } : {}}
       defaultOpen={defaultOpen}

@@ -89,9 +89,17 @@ export async function materializeChore(choreId: string, today: string) {
   if (!dates.length) return;
 
   const items = await db.select().from(choreChecklistItems).where(eq(choreChecklistItems.choreId, chore.id));
+  // Rotation: the nth occurrence (counting every date ever generated) goes to rotation[n % size].
+  const rotation = chore.rotationMemberIds ?? [];
+  let assigneeFor = (_d: string) => chore.defaultAssigneeId;
+  if (rotation.length > 1) {
+    const existing = (await db.select({ d: choreOccurrences.dueDate }).from(choreOccurrences).where(eq(choreOccurrences.choreId, chore.id))).map((r) => r.d);
+    const all = [...new Set([...existing, ...dates])].sort();
+    assigneeFor = (d: string) => rotation[all.indexOf(d) % rotation.length]!;
+  }
   const inserted = await db
     .insert(choreOccurrences)
-    .values(dates.map((dueDate) => ({ familyId: chore.familyId, choreId: chore.id, dueDate, assigneeId: chore.defaultAssigneeId })))
+    .values(dates.map((dueDate) => ({ familyId: chore.familyId, choreId: chore.id, dueDate, assigneeId: assigneeFor(dueDate) })))
     .onConflictDoNothing()
     .returning({ id: choreOccurrences.id });
   if (items.length && inserted.length) {

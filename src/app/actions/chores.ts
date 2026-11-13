@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { choreChecklistItems, choreOccurrenceItems, choreOccurrences, chores, homeProjects, pets } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
@@ -12,7 +12,7 @@ import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { ownedCategoryId, ownedId, ownedRoomId, ownedStageId } from "@/lib/queries";
-import { f, familyMemberIdOrNull, upsertRule } from "@/lib/records";
+import { f, familyMemberIdOrNull, familyMemberIds, upsertRule } from "@/lib/records";
 import { CADENCE_PRESETS, ruleFromForm, type Rule } from "@/lib/recurrence";
 
 const KINDS: ChoreKind[] = ["chore", "cleaning", "maintenance", "task"];
@@ -24,6 +24,9 @@ function revalidateHouse() {
   revalidatePath("/");
   revalidatePath("/calendar");
 }
+
+/** The chore's current points, captured at completion so later edits don't rewrite history. */
+const pointsOf = (choreId: string) => sql<number | null>`(select nullif(${chores.points}, 0) from ${chores} where ${chores.id} = ${choreId})`;
 
 function requireKindEdit(viewer: Viewer, kind: ChoreKind) {
   if (!viewer.can(kindModule(kind), "edit")) throw new AuthorizationError("You don't have permission to manage these.");
@@ -72,6 +75,8 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       defaultAssigneeId: await familyMemberIdOrNull(viewer.family.id, f.str(fd, "assigneeId")),
       dueDate: rule ? null : f.date(fd, "dueDate"),
       notes: f.str(fd, "notes"),
+      points: Math.max(0, Math.min(1000, f.int(fd, "points") ?? 0)) || null,
+      rotationMemberIds: await familyMemberIds(viewer.family.id, f.list(fd, "rotation")),
       ...(fd.has("estimatedCost") ? { estimatedCostCents: f.cents(fd, "estimatedCost") } : {}),
       // Cross-module links are only touched when the form carries them.
       ...(fd.has("petId") ? { petId: await ownedId(viewer, pets, f.str(fd, "petId")) } : {}),
@@ -166,8 +171,8 @@ export async function setOccurrenceDone(fd: FormData) {
     .update(choreOccurrences)
     .set(
       done
-        ? { status: "done", completedAt: new Date(), completedByMemberId: viewer.member.id }
-        : { status: "pending", completedAt: null, completedByMemberId: null },
+        ? { status: "done", completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(occ.choreId) }
+        : { status: "pending", completedAt: null, completedByMemberId: null, pointsAwarded: null },
     )
     .where(eq(choreOccurrences.id, occ.id));
   if (done) {
@@ -215,10 +220,33 @@ export async function setOccurrenceItemDone(fd: FormData) {
     .from(choreOccurrenceItems)
     .where(and(eq(choreOccurrenceItems.occurrenceId, occ.id), isNull(choreOccurrenceItems.completedAt)));
   if (remaining.length === 0 && occ.status !== "done") {
-    await db.update(choreOccurrences).set({ status: "done", completedAt: new Date(), completedByMemberId: viewer.member.id }).where(eq(choreOccurrences.id, occ.id));
+    await db.update(choreOccurrences).set({ status: "done", completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(occ.choreId) }).where(eq(choreOccurrences.id, occ.id));
     await logActivity(db, viewer.family.id, viewer.member.id, "chore.completed", `completed "${title}"`, { module: kindModule(kind), entityId: occ.choreId });
   } else if (remaining.length > 0 && occ.status === "done") {
     await db.update(choreOccurrences).set({ status: "pending", completedAt: null, completedByMemberId: null }).where(eq(choreOccurrences.id, occ.id));
   }
+  revalidateHouse();
+}
+
+/** "Clean now": complete today's (or the oldest overdue) occurrence, or log an extra one for today. */
+export async function cleanNow(fd: FormData) {
+  const viewer = await getViewer();
+  const [c] = await db.select().from(chores).where(and(eq(chores.id, String(fd.get("id"))), eq(chores.familyId, viewer.family.id)));
+  if (!c) return;
+  const today = todayIn(viewer.family.timezone);
+  const [due] = await db
+    .select()
+    .from(choreOccurrences)
+    .where(and(eq(choreOccurrences.choreId, c.id), eq(choreOccurrences.status, "pending"), lte(choreOccurrences.dueDate, today)))
+    .orderBy(asc(choreOccurrences.dueDate))
+    .limit(1);
+  const [own] = due ? [] : await db.select().from(choreOccurrences).where(and(eq(choreOccurrences.choreId, c.id), eq(choreOccurrences.dueDate, today)));
+  const target = due ?? own;
+  if (target && target.assigneeId !== viewer.member.id && !viewer.can(kindModule(c.kind), "edit")) throw new AuthorizationError("That isn't assigned to you.");
+  if (!target && !viewer.can(kindModule(c.kind))) throw new AuthorizationError("You can't log this.");
+  const done = { status: "done" as const, completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(c.id) };
+  if (target) await db.update(choreOccurrences).set(done).where(eq(choreOccurrences.id, target.id));
+  else await db.insert(choreOccurrences).values({ familyId: viewer.family.id, choreId: c.id, dueDate: today, assigneeId: viewer.member.id, ...done });
+  await logActivity(db, viewer.family.id, viewer.member.id, "chore.completed", `completed "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
   revalidateHouse();
 }

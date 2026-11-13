@@ -46,6 +46,9 @@ export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
     { href: "/maintenance/projects", label: "Remodeling projects" },
     { href: "/maintenance/todo", label: "To-do lists" },
     { href: "/maintenance/documents", label: "Documents & warranties" },
+    { href: "/maintenance/inventory", label: "Home inventory" },
+    { href: "/maintenance/vendors", label: "Service providers" },
+    { href: "/maintenance/manual", label: "Household manual" },
     { href: "/maintenance/calendar", label: "Calendar" },
   ],
 };

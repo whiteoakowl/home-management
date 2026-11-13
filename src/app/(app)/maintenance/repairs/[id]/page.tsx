@@ -10,7 +10,10 @@ import { DetailList } from "@/components/records/detail-list";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { todayIn } from "@/lib/dates";
-import { getRepair, photosFor, roomOpts } from "@/lib/maintenance";
+import { getRepair, photosFor, roomOpts, vendorOpts } from "@/lib/maintenance";
+import { db } from "@/db";
+import { vendors as vendorsT } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { REPAIR_FIELDS } from "@/lib/maintenance-config";
 import { RepairModal, maintViewer } from "../../shared";
 
@@ -23,8 +26,8 @@ export default async function RepairPage({ params }: PageProps<"/maintenance/rep
   if (!r) notFound();
   const today = todayIn(viewer.family.timezone);
   const canEdit = viewer.can("maintenance", "edit");
-  const [rooms, photos] = await Promise.all([roomOpts(viewer), photosFor(viewer, { repairId: r.id })]);
-  const fields = REPAIR_FIELDS.map((f) => (f.name === "roomId" ? { ...f, options: rooms } : f));
+  const [rooms, vendors, photos, vendor] = await Promise.all([roomOpts(viewer), vendorOpts(viewer), photosFor(viewer, { repairId: r.id }), r.vendorId ? db.select().from(vendorsT).where(eq(vendorsT.id, r.vendorId)).then((x) => x[0]) : null]);
+  const fields = REPAIR_FIELDS.map((f) => (f.name === "roomId" ? { ...f, options: rooms } : f.name === "vendorId" ? { ...f, options: vendors } : f));
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <Link href="/maintenance/repairs" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
@@ -37,7 +40,7 @@ export default async function RepairPage({ params }: PageProps<"/maintenance/rep
         actions={
           canEdit && (
             <>
-              <RepairModal r={r} rooms={rooms} canBudget={viewer.can("budget", "edit")} today={today} />
+              <RepairModal r={r} rooms={rooms} vendors={vendors} canBudget={viewer.can("budget", "edit")} today={today} />
               <DeleteButton action={deleteRepair} fields={{ id: r.id }} what={`"${r.title}"`} />
             </>
           )
@@ -50,7 +53,21 @@ export default async function RepairPage({ params }: PageProps<"/maintenance/rep
         </p>
       )}
       <Card>
-        <DetailList fields={fields} values={r as never} skip={["title", "status"]} />
+        <DetailList fields={fields} values={r as never} skip={["title", "status", "vendorId"]} />
+        {vendor && (
+          <p className="mt-4 rounded-xl bg-sunken px-4 py-3 text-sm">
+            <strong>{vendor.name}</strong>
+            {vendor.phone && (
+              <>
+                {" · "}
+                <a href={`tel:${vendor.phone}`} className="text-primary-700 underline">
+                  {vendor.phone}
+                </a>
+              </>
+            )}
+            {vendor.email && ` · ${vendor.email}`}
+          </p>
+        )}
       </Card>
       <Card>
         <CardHeader title="Before, after & receipts" action={canEdit && <AddPhotosModal target={{ repairId: r.id }} kinds={["before", "after", "receipt", "progress"]} defaultKind="before" />} />

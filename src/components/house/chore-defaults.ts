@@ -18,6 +18,8 @@ export function toChoreDefaults(t: ChoreTemplate): ChoreDefaults {
     dueDate: c.dueDate,
     notes: c.notes,
     estimatedCostCents: c.estimatedCostCents,
+    points: c.points,
+    rotationMemberIds: c.rotationMemberIds,
     rule: t.rule
       ? {
           freq: t.rule.freq,

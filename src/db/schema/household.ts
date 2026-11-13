@@ -106,7 +106,10 @@ export const chores = pgTable(
     /** For one-off tasks without recurrence. */
     dueDate: date("due_date"),
     notes: text("notes"),
+    /** Reward points earned per completion (0/null = none). */
     points: integer("points"),
+    /** Round-robin rotation: occurrences are assigned to these members in turn. */
+    rotationMemberIds: uuid("rotation_member_ids").array().notNull().default([]),
     /** Pet care chores (feeding, grooming…). */
     petId: uuid("pet_id"),
     /** Remodeling project tasks. */
@@ -161,6 +164,8 @@ export const choreOccurrences = pgTable(
     }),
     notes: text("notes"),
     actualCostCents: integer("actual_cost_cents"),
+    /** Points credited to completedByMemberId (kept even if the chore's points change later). */
+    pointsAwarded: integer("points_awarded"),
     ...timestamps,
   },
   (t) => [

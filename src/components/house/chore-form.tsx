@@ -7,6 +7,7 @@ import { FormModal } from "@/components/forms/action-form";
 import {
   DateField,
   FormRow,
+  MemberChips,
   MemberSelect,
   NumberField,
   RecurrenceField,
@@ -35,6 +36,8 @@ export type ChoreDefaults = {
   rule: (RuleDefaults & { startsOn?: string }) | null;
   checklist: { text: string; assigneeId: string | null }[];
   estimatedCostCents?: number | null;
+  points?: number | null;
+  rotationMemberIds?: string[];
 };
 
 const KIND_LABEL = { chore: "chore", cleaning: "cleaning task", maintenance: "maintenance task", task: "task" } as const;
@@ -199,11 +202,21 @@ export function ChoreFormModal({
 
       <FormRow>
         <NumberField name="estimatedMinutes" label="Estimated minutes" min={0} defaultValue={defaults?.estimatedMinutes ?? ""} />
+        {(kind === "chore" || kind === "cleaning" || kind === "task") && (
+          <NumberField name="points" label="Reward points" min={0} max={1000} defaultValue={defaults?.points ?? ""} hint="Earned by whoever completes it." />
+        )}
         {(showCost || kind === "maintenance") && (
           <NumberField name="estimatedCost" label="Estimated cost ($)" min={0} step="0.01" defaultValue={defaults?.estimatedCostCents != null ? defaults.estimatedCostCents / 100 : ""} />
         )}
       </FormRow>
       <TextAreaField name="instructions" label="Instructions" rows={2} defaultValue={defaults?.instructions ?? ""} placeholder="How to do it well…" />
+      {kind !== "task" && (
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className="mb-1.5 text-sm font-medium text-ink-soft">Take turns (optional)</legend>
+          <MemberChips name="rotation" members={members} defaultValue={defaults?.rotationMemberIds ?? []} />
+          <p className="text-xs text-muted">Pick two or more people and each occurrence goes to the next person in turn. Leave empty to use the assignee above.</p>
+        </fieldset>
+      )}
       <ChecklistEditor members={members} initial={defaults?.checklist ?? []} />
       <TextAreaField name="notes" label="Notes" rows={2} defaultValue={defaults?.notes ?? ""} />
     </FormModal>

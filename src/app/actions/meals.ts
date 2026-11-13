@@ -87,3 +87,24 @@ export async function shopForWeek(fd: FormData) {
   if (n) await logActivity(db, viewer.family.id, viewer.member.id, "shopping.meal_plan", `added ${n} item${n === 1 ? "" : "s"} for this week's meals to the shopping list`, { module: "shopping" });
   revalidateMeals();
 }
+
+/** Copy a previous week's plan into this week (slots that already have a meal are left alone). */
+export async function copyMealWeek(fd: FormData) {
+  const viewer = await requireModule("meals", "edit");
+  const to = f.date(fd, "to");
+  const weeksBack = Math.min(12, Math.max(1, f.int(fd, "weeksBack") ?? 1));
+  if (!to) return;
+  const from = addDays(to, -7 * weeksBack);
+  const [source, existing] = await Promise.all([
+    db.select().from(mealPlanEntries).where(and(eq(mealPlanEntries.familyId, viewer.family.id), gte(mealPlanEntries.date, from), lte(mealPlanEntries.date, addDays(from, 6)))),
+    db.select({ date: mealPlanEntries.date, slot: mealPlanEntries.slot }).from(mealPlanEntries).where(and(eq(mealPlanEntries.familyId, viewer.family.id), gte(mealPlanEntries.date, to), lte(mealPlanEntries.date, addDays(to, 6)))),
+  ]);
+  const taken = new Set(existing.map((e) => `${e.date}|${e.slot}`));
+  const rows = source
+    .map((e) => ({ ...e, date: addDays(e.date, 7 * weeksBack) }))
+    .filter((e) => !taken.has(`${e.date}|${e.slot}`) || e.slot === "snack")
+    .map(({ date, slot, recipeId, title, servings, notes }) => ({ familyId: viewer.family.id, date, slot, recipeId, title, servings, notes, createdByMemberId: viewer.member.id }));
+  if (rows.length) await db.insert(mealPlanEntries).values(rows);
+  revalidatePath("/meals");
+  revalidatePath("/calendar", "layout");
+}

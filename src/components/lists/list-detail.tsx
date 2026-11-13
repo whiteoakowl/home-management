@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Archive, ArchiveRestore, ArrowLeft, Lock, Pencil, Trash2, Users } from "lucide-react";
-import { archiveList, clearChecked, deleteList } from "@/app/actions/lists";
+import { Archive, ArchiveRestore, ArrowLeft, Lock, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { archiveList, clearChecked, deleteList, quickAddItem } from "@/app/actions/lists";
 import { ActionButton } from "@/components/forms/inline";
 import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
-import { listModule, loadList, loadListItems } from "@/lib/lists";
+import { frequentItems, listModule, loadList, loadListItems } from "@/lib/lists";
 import { categoryOptions, memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import type { ReactNode } from "react";
@@ -28,6 +28,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
     categoryOptions(viewer, "list"),
     getRecordAccess("list", [list.id]),
   ]);
+  const frequent = list.kind === "shopping" && canEdit ? await frequentItems(viewer.family.id, list.id) : [];
   const shared = access.get(list.id) ?? [];
   const checked = items.filter((i) => i.checked).length;
 
@@ -86,6 +87,18 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
           ) : undefined
         }
       />
+      {frequent.length > 0 && (
+        <section aria-label="Buy again" className="-mt-1">
+          <p className="mb-2 text-xs font-semibold tracking-[0.12em] text-muted uppercase">Buy again</p>
+          <div className="flex flex-wrap gap-2">
+            {frequent.map((f) => (
+              <ActionButton key={f.text} action={quickAddItem} fields={{ listId: list.id, text: f.text }} label={`Add ${f.text}`} className="h-9 rounded-full border border-line-strong bg-surface px-3 text-sm hover:border-primary-300 hover:bg-primary-50">
+                <Plus className="size-3.5" aria-hidden /> {f.text}
+              </ActionButton>
+            ))}
+          </div>
+        </section>
+      )}
       <Card className="p-3 sm:p-4">
         <ListView
           listId={list.id}

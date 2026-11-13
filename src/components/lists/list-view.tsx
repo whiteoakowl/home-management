@@ -31,6 +31,7 @@ export type ItemView = {
   unit: string | null;
   shoppingCategory: string | null;
   store: string | null;
+  priceCents?: number | null;
   notes: string | null;
   source: string;
   recurring: string | null;
@@ -83,6 +84,7 @@ function ItemFields({ kind, item, members }: { kind: ListKind; item?: ItemView; 
           <TextField name="unit" label="Unit" defaultValue={item?.unit ?? ""} placeholder="lb, dozen, box…" />
           <SelectField name="shoppingCategory" label="Aisle" defaultValue={item?.shoppingCategory ?? ""} placeholder="Auto" options={SHOPPING_CATEGORIES} />
           <TextField name="store" label="Store" defaultValue={item?.store ?? ""} />
+          <NumberField name="price" label="Price ($)" min={0} step="0.01" defaultValue={item?.priceCents != null ? item.priceCents / 100 : ""} />
         </FormRow>
       )}
       <TextAreaField name="notes" label="Notes" rows={2} defaultValue={item?.notes ?? ""} />
@@ -150,6 +152,7 @@ function Row({
           </span>
         )}
       </div>
+      {kind === "shopping" && item.priceCents != null && <span className={cn("text-sm tabular-nums", item.checked ? "text-muted" : "text-ink-soft")}>${(item.priceCents / 100).toFixed(2)}</span>}
       {item.priority === "high" && !item.checked && <Badge tone="wine">High</Badge>}
       {assignee && <Avatar name={assignee.displayName} color={assignee.color} size="xs" />}
       {canEdit && (
@@ -232,6 +235,7 @@ function AddBar({ listId, kind, members }: { listId: string; kind: ListKind; mem
               <TextField name="unit" label="Unit" placeholder="lb" />
               <SelectField name="shoppingCategory" label="Aisle" placeholder="Auto" options={SHOPPING_CATEGORIES} />
               <TextField name="store" label="Store" />
+              <NumberField name="price" label="Price ($)" min={0} step="0.01" hint="Remembered for next time" />
             </FormRow>
           )}
         </div>
@@ -267,9 +271,21 @@ export function ListView({
       ? SHOPPING_CATEGORIES.map((c) => ({ key: c.value, label: c.label, items: open.filter((i) => (i.shoppingCategory ?? "other") === c.value) })).filter((g) => g.items.length)
       : [{ key: "all", label: "", items: kind === "todo" ? [...open].sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")) : open }];
 
+  const sum = (xs: ItemView[]) => xs.reduce((s, i) => s + (i.priceCents ?? 0), 0);
+  const priced = kind === "shopping" && items.some((i) => i.priceCents != null);
   return (
     <div className="flex flex-col gap-5">
       {canAdd && <AddBar listId={listId} kind={kind} members={members} />}
+      {priced && (
+        <p className="flex flex-wrap gap-x-4 px-2 text-sm text-muted" aria-live="polite">
+          <span>
+            Estimated total <strong className="text-ink">${(sum(items) / 100).toFixed(2)}</strong>
+          </span>
+          <span>
+            In the cart <strong className="text-ink">${(sum(done) / 100).toFixed(2)}</strong>
+          </span>
+        </p>
+      )}
       {groups.map((g) => (
         <section key={g.key}>
           {g.label && <h2 className="mb-1 px-2 font-sans text-xs font-semibold tracking-[0.12em] text-muted uppercase">{g.label}</h2>}

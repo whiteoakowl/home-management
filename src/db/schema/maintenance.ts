@@ -22,6 +22,7 @@ export const homeRepairs = pgTable(
     problem: text("problem"),
     repairPerformed: text("repair_performed"),
     contractor: text("contractor"),
+    vendorId: uuid("vendor_id"),
     costCents: integer("cost_cents"),
     materials: text("materials"),
     warrantyInfo: text("warranty_info"),

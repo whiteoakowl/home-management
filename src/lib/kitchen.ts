@@ -5,11 +5,14 @@ import { inventoryEvents, inventoryItems, listItems, recipeIngredients, recipes 
 import { mainShoppingListId } from "./automation";
 import { checkIngredients, formatQty, normalizeName } from "./ingredients";
 
+/** Locations that hold food or kitchen supplies (pet food, craft and home supplies never count for recipes). */
+export const FOOD_LOCATIONS = ["pantry", "fridge", "freezer", "supplies", "farm", "garden", "other"] as const;
+
 export async function activeInventory(familyId: string) {
   return db
-    .select({ id: inventoryItems.id, name: inventoryItems.name, quantity: inventoryItems.quantity, unit: inventoryItems.unit })
+    .select({ id: inventoryItems.id, name: inventoryItems.name, quantity: inventoryItems.quantity, unit: inventoryItems.unit, expiresOn: inventoryItems.expiresOn })
     .from(inventoryItems)
-    .where(and(eq(inventoryItems.familyId, familyId), isNull(inventoryItems.archivedAt)));
+    .where(and(eq(inventoryItems.familyId, familyId), isNull(inventoryItems.archivedAt), inArray(inventoryItems.location, [...FOOD_LOCATIONS])));
 }
 
 export async function ingredientsFor(recipeIds: string[]) {

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, eq, max } from "drizzle-orm";
 import { db } from "@/db";
-import { choreOccurrences, chores, homeDocuments, homePhotos, homeProjects, homeRepairs, listItems, lists, projectMaterials, projectStages, rooms } from "@/db/schema";
+import { choreOccurrences, chores, homeDocuments, homeItems, homePhotos, homeProjects, homeRepairs, listItems, lists, projectMaterials, projectStages, rooms, vendors } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, requireModule } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
@@ -12,7 +12,7 @@ import { recordExpense } from "@/lib/expenses";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { getProject, getRepair } from "@/lib/maintenance";
-import { DOC_FIELDS, MATERIAL_FIELDS, PHOTO_KINDS, PROJECT_FIELDS, REPAIR_FIELDS, ROOM_FIELDS } from "@/lib/maintenance-config";
+import { DOC_FIELDS, ITEM_FIELDS, MATERIAL_FIELDS, PHOTO_KINDS, PROJECT_FIELDS, REPAIR_FIELDS, ROOM_FIELDS, VENDOR_FIELDS } from "@/lib/maintenance-config";
 import { ownedId, ownedRoomId } from "@/lib/queries";
 import { parseFields } from "@/lib/record-fields";
 import { f, familyMemberIdOrNull, saveRecordAccess, visibilityFromForm } from "@/lib/records";
@@ -266,6 +266,7 @@ export async function saveRepair(_: ActionState, fd: FormData): Promise<ActionSt
       ...(values as Record<string, unknown>),
       familyId: viewer.family.id,
       roomId: await ownedRoomId(viewer, values.roomId as string | null),
+      vendorId: await ownedId(viewer, vendors, values.vendorId as string | null),
       completedOn: status === "completed" ? ((values.completedOn as string | null) ?? todayIn(viewer.family.timezone)) : (values.completedOn as string | null),
     } as typeof homeRepairs.$inferInsert;
     let rid = id;
@@ -377,4 +378,71 @@ export async function createHomeTodoList(_: ActionState, fd: FormData): Promise<
     revalidatePath("/lists", "layout");
     redirect(`/lists/${l!.id}`);
   });
+}
+
+// ─── Home inventory (belongings) ─────────────────────────────────────────────
+
+export async function saveHomeItem(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await edit();
+    const { values, errors } = parseFields(fd, ITEM_FIELDS);
+    if (Object.keys(errors).length) return { ok: false, errors };
+    const id = f.str(fd, "id");
+    const [old] = id ? await db.select().from(homeItems).where(and(eq(homeItems.id, id), eq(homeItems.familyId, viewer.family.id))) : [];
+    if (id && !old) throw new AuthorizationError("Not found.");
+    const image = await saveUpload(viewer, fd.get("image"));
+    const receipt = await saveUpload(viewer, fd.get("receipt"), { allowDocs: true });
+    const row = {
+      ...(values as Record<string, unknown>),
+      familyId: viewer.family.id,
+      roomId: await ownedRoomId(viewer, values.roomId as string | null),
+      quantity: Math.max(1, Math.round((values.quantity as number | null) ?? 1)),
+      ...(image ? { imageFileId: image } : fd.get("removeImage") === "1" ? { imageFileId: null } : {}),
+      ...(receipt ? { receiptFileId: receipt } : {}),
+    } as typeof homeItems.$inferInsert;
+    if (old) await db.update(homeItems).set(row).where(eq(homeItems.id, old.id));
+    else await db.insert(homeItems).values(row);
+    if (old?.imageFileId && (image || fd.get("removeImage") === "1")) await deleteFamilyFile(viewer.family.id, old.imageFileId);
+    if (old?.receiptFileId && receipt) await deleteFamilyFile(viewer.family.id, old.receiptFileId);
+    revalidateHome();
+    return ok("Saved.");
+  });
+}
+
+export async function deleteHomeItem(fd: FormData) {
+  const viewer = await edit();
+  const [it] = await db.delete(homeItems).where(and(eq(homeItems.id, String(fd.get("id"))), eq(homeItems.familyId, viewer.family.id))).returning();
+  if (it?.imageFileId) await deleteFamilyFile(viewer.family.id, it.imageFileId);
+  if (it?.receiptFileId) await deleteFamilyFile(viewer.family.id, it.receiptFileId);
+  revalidateHome();
+}
+
+// ─── Service providers ───────────────────────────────────────────────────────
+
+export async function saveVendor(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await edit();
+    const { values, errors } = parseFields(fd, VENDOR_FIELDS);
+    if (Object.keys(errors).length) return { ok: false, errors };
+    const row = { ...(values as Record<string, unknown>), rating: values.rating ? Number(values.rating) : null, familyId: viewer.family.id } as typeof vendors.$inferInsert;
+    const id = f.str(fd, "id");
+    if (id) await db.update(vendors).set(row).where(and(eq(vendors.id, id), eq(vendors.familyId, viewer.family.id)));
+    else await db.insert(vendors).values(row);
+    revalidateHome();
+    return ok("Saved.");
+  });
+}
+
+export async function toggleVendorFavorite(fd: FormData) {
+  const viewer = await edit();
+  const [v] = await db.select().from(vendors).where(and(eq(vendors.id, String(fd.get("id"))), eq(vendors.familyId, viewer.family.id)));
+  if (!v) return;
+  await db.update(vendors).set({ isFavorite: !v.isFavorite }).where(eq(vendors.id, v.id));
+  revalidateHome();
+}
+
+export async function deleteVendor(fd: FormData) {
+  const viewer = await edit();
+  await db.delete(vendors).where(and(eq(vendors.id, String(fd.get("id"))), eq(vendors.familyId, viewer.family.id)));
+  revalidateHome();
 }

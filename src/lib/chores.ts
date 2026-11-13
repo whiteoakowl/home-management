@@ -70,6 +70,7 @@ export async function listOccurrences(
       completedAt: choreOccurrences.completedAt,
       actualCostCents: choreOccurrences.actualCostCents,
       estimatedCostCents: chores.estimatedCostCents,
+      points: chores.points,
       assigneeId: choreOccurrences.assigneeId,
       assigneeName: assignee.displayName,
       assigneeColor: assignee.color,

@@ -1,5 +1,7 @@
 "use server";
 
+import { parseRecipeHtml, parseRecipeText, type ImportedRecipe } from "@/lib/recipe-import";
+import { safeFetch } from "@/lib/safe-fetch";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
@@ -168,4 +170,68 @@ export async function deleteCollection(fd: FormData) {
   await db.delete(recipeCollections).where(and(eq(recipeCollections.id, String(fd.get("id"))), eq(recipeCollections.familyId, viewer.family.id)));
   revalidateRecipes();
   redirect("/recipes/collections");
+}
+
+/**
+ * Import a recipe from a web page (schema.org Recipe) or pasted text. Creates
+ * the recipe, then opens it so the family can review and edit.
+ */
+export async function importRecipe(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("recipes", "edit");
+    const url = f.str(fd, "url");
+    const text = f.str(fd, "text");
+    let parsed: ImportedRecipe | null = null;
+    if (url) {
+      if (!/^https?:\/\//i.test(url)) return fail("Paste a full link starting with https://", "url");
+      try {
+        const page = await safeFetch(url);
+        parsed = parseRecipeHtml(page.body.toString("utf8"), page.url);
+      } catch (e) {
+        return fail(`Couldn't open that page (${(e as Error).message}). You can paste the recipe text instead.`, "url");
+      }
+      if (!parsed) return fail("No recipe found on that page. Try pasting the recipe text instead.", "url");
+    } else if (text) {
+      parsed = parseRecipeText(text);
+      if (!parsed) return fail("Couldn't find ingredients or steps. Put each on its own line.", "text");
+    } else return fail("Paste a link or the recipe text.", "url");
+
+    let imageFileId: string | null = null;
+    if (parsed.imageUrl) {
+      try {
+        const img = await safeFetch(parsed.imageUrl, { maxBytes: 8_000_000, accept: "image/*" });
+        const type = img.contentType.split(";")[0]!.trim();
+        if (type.startsWith("image/")) imageFileId = await saveUpload(viewer, new File([new Uint8Array(img.body)], "recipe", { type }));
+      } catch {
+        // The recipe still imports without its photo.
+      }
+    }
+    const lines = parsed.ingredients.map(parseIngredientLine).filter((x): x is NonNullable<typeof x> => !!x);
+    let recipeId = "";
+    await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(recipes)
+        .values({
+          familyId: viewer.family.id,
+          name: parsed.name,
+          description: parsed.description,
+          instructions: parsed.instructions,
+          prepMinutes: parsed.prepMinutes,
+          cookMinutes: parsed.cookMinutes,
+          servings: parsed.servings,
+          tags: parsed.tags,
+          source: parsed.source,
+          imageFileId,
+          createdByMemberId: viewer.member.id,
+        })
+        .returning({ id: recipes.id });
+      recipeId = row!.id;
+      if (lines.length) {
+        await tx.insert(recipeIngredients).values(lines.map((p, position) => ({ recipeId, name: p.name, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })));
+      }
+    });
+    await logActivity(db, viewer.family.id, viewer.member.id, "recipe.added", `imported the recipe "${parsed.name}"`, { module: "recipes", entityId: recipeId });
+    revalidateRecipes();
+    redirect(`/recipes/${recipeId}?imported=1`);
+  });
 }

@@ -9,7 +9,7 @@ import { fmtDate, fmtMoney } from "@/components/records/detail-list";
 import { Card } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { todayIn } from "@/lib/dates";
-import { roomOpts } from "@/lib/maintenance";
+import { roomOpts, vendorOpts } from "@/lib/maintenance";
 import { REPAIR_STATUSES } from "@/lib/maintenance-config";
 import { RepairModal, maintViewer } from "../shared";
 
@@ -19,12 +19,12 @@ export default async function RepairsPage({ searchParams }: PageProps<"/maintena
   const viewer = await maintViewer();
   const sp = (await searchParams) as { status?: string; room?: string; q?: string };
   const today = todayIn(viewer.family.timezone);
-  const [rooms, rows] = await Promise.all([roomOpts(viewer), db.select().from(homeRepairs).where(eq(homeRepairs.familyId, viewer.family.id)).orderBy(desc(homeRepairs.reportedOn))]);
+  const [rooms, vendors, rows] = await Promise.all([roomOpts(viewer), vendorOpts(viewer), db.select().from(homeRepairs).where(eq(homeRepairs.familyId, viewer.family.id)).orderBy(desc(homeRepairs.reportedOn))]);
   const q = sp.q?.toLowerCase();
   const shown = rows.filter((r) => (!sp.status || r.status === sp.status) && (!sp.room || r.roomId === sp.room) && (!q || `${r.title} ${r.problem} ${r.contractor} ${r.notes}`.toLowerCase().includes(q)));
   const total = shown.reduce((s, r) => s + (r.costCents ?? 0), 0);
   const canEdit = viewer.can("maintenance", "edit");
-  const add = canEdit ? <RepairModal rooms={rooms} canBudget={viewer.can("budget", "edit")} today={today} defaultOpen={(sp as { new?: string }).new === "1"} /> : undefined;
+  const add = canEdit ? <RepairModal rooms={rooms} vendors={vendors} canBudget={viewer.can("budget", "edit")} today={today} defaultOpen={(sp as { new?: string }).new === "1"} /> : undefined;
   const sel = "h-10 rounded-full border border-line-strong bg-surface px-3 text-sm";
   return (
     <>
@@ -73,7 +73,7 @@ export default async function RepairsPage({ searchParams }: PageProps<"/maintena
         </Card>
       ) : (
         <Card>
-          <EmptyState icon={<Hammer />} title={rows.length ? "No repairs match" : "No repairs logged"} description="Log what broke, how it was fixed and what it cost, so you have the history when you need it." action={!rows.length && canEdit && <RepairModal rooms={rooms} canBudget={viewer.can("budget", "edit")} today={today} />} />
+          <EmptyState icon={<Hammer />} title={rows.length ? "No repairs match" : "No repairs logged"} description="Log what broke, how it was fixed and what it cost, so you have the history when you need it." action={!rows.length && canEdit && <RepairModal rooms={rooms} vendors={vendors} canBudget={viewer.can("budget", "edit")} today={today} />} />
         </Card>
       )}
     </>
