@@ -105,7 +105,7 @@ export default async function MedicalDashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Upcoming appointments" icon={<CalendarClock className="size-4" />} href="/medical/calendar" />
           <AppointmentList viewer={viewer} rows={appts.slice(0, 5)} members={members} empty="No upcoming appointments." />

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, inArray } from "drizzle-orm";
 import { HeartPulse } from "lucide-react";
 import { db } from "@/db";
 import { petMedicalRecords } from "@/db/schema";

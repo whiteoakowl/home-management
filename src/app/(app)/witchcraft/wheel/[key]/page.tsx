@@ -104,7 +104,7 @@ export default async function SabbatPage({ params }: PageProps<"/witchcraft/whee
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Meaning" />
           <p className="text-[15px]">{s.meaning}</p>

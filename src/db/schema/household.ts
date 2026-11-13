@@ -202,7 +202,8 @@ export const homeProjects = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description"),
-    status: text("status").notNull().default("planned"),
+    /** idea | planning | budgeting | ready | in_progress | on_hold | completed */
+    status: text("status").notNull().default("idea"),
     roomId: uuid("room_id").references(() => rooms.id, { onDelete: "set null" }),
     budgetCents: integer("budget_cents"),
     startDate: date("start_date"),

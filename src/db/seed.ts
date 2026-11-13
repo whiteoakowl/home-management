@@ -86,9 +86,21 @@ async function main() {
   await chore({ title: "Bathroom clean", kind: "cleaning", cleaningCadence: "weekly", roomId: room("Bathroom"), defaultAssigneeId: sarah!.id, estimatedMinutes: 30, recurrenceRuleId: await rule({ freq: "weekly", interval: 1, byWeekday: [weekday(todayIso)], startsOn: day(-21) }) }, [{ text: "Scrub sink & toilet" }, { text: "Clean the mirror", assigneeId: emma!.id }, { text: "Mop the floor" }]);
   await chore({ title: "Kitchen deep clean", kind: "cleaning", cleaningCadence: "seasonal", roomId: room("Kitchen"), estimatedMinutes: 120, recurrenceRuleId: await rule({ freq: "yearly", interval: 1, byMonth: [3, 6, 9, 12], startsOn: day(5) }) }, [{ text: "Clean refrigerator" }, { text: "Clean oven" }, { text: "Wipe cabinets", assigneeId: emma!.id }, { text: "Clean pantry" }, { text: "Mop floor", assigneeId: michael!.id }, { text: "Clean windows" }]);
   await chore({ title: "Vacuum living room", kind: "cleaning", cleaningCadence: "daily", roomId: room("Living room"), defaultAssigneeId: michael!.id, recurrenceRuleId: await rule({ freq: "daily", interval: 1, startsOn: day(-10) }) });
-  await chore({ title: "Replace HVAC filter", kind: "maintenance", defaultAssigneeId: michael!.id, recurrenceRuleId: await rule({ freq: "monthly", interval: 3, startsOn: day(3) }) });
-  await chore({ title: "Clean gutters", kind: "maintenance", recurrenceRuleId: await rule({ freq: "yearly", interval: 1, byMonth: [4, 11], startsOn: day(2) }) });
+  const [hvac, plumbing, roof] = await db
+    .insert(s.rooms)
+    .values([
+      { familyId: fid, name: "HVAC", kind: "system", description: "Carrier heat pump (2019) · 16×25×1 filters", sortOrder: 20 },
+      { familyId: fid, name: "Plumbing", kind: "system", description: "50-gal gas water heater (2017), main shut-off in the basement", sortOrder: 21 },
+      { familyId: fid, name: "Roof & gutters", kind: "system", description: "Architectural shingles, replaced 2015", sortOrder: 22 },
+      { familyId: fid, name: "Back yard", kind: "area", sortOrder: 30 },
+    ])
+    .returning();
+  const filter = await chore({ title: "Replace HVAC filter", kind: "maintenance", roomId: hvac!.id, defaultAssigneeId: michael!.id, estimatedCostCents: 2500, recurrenceRuleId: await rule({ freq: "monthly", interval: 3, startsOn: day(3) }) });
+  await chore({ title: "Clean gutters", kind: "maintenance", roomId: roof!.id, estimatedCostCents: 15000, recurrenceRuleId: await rule({ freq: "yearly", interval: 1, byMonth: [4, 11], startsOn: day(2) }) });
   await chore({ title: "Test smoke detectors", kind: "maintenance", recurrenceRuleId: await rule({ freq: "monthly", interval: 6, startsOn: day(12) }) });
+  await chore({ title: "Flush water heater", kind: "maintenance", roomId: plumbing!.id, estimatedMinutes: 45, recurrenceRuleId: await rule({ freq: "yearly", interval: 1, startsOn: day(40) }) });
+  await chore({ title: "Check for leaks under sinks", kind: "maintenance", roomId: plumbing!.id, estimatedMinutes: 10, recurrenceRuleId: await rule({ freq: "monthly", interval: 1, startsOn: day(6) }) });
+  await db.insert(s.choreOccurrences).values({ familyId: fid, choreId: filter.id, dueDate: day(-88), status: "done", completedAt: at(-88, 10), completedByMemberId: michael!.id, actualCostCents: 2299 });
   await chore({ title: "Schedule furnace inspection", kind: "task", defaultAssigneeId: michael!.id, dueDate: day(-2), priority: "high" });
   await chore({ title: "Return library books", kind: "task", defaultAssigneeId: emma!.id, dueDate: day(1) });
   // Completed history for the past week.
@@ -98,10 +110,33 @@ async function main() {
     occ.push({ familyId: fid, choreId: feedChickens.id, dueDate: day(-i), assigneeId: jack!.id, status: "done", completedAt: at(-i, 7, 30), completedByMemberId: jack!.id });
   }
   await db.insert(s.choreOccurrences).values(occ);
-  await db.insert(s.homeProjects).values([
-    { familyId: fid, title: "Build raised garden beds", status: "in_progress", budgetCents: 40000, targetDate: day(20), ownerMemberId: michael!.id },
-    { familyId: fid, title: "Paint the porch", status: "planned", budgetCents: 25000, targetDate: day(120), roomId: null },
-    { familyId: fid, title: "Mudroom cubbies", status: "idea" },
+  const [beds, porch] = await db
+    .insert(s.homeProjects)
+    .values([
+      { familyId: fid, title: "Build raised garden beds", status: "in_progress", budgetCents: 40000, estimatedCostCents: 32000, startDate: day(-10), targetDate: day(20), ownerMemberId: michael!.id, description: "Three cedar beds along the south fence.", measurements: "Each bed 4 ft × 8 ft × 16 in" },
+      { familyId: fid, title: "Paint the porch", status: "budgeting", budgetCents: 25000, targetDate: day(120), description: "Scrape, prime and paint the front porch floor and railings." },
+      { familyId: fid, title: "Mudroom cubbies", status: "idea", roomId: room("Mudroom") },
+    ])
+    .returning();
+  await db.insert(s.projectStages).values([
+    { projectId: beds!.id, name: "Buy lumber & soil", done: true, position: 1, dueOn: day(-5) },
+    { projectId: beds!.id, name: "Build the frames", position: 2, dueOn: day(2) },
+    { projectId: beds!.id, name: "Fill & plant", position: 3, dueOn: day(20) },
+    { projectId: porch!.id, name: "Get paint quotes", position: 1, dueOn: day(30) },
+  ]);
+  await db.insert(s.projectMaterials).values([
+    { projectId: beds!.id, name: "Cedar 2×8 boards", quantity: "18", unit: "boards", estimatedCostCents: 21600, store: "Lumber yard", purchased: true },
+    { projectId: beds!.id, name: "Raised bed soil", quantity: "2", unit: "cu yd", estimatedCostCents: 9000, store: "Garden center" },
+    { projectId: beds!.id, name: "Deck screws 3 in", quantity: "1", unit: "box", estimatedCostCents: 1400 },
+    { projectId: porch!.id, name: "Porch & floor paint", quantity: "3", unit: "gal", estimatedCostCents: 18000 },
+  ]);
+  await db.insert(s.homeRepairs).values([
+    { familyId: fid, title: "Leaking kitchen faucet", roomId: room("Kitchen"), status: "completed", reportedOn: day(-45), completedOn: day(-40), problem: "Drip from the base of the spout.", repairPerformed: "Replaced the cartridge and O-rings.", contractor: "Blue Ridge Plumbing", costCents: 18500, warrantyInfo: "90-day labor warranty", warrantyExpiresOn: day(50), reportedByMemberId: sarah!.id },
+    { familyId: fid, title: "Garage door sticks", roomId: room("Garage"), status: "scheduled", reportedOn: day(-6), scheduledOn: day(1), problem: "Door stops halfway when closing.", contractor: "Overhead Door Co.", reportedByMemberId: michael!.id },
+  ]);
+  await db.insert(s.homeDocuments).values([
+    { familyId: fid, title: "Living room paint colors", docType: "paint", roomId: room("Living room"), notes: "Walls: Sherwin-Williams 'Grape Mist' SW 6556 (eggshell)\nTrim: 'Alabaster' SW 7008 (semi-gloss)", createdByMemberId: sarah!.id },
+    { familyId: fid, title: "Heat pump warranty", docType: "warranty", roomId: hvac!.id, applianceName: "Carrier 25HCE4", expiresOn: day(25), notes: "10-year parts registration", createdByMemberId: michael!.id },
   ]);
   await db.insert(s.householdInfo).values([
     { familyId: fid, title: "Wi-Fi", body: "Network: Vanderbilt-Home\nPassword: sunflower-porch-42", createdByMemberId: sarah!.id },

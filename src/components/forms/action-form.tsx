@@ -78,7 +78,7 @@ export function FormModal({
   triggerLabel,
   triggerVariant = "primary",
   triggerSize = "md",
-  triggerIcon = <Plus className="size-4" />,
+  triggerIcon: triggerIconProp,
   size = "md",
   defaultOpen = false,
   triggerContent,
@@ -103,6 +103,7 @@ export function FormModal({
   size?: "sm" | "md" | "lg";
   defaultOpen?: boolean;
 }) {
+  const triggerIcon = triggerIconProp ?? <Plus className="size-4" />;
   const [open, setOpen] = useState(defaultOpen);
   // Remount the form each time the modal opens so it starts clean.
   const [key, setKey] = useState(0);

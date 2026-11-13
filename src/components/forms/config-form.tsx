@@ -147,6 +147,7 @@ export function RecordModal({
       triggerVariant={triggerVariant}
       triggerSize={triggerVariant === "ghost" || triggerVariant === "soft" ? "sm" : "md"}
       triggerContent={edit ? <Pencil className="mx-auto size-4" /> : undefined}
+      triggerIcon={!edit && triggerLabel === "Edit" ? <Pencil className="size-4" /> : undefined}
       triggerAriaLabel={edit ? title : undefined}
       triggerClassName={edit ? "size-9 rounded-full text-muted hover:bg-sunken" : undefined}
     >

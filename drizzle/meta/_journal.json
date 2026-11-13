@@ -22,6 +22,20 @@
       "when": 1794528849556,
       "tag": "0002_enable_addon_modules",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794530887696,
+      "tag": "0003_project_statuses",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794530890153,
+      "tag": "0004_complete_pandemic",
+      "breakpoints": true
     }
   ]
 }

@@ -260,7 +260,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
           .limit(4),
       ]).then(([i, d]) => [
         ...i.map((x) => ({ id: x.id, title: x.title, subtitle: "Important info", href: "/house/info" })),
-        ...d.map((x) => ({ id: x.id, title: x.title, subtitle: "Document", href: "/house/documents" })),
+        ...d.map((x) => ({ id: x.id, title: x.title, subtitle: "Document", href: "/maintenance/documents" })),
       ]),
     );
   }

@@ -26,7 +26,7 @@ export default async function PreventativesPage() {
           <EmptyState icon={<ShieldCheck />} title="No pets yet" description="Add a pet first." compact />
         </Card>
       )}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         {list.map((p) => {
           const mine = prevs.filter((x) => x.petId === p.id);
           return (

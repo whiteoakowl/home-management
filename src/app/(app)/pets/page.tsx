@@ -52,7 +52,7 @@ export default async function PetsDashboard() {
               );
             })}
           </div>
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
             <Card>
               <CardHeader title="Preventatives due soon" icon={<ShieldCheck className="size-4" />} href="/pets/preventatives" />
               {due.length ? (

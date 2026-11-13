@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Clock } from "lucide-react";
 import { Avatar, Badge } from "@/components/ui/display";
 import type { ChoreTemplate } from "@/lib/chores";
+import { formatCents } from "@/lib/utils";
 import { daysBetween, formatShortDate } from "@/lib/dates";
 import { describeRule } from "@/lib/recurrence";
 
@@ -22,10 +23,12 @@ export function TemplateBoard({
     <div className="flex flex-col gap-8">
       {nonEmpty.map((g) => (
         <section key={g.key}>
-          <div className="mb-3 flex items-baseline gap-3">
-            <h2 className="text-xl font-semibold">{g.label}</h2>
-            {g.description && <p className="text-sm text-muted">{g.description}</p>}
-          </div>
+          {g.label && (
+            <div className="mb-3 flex items-baseline gap-3">
+              <h2 className="text-xl font-semibold">{g.label}</h2>
+              {g.description && <p className="text-sm text-muted">{g.description}</p>}
+            </div>
+          )}
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {g.items.map((t) => {
               const due = t.nextDue ? daysBetween(today, t.nextDue) : null;
@@ -41,6 +44,7 @@ export function TemplateBoard({
                       {t.roomName && ` · ${t.roomName}`}
                     </p>
                     {t.checklist.length > 0 && <p className="text-sm text-muted">{t.checklist.length}-step checklist</p>}
+                    {t.chore.estimatedCostCents ? <p className="text-sm text-muted">Est. {formatCents(t.chore.estimatedCostCents)}</p> : null}
                     <div className="mt-auto flex items-center justify-between gap-2 pt-2 text-sm">
                       <span className="flex items-center gap-2">
                         {t.assigneeName ? (

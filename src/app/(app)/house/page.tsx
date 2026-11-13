@@ -39,7 +39,7 @@ export default async function HousePage() {
       .from(rooms)
       .where(eq(rooms.familyId, fid))
       .orderBy(asc(rooms.sortOrder), asc(rooms.name)),
-    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, fid), ne(homeProjects.status, "done"))).orderBy(asc(homeProjects.targetDate)).limit(4),
+    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, fid), ne(homeProjects.status, "completed"))).orderBy(asc(homeProjects.targetDate)).limit(4),
     db
       .select()
       .from(homeDocuments)
@@ -60,10 +60,10 @@ export default async function HousePage() {
 
   const tiles = [
     { href: "/house/cleaning", label: "Cleaning", icon: Sparkles, stat: `${count("cleaning")} scheduled` },
-    { href: "/house/maintenance", label: "Maintenance", icon: Wrench, stat: `${count("maintenance")} scheduled` },
+    { href: "/maintenance/schedule", label: "Maintenance", icon: Wrench, stat: `${count("maintenance")} scheduled` },
     { href: "/house/chores", label: "Chores", icon: ListChecks, stat: `${weekDone[0]?.n ?? 0} done this week` },
-    { href: "/house/projects", label: "Projects", icon: Hammer, stat: `${projects.length} active` },
-    { href: "/house/documents", label: "Documents", icon: FileText, stat: "Warranties, manuals, policies" },
+    { href: "/maintenance/projects", label: "Projects", icon: Hammer, stat: `${projects.length} active` },
+    { href: "/maintenance/documents", label: "Documents", icon: FileText, stat: "Warranties, manuals, policies" },
     { href: "/house/info", label: "Important info", icon: KeyRound, stat: "Wi-Fi, codes, contacts" },
   ];
 
@@ -127,7 +127,7 @@ export default async function HousePage() {
           </Card>
           {projects.length > 0 && (
             <Card>
-              <CardHeader title="Active projects" icon={<Hammer className="size-4" />} href="/house/projects" />
+              <CardHeader title="Active projects" icon={<Hammer className="size-4" />} href="/maintenance/projects" />
               <ul className="flex flex-col gap-2">
                 {projects.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-2 text-[15px]">
@@ -140,7 +140,7 @@ export default async function HousePage() {
           )}
           {expiringDocs.length > 0 && (
             <Card>
-              <CardHeader title="Documents expiring" icon={<FileText className="size-4" />} href="/house/documents" />
+              <CardHeader title="Documents expiring" icon={<FileText className="size-4" />} href="/maintenance/documents" />
               <ul className="flex flex-col gap-2">
                 {expiringDocs.map((d) => (
                   <li key={d.id} className="flex items-center justify-between gap-2 text-[15px]">

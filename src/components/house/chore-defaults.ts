@@ -17,6 +17,7 @@ export function toChoreDefaults(t: ChoreTemplate): ChoreDefaults {
     defaultAssigneeId: c.defaultAssigneeId,
     dueDate: c.dueDate,
     notes: c.notes,
+    estimatedCostCents: c.estimatedCostCents,
     rule: t.rule
       ? {
           freq: t.rule.freq,

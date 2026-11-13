@@ -1,0 +1,1 @@
+ALTER TABLE "home_projects" ALTER COLUMN "status" SET DEFAULT 'idea';

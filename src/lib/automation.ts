@@ -2,6 +2,10 @@ import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  homeDocuments,
+  homeProjects,
+  homeRepairs,
+  projectStages,
   celebrations,
   sabbatSettings,
   petMedicalRecords,
@@ -60,6 +64,7 @@ export const AUTOMATIONS = [
   { key: "medicalReminders", label: "Medical reminders", description: "Remind the patient and parents about refills, follow-ups and expiring medical documents." },
   { key: "petReminders", label: "Pet care reminders", description: "Preventatives and vet follow-ups that are due (to whoever gives them, plus parents)." },
   { key: "craftReminders", label: "Moon & sabbat reminders", description: "Full and new moons, upcoming sabbats and planned celebrations (Witchcraft)." },
+  { key: "maintenanceReminders", label: "Home maintenance reminders", description: "Warranties expiring, scheduled repairs and project milestones." },
   { key: "recurringTransactions", label: "Recurring bills & income", description: "Record repeating expenses and income automatically when they come due." },
 ] as const;
 export type AutomationKey = (typeof AUTOMATIONS)[number]["key"];
@@ -331,6 +336,23 @@ export async function runDailyAutomation(family: Family, force = false) {
     }
     const cels = await db.select({ id: celebrations.id, name: celebrations.name, date: celebrations.date }).from(celebrations).where(and(eq(celebrations.familyId, fid), gte(celebrations.date, today), lte(celebrations.date, addDays(today, 2))));
     for (const c of cels) await notify(fid, who, { kind: "craft_reminder", title: c.date === today ? `Today: ${c.name}` : `Coming up: ${c.name}`, href: `/witchcraft/celebrations/${c.id}` }, today);
+  }
+
+  if (on("maintenanceReminders") && enabled("maintenance")) {
+    const who = await viewersOf(fid, "maintenance");
+    const in30 = addDays(today, 30);
+    const docs = await db.select({ title: homeDocuments.title, on: homeDocuments.expiresOn }).from(homeDocuments).where(and(eq(homeDocuments.familyId, fid), gte(homeDocuments.expiresOn, today), lte(homeDocuments.expiresOn, in30)));
+    for (const d of docs) await notify(fid, who, { kind: "maintenance_due", title: `Expires ${d.on === today ? "today" : "soon"}: ${d.title}`, href: "/maintenance/documents?expiring=1" }, today);
+    const warranties = await db.select({ id: homeRepairs.id, title: homeRepairs.title }).from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), gte(homeRepairs.warrantyExpiresOn, today), lte(homeRepairs.warrantyExpiresOn, in30)));
+    for (const w of warranties) await notify(fid, who, { kind: "maintenance_due", title: `Repair warranty ending soon: ${w.title}`, href: `/maintenance/repairs/${w.id}` }, today);
+    const repairs = await db.select({ id: homeRepairs.id, title: homeRepairs.title }).from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), inArray(homeRepairs.scheduledOn, [today, addDays(today, 1)]), inArray(homeRepairs.status, ["open", "scheduled"])));
+    for (const r of repairs) await notify(fid, who, { kind: "maintenance_due", title: `Repair scheduled: ${r.title}`, href: `/maintenance/repairs/${r.id}` }, today);
+    const stages = await db
+      .select({ name: projectStages.name, project: homeProjects.title, pid: homeProjects.id })
+      .from(projectStages)
+      .innerJoin(homeProjects, eq(homeProjects.id, projectStages.projectId))
+      .where(and(eq(homeProjects.familyId, fid), eq(projectStages.done, false), gte(projectStages.dueOn, today), lte(projectStages.dueOn, addDays(today, 3))));
+    for (const st of stages) await notify(fid, who, { kind: "maintenance_due", title: `${st.project}: "${st.name}" due soon`, href: `/maintenance/projects/${st.pid}` }, today);
   }
 
   if (on("recurringTransactions") && enabled("budget")) {

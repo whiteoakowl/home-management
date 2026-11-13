@@ -55,7 +55,7 @@ export default async function WitchcraftDashboard() {
           </Link>
         ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Wheel of the Year" icon={<CalendarHeart className="size-4" />} href="/witchcraft/wheel" hrefLabel="Open wheel" />
           <ul className="divide-y divide-line">

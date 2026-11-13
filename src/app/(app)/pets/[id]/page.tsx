@@ -106,7 +106,7 @@ export default async function PetPage({ params }: PageProps<"/pets/[id]">) {
         </section>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader title="Preventatives" icon={<ShieldCheck className="size-4" />} action={canEdit && <PreventativeModal petId={pet.id} members={members} />} />
           {prevs.length ? (

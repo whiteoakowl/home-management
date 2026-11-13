@@ -18,7 +18,7 @@ import { nextOccurrence, type Rule } from "./recurrence";
 export type ChoreKind = (typeof chores.$inferSelect)["kind"];
 
 /** Module that governs a chore kind. */
-export const kindModule = (kind: ChoreKind) => (kind === "cleaning" || kind === "maintenance" ? "house" : "chores");
+export const kindModule = (kind: ChoreKind) => (kind === "cleaning" ? "house" : kind === "maintenance" ? "maintenance" : "chores");
 
 /**
  * Members without module access still see work assigned to them
@@ -68,6 +68,8 @@ export async function listOccurrences(
       dueDate: choreOccurrences.dueDate,
       status: choreOccurrences.status,
       completedAt: choreOccurrences.completedAt,
+      actualCostCents: choreOccurrences.actualCostCents,
+      estimatedCostCents: chores.estimatedCostCents,
       assigneeId: choreOccurrences.assigneeId,
       assigneeName: assignee.displayName,
       assigneeColor: assignee.color,

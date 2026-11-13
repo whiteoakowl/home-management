@@ -94,6 +94,7 @@ export function ChoreFormModal({
   links,
   showCost,
   label,
+  presetRoomId,
 }: {
   kind: keyof typeof KIND_LABEL;
   members: MemberOption[];
@@ -108,6 +109,8 @@ export function ChoreFormModal({
   showCost?: boolean;
   /** Custom trigger label (server-safe alternative to `trigger`). */
   label?: string;
+  /** Pre-select a room for new items. */
+  presetRoomId?: string;
 }) {
   const [cadence, setCadence] = useState(defaults?.cleaningCadence ?? "weekly");
   const editing = !!defaults;
@@ -143,7 +146,7 @@ export function ChoreFormModal({
       <FormRow>
         <MemberSelect name="assigneeId" members={members} defaultValue={defaults?.defaultAssigneeId} />
         {rooms.length > 0 && (
-          <SelectField name="roomId" label="Room" defaultValue={defaults?.roomId ?? ""} placeholder="No room" options={rooms.map((r) => ({ value: r.id, label: r.name }))} />
+          <SelectField name="roomId" label="Room" defaultValue={defaults?.roomId ?? presetRoomId ?? ""} placeholder="No room" options={rooms.map((r) => ({ value: r.id, label: r.name }))} />
         )}
         {categories.length > 0 && (
           <SelectField name="categoryId" label="Category" defaultValue={defaults?.categoryId ?? ""} placeholder="None" options={categories.map((c) => ({ value: c.id, label: c.name }))} />

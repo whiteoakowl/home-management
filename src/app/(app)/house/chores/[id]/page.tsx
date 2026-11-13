@@ -5,6 +5,8 @@ import { ArrowLeft, Archive } from "lucide-react";
 import { archiveChore } from "@/app/actions/chores";
 import { ActionButton } from "@/components/forms/inline";
 import { ChoreFormModal } from "@/components/house/chore-form";
+import { MaintenanceCostModal } from "@/components/maintenance/cost-modal";
+import { formatCents } from "@/lib/utils";
 import { toChoreDefaults } from "@/components/house/chore-defaults";
 import { OccurrenceList } from "@/components/house/occurrence-list";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -41,7 +43,7 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
 
   const finished = t.doneCount + t.missedCount;
   const rate = finished ? Math.round((t.doneCount / finished) * 100) : null;
-  const back = { chore: "/house/chores", task: "/house/tasks", cleaning: "/house/cleaning", maintenance: "/house/maintenance" }[kind];
+  const back = { chore: "/house/chores", task: "/house/tasks", cleaning: "/house/cleaning", maintenance: "/maintenance/schedule" }[kind];
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -142,7 +144,8 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
                   <th className="py-2 pr-4 font-medium">Status</th>
                   <th className="py-2 pr-4 font-medium">Assigned</th>
                   <th className="py-2 pr-4 font-medium">Completed by</th>
-                  <th className="py-2 font-medium">When</th>
+                  <th className="py-2 pr-4 font-medium">When</th>
+                  {kind === "maintenance" && <th className="py-2 font-medium">Cost</th>}
                 </tr>
               </thead>
               <tbody>
@@ -157,6 +160,14 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
                     <td className="py-2 text-muted">
                       {h.completedAt?.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: viewer.family.timezone }) ?? "—"}
                     </td>
+                    {kind === "maintenance" && (
+                      <td className="py-2">
+                        <span className="inline-flex items-center gap-1">
+                          {h.actualCostCents !== null ? formatCents(h.actualCostCents) : "—"}
+                          {canManage && h.status === "done" && <MaintenanceCostModal occurrenceId={h.id} current={h.actualCostCents} canBudget={viewer.can("budget", "edit")} />}
+                        </span>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
