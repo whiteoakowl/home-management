@@ -18,12 +18,23 @@ const SignupSchema = z.object({
     .regex(/[0-9]/, "Include at least one number."),
 });
 
+/** The first query on a fresh deployment fails here when no database is set up; say so plainly. */
+const DB_DOWN: ActionState = {
+  ok: false,
+  message: "The app can't reach its database right now. If this is a new deployment, a database still needs to be added (see README, Deploying).",
+};
+function databaseDown(e: unknown): null {
+  console.error("Database unavailable during sign-in:", e);
+  return null;
+}
+
 export async function signup(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = SignupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fieldErrors(parsed.error);
   const { name, email, password } = parsed.data;
 
-  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1).catch(databaseDown);
+  if (!existing) return DB_DOWN;
   if (existing.length) return { ok: false, errors: { email: ["An account with this email already exists."] } };
 
   const [user] = await db
@@ -45,7 +56,9 @@ export async function login(_: ActionState, formData: FormData): Promise<ActionS
   if (!parsed.success) return fieldErrors(parsed.error);
   const { email, password, next } = parsed.data;
 
-  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const rows = await db.select().from(users).where(eq(users.email, email)).limit(1).catch(databaseDown);
+  if (!rows) return DB_DOWN;
+  const [user] = rows;
   // Same message whether the email or password is wrong.
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return { ok: false, message: "That email and password don't match." };

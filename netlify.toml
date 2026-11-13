@@ -1,0 +1,4 @@
+# Netlify: migrate (and on first deploy, fill) the database, then build Next.js.
+[build]
+  command = "npm run db:setup && npm run build"
+  publish = ".next"

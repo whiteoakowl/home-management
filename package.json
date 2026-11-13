@@ -11,9 +11,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed.ts",
     "typecheck": "next typegen >/dev/null && tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "db:setup": "SEED_IF_EMPTY=1 node scripts/db-setup.mjs"
   },
   "dependencies": {
+    "@netlify/blobs": "^8.2.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",

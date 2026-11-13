@@ -11,9 +11,10 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { CRAFT_REFERENCE } from "./craft-data";
 import { referencePlantRows } from "./plant-data";
+import { databaseUrl } from "./url";
 import * as s from "./schema";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({ connectionString: databaseUrl() });
 const db = drizzle(pool, { schema: s });
 
 const tz = "America/New_York";
@@ -31,6 +32,14 @@ const at = (n: number, hh: number, mm = 0) => {
 const weekday = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay();
 
 async function main() {
+  // Deploy mode: only fill an empty database, never reset a live one.
+  if (process.env.SEED_IF_EMPTY === "1") {
+    const [{ n } = { n: 0 }] = await db.select({ n: sql<number>`count(*)::int` }).from(s.families);
+    if (n > 0) {
+      console.log("Database already has a family; skipping demo data.");
+      return;
+    }
+  }
   const emails = ["sarah@vanderbilt.family", "michael@vanderbilt.family", "emma@vanderbilt.family"];
   const old = await db.select().from(s.users).where(inArray(s.users.email, emails));
   if (old.length) {

@@ -9,19 +9,43 @@ import { files } from "@/db/schema";
 import type { Viewer } from "./dal";
 
 /**
- * Storage adapter. Local disk in development (STORAGE_DIR, default ./storage);
- * swap `put/get/remove` for an S3-compatible client in production.
+ * Storage adapter. On Netlify (where the server's disk isn't kept between
+ * requests) files go to Netlify Blobs; elsewhere to local disk (STORAGE_DIR,
+ * default ./storage). STORAGE_DRIVER=blobs|disk forces one or the other.
  */
 const ROOT = process.env.STORAGE_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "storage");
 
+const onNetlify = () =>
+  process.env.STORAGE_DRIVER === "blobs" ||
+  (process.env.STORAGE_DRIVER !== "disk" && !!((globalThis as { netlifyBlobsContext?: unknown }).netlifyBlobsContext || process.env.NETLIFY_BLOBS_CONTEXT));
+
+const blobStore = async () => (await import("@netlify/blobs")).getStore({ name: "uploads", consistency: "strong" });
+
 const storage = {
   async put(key: string, data: Buffer) {
+    if (onNetlify()) {
+      await (await blobStore()).set(key, new Uint8Array(data).buffer as ArrayBuffer);
+      return;
+    }
     const full = path.join(/*turbopackIgnore: true*/ ROOT, key);
     await mkdir(path.dirname(full), { recursive: true });
     await writeFile(full, data);
   },
-  get: (key: string) => readFile(/*turbopackIgnore: true*/ path.join(ROOT, key)),
-  remove: (key: string) => unlink(/*turbopackIgnore: true*/ path.join(ROOT, key)).catch(() => undefined),
+  async get(key: string): Promise<Buffer> {
+    if (onNetlify()) {
+      const ab = await (await blobStore()).get(key, { type: "arrayBuffer" });
+      if (!ab) throw new Error("File not found");
+      return Buffer.from(ab);
+    }
+    return readFile(/*turbopackIgnore: true*/ path.join(ROOT, key));
+  },
+  async remove(key: string) {
+    if (onNetlify()) {
+      await (await blobStore()).delete(key).catch(() => undefined);
+      return;
+    }
+    await unlink(/*turbopackIgnore: true*/ path.join(ROOT, key)).catch(() => undefined);
+  },
 };
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif", "image/avif"];

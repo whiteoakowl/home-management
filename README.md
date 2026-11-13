@@ -66,6 +66,23 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Reports | Cleaning, garden, farm, kitchen, budget, fitness and goal history |
 | Everywhere | Global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
 
+## Deploying (Netlify)
+
+The app needs a PostgreSQL database. Without one, sign-in shows "The app can't reach its database".
+
+1. **Add a database.** In Netlify: your site → **Extensions** → **Neon** (Netlify DB) → add a database to the
+   site. That sets `NETLIFY_DB_URL` (older setups: `NETLIFY_DATABASE_URL`) automatically. Any other Postgres
+   works too: set `DATABASE_URL` under **Site configuration → Environment variables**.
+2. **Redeploy** (Deploys → Trigger deploy → *Clear cache and deploy site*). `netlify.toml` runs
+   `npm run db:setup` before the build: it applies migrations and, on a brand-new empty database only,
+   loads the demo family. It never resets a database that already has data. Set `SEED_DEMO=0` to skip
+   the demo family.
+3. **Sign in** with `sarah@vanderbilt.family` / `vanderbilt123`, then create your own accounts and change or
+   remove the demo ones before adding real information.
+
+Uploaded photos and documents are stored in **Netlify Blobs** automatically when running on Netlify
+(the server's disk is not kept there). Elsewhere they go to `STORAGE_DIR` (default `./storage`).
+
 ## Project layout
 
 ```
