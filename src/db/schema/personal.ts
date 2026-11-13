@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   index,
   integer,
@@ -32,6 +33,13 @@ export const journalEntries = pgTable(
     body: text("body").notNull(),
     mood: text("mood"),
     tags: text("tags").array().notNull().default([]),
+    /** journal | grimoire | pet */
+    book: text("book").notNull().default("journal"),
+    category: text("category"),
+    isFavorite: boolean("is_favorite").notNull().default(false),
+    moonPhase: text("moon_phase"),
+    /** Linked spell/ritual (grimoire) or pet (pet memories). */
+    linkedId: uuid("linked_id"),
     /** 'private' = author only (parents included). */
     visibility: visibility("visibility").notNull().default("private"),
     ...timestamps,

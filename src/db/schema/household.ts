@@ -68,6 +68,11 @@ export const rooms = pgTable(
       .notNull()
       .references(() => families.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    /** room | area | system (HVAC, plumbing…) */
+    kind: text("kind").notNull().default("room"),
+    description: text("description"),
+    notes: text("notes"),
+    imageFileId: uuid("image_file_id"),
     icon: text("icon"),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestamps,
@@ -102,6 +107,13 @@ export const chores = pgTable(
     dueDate: date("due_date"),
     notes: text("notes"),
     points: integer("points"),
+    /** Pet care chores (feeding, grooming…). */
+    petId: uuid("pet_id"),
+    /** Remodeling project tasks. */
+    projectId: uuid("project_id"),
+    projectStageId: uuid("project_stage_id"),
+    estimatedCostCents: integer("estimated_cost_cents"),
+    imageFileId: uuid("image_file_id"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
@@ -148,6 +160,7 @@ export const choreOccurrences = pgTable(
       onDelete: "set null",
     }),
     notes: text("notes"),
+    actualCostCents: integer("actual_cost_cents"),
     ...timestamps,
   },
   (t) => [
@@ -194,6 +207,13 @@ export const homeProjects = pgTable(
     budgetCents: integer("budget_cents"),
     startDate: date("start_date"),
     targetDate: date("target_date"),
+    completedOn: date("completed_on"),
+    estimatedCostCents: integer("estimated_cost_cents"),
+    coverFileId: uuid("cover_file_id"),
+    contractor: text("contractor"),
+    measurements: text("measurements"),
+    notes: text("notes"),
+    shoppingListId: uuid("shopping_list_id"),
     ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
     }),
@@ -213,6 +233,11 @@ export const homeDocuments = pgTable(
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     fileId: uuid("file_id").references(() => files.id, { onDelete: "set null" }),
     notes: text("notes"),
+    /** manual | warranty | estimate | receipt | plan | inspection | paint | product | instructions | other */
+    docType: text("doc_type").notNull().default("other"),
+    roomId: uuid("room_id").references(() => rooms.id, { onDelete: "set null" }),
+    projectId: uuid("project_id").references(() => homeProjects.id, { onDelete: "set null" }),
+    applianceName: text("appliance_name"),
     expiresOn: date("expires_on"),
     visibility: visibility("visibility").notNull().default("family"),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {

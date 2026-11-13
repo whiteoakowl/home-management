@@ -4,9 +4,12 @@ import {
   ChartColumn,
   ClipboardList,
   Dumbbell,
+  Hammer,
+  HeartPulse,
   House,
   LayoutDashboard,
   ListChecks,
+  Moon,
   NotebookPen,
   PawPrint,
   Refrigerator,
@@ -23,6 +26,9 @@ import {
 
 const ICONS: Record<string, LucideIcon> = {
   PawPrint,
+  Hammer,
+  HeartPulse,
+  Moon,
   BookOpen,
   CalendarDays,
   ChartColumn,

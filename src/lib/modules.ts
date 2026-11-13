@@ -1,6 +1,6 @@
 import type { AccessLevel, Module } from "@/db/schema/_shared";
 
-export type NavGroup = "Today" | "Household" | "Kitchen" | "Land" | "Personal" | "Money";
+export type NavGroup = "Today" | "Household" | "Care" | "Kitchen" | "Land" | "Personal" | "Spirit" | "Money";
 
 export type ModuleMeta = {
   id: Module;
@@ -200,9 +200,57 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "History and trends across the whole household.",
     highlights: ["Cleaning, garden & farm history", "Kitchen waste", "Budget, fitness & goal progress"],
   },
+  maintenance: {
+    id: "maintenance",
+    label: "Home Maintenance",
+    href: "/maintenance",
+    icon: "Hammer",
+    group: "Household",
+    phase: 8,
+    inNav: true,
+    defaultMemberAccess: "view",
+    tagline: "Rooms & systems, preventative maintenance, repairs, remodeling and warranties.",
+    highlights: ["Maintenance schedules with costs", "Repair history with photos", "Remodeling projects & warranties"],
+  },
+  medical: {
+    id: "medical",
+    label: "Medical",
+    href: "/medical",
+    icon: "HeartPulse",
+    group: "Care",
+    phase: 8,
+    inNav: true,
+    defaultMemberAccess: "view",
+    tagline: "Health profiles, allergies, conditions, medications and documents, kept private.",
+    highlights: ["Allergy & diet warnings in meal planning", "Medication refill reminders", "Private medical documents"],
+  },
+  pets: {
+    id: "pets",
+    label: "Pets",
+    href: "/pets",
+    icon: "PawPrint",
+    group: "Care",
+    phase: 8,
+    inNav: true,
+    defaultMemberAccess: "edit",
+    tagline: "Pet profiles, health records, preventatives, food, care schedules and memories.",
+    highlights: ["Flea, tick & heartworm reminders", "Food that restocks the shopping list", "Memories timeline"],
+  },
+  witchcraft: {
+    id: "witchcraft",
+    label: "Witchcraft",
+    href: "/witchcraft",
+    icon: "Moon",
+    group: "Spirit",
+    phase: 8,
+    inNav: true,
+    defaultMemberAccess: "edit",
+    tagline: "Moon cycles, Wheel of the Year, spells, rituals, grimoire, crystals and herbs.",
+    highlights: ["Accurate moon phases", "Wheel of the Year planner", "Spell, crystal & herb libraries"],
+  },
 };
 
-export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Kitchen", "Land", "Personal", "Money"];
+export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Care", "Kitchen", "Land", "Personal", "Spirit", "Money"];
 
 export function moduleByHref(href: string): ModuleMeta | undefined {
   return Object.values(MODULE_META).find((m) => m.href === href);

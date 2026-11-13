@@ -20,6 +20,9 @@ export const storageLocation = pgEnum("storage_location", [
   "supplies",
   "farm",
   "garden",
+  "pets",
+  "craft",
+  "home",
   "other",
 ]);
 export const inventoryEventKind = pgEnum("inventory_event_kind", [

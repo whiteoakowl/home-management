@@ -38,6 +38,9 @@ export const entityType = pgEnum("entity_type", [
   "goal",
   "household_info",
   "announcement",
+  "medical",
+  "pet",
+  "craft_item",
 ]);
 
 // ─── Identity ────────────────────────────────────────────────────────────────

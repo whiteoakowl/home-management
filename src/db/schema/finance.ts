@@ -76,6 +76,10 @@ export const transactions = pgTable(
       onDelete: "set null",
     }),
     memberId: uuid("member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    /** Home repair / remodeling project this expense belongs to. */
+    repairId: uuid("repair_id"),
+    projectId: uuid("project_id"),
+    celebrationId: uuid("celebration_id"),
     notes: text("notes"),
     ...timestamps,
   },

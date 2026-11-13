@@ -32,6 +32,10 @@ export const MODULES = [
   "fitness",
   "budget",
   "reports",
+  "medical",
+  "pets",
+  "witchcraft",
+  "maintenance",
 ] as const;
 export type Module = (typeof MODULES)[number];
 

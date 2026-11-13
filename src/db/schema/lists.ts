@@ -52,6 +52,8 @@ export const lists = pgTable(
     kind: listKind("kind").notNull().default("checklist"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     store: text("store"),
+    roomId: uuid("room_id"),
+    projectId: uuid("project_id"),
     visibility: visibility("visibility").notNull().default("family"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {

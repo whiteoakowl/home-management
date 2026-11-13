@@ -9,3 +9,7 @@ export * from "./garden";
 export * from "./farm";
 export * from "./personal";
 export * from "./finance";
+export * from "./medical";
+export * from "./pets";
+export * from "./craft";
+export * from "./maintenance";
