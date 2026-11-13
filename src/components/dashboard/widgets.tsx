@@ -505,7 +505,9 @@ export async function FitnessWidget({ scope }: { scope: Scope }) {
   return (
     <Card>
       <CardHeader title="Fitness this week" icon={<Dumbbell className={ic} />} href="/fitness" />
-      {f.sessions === 0 ? (
+      {f === null ? (
+        <p className="text-sm text-muted">Private. They haven&apos;t shared their fitness with the other parents.</p>
+      ) : f.sessions === 0 ? (
         <EmptyState compact icon={<Dumbbell />} title="No workouts logged" description="Build a weekly plan and log sessions to see progress." />
       ) : (
         <div className="flex gap-6">

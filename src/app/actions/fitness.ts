@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  familyMembers,
   bodyMetrics,
   fitnessPlans,
   foodJournalEntries,
@@ -18,7 +19,8 @@ import {
   workouts,
 } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, getFamilyMember, requireModule, type Viewer } from "@/lib/dal";
+import { canEditFitness } from "@/lib/fitness";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
@@ -30,10 +32,13 @@ function revalidateFitness() {
   revalidatePath("/");
 }
 
-/** You can manage your own fitness data; parents can manage anyone's. */
+/** You can manage your own fitness data; parents can also manage the kids' (not another parent's). */
 async function subject(viewer: Viewer, memberId: string | null) {
   const id = (await familyMemberIdOrNull(viewer.family.id, memberId)) ?? viewer.member.id;
-  if (id !== viewer.member.id && !viewer.isParent) throw new AuthorizationError("You can only change your own fitness data.");
+  if (id !== viewer.member.id) {
+    const m = await getFamilyMember(viewer, id);
+    if (!m || !canEditFitness(viewer, m)) throw new AuthorizationError("You can only change your own fitness data (parents can also manage the kids').");
+  }
   return id;
 }
 
@@ -203,7 +208,10 @@ export async function logWorkout(_: ActionState, fd: FormData): Promise<ActionSt
         }
       }
     }
-    await logActivity(db, viewer.family.id, memberId, "workout.logged", `finished a workout: ${title}${newPRs.length ? ` (new PR: ${newPRs.join(", ")} 💪)` : ""}`, { module: "fitness" });
+    // The family activity feed only mentions a parent's workout if they share their fitness.
+    const who = memberId === viewer.member.id ? viewer.member : await getFamilyMember(viewer, memberId);
+    if (who && (who.role !== "parent" || who.shareFitness))
+      await logActivity(db, viewer.family.id, memberId, "workout.logged", `finished a workout: ${title}${newPRs.length ? ` (new PR: ${newPRs.join(", ")} 💪)` : ""}`, { module: "fitness" });
     revalidateFitness();
     return ok(newPRs.length ? `Logged. New personal record: ${newPRs.join(", ")}!` : "Workout logged.");
   });
@@ -288,4 +296,13 @@ export async function deleteFoodEntry(fd: FormData) {
   await db.delete(foodJournalEntries).where(eq(foodJournalEntries.id, e.id));
   await deleteFamilyFile(viewer.family.id, e.imageFileId);
   revalidateFitness();
+}
+
+/** Parents: share (view-only) or stop sharing my fitness and food journal with the other parents. */
+export async function setShareFitness(fd: FormData) {
+  const viewer = await requireModule("fitness");
+  if (!viewer.isParent) return;
+  await db.update(familyMembers).set({ shareFitness: fd.get("share") === "true" }).where(eq(familyMembers.id, viewer.member.id));
+  revalidatePath("/fitness", "layout");
+  revalidatePath("/", "layout");
 }

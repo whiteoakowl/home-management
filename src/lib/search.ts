@@ -36,6 +36,7 @@ import {
 import { visibleTo, type Viewer } from "./dal";
 import { utcToZoned } from "./dates";
 import { craftVisible } from "./craft";
+import { fitnessVisibleIds } from "./fitness";
 import { medicalVisible } from "./medical";
 
 export type SearchHit = { id: string; title: string; subtitle?: string | null; href: string };
@@ -238,7 +239,8 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
   }
 
   if (viewer.can("fitness")) {
-    const mine = viewer.isParent ? sql`true` : eq(workoutLogs.memberId, viewer.member.id);
+    const visible = await fitnessVisibleIds(viewer);
+    const mine = inArray(workoutLogs.memberId, visible);
     group(
       "fitness",
       "Fitness",
@@ -247,7 +249,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         db
           .select({ id: fitnessPlans.id, title: fitnessPlans.name, memberId: fitnessPlans.memberId })
           .from(fitnessPlans)
-          .where(and(eq(fitnessPlans.familyId, fid), viewer.isParent ? sql`true` : eq(fitnessPlans.memberId, viewer.member.id), ilike(fitnessPlans.name, like)))
+          .where(and(eq(fitnessPlans.familyId, fid), inArray(fitnessPlans.memberId, visible), ilike(fitnessPlans.name, like)))
           .limit(4),
         db.select({ id: workoutLogs.id, title: workoutLogs.title, date: workoutLogs.date, memberId: workoutLogs.memberId }).from(workoutLogs).where(and(eq(workoutLogs.familyId, fid), mine, ilike(workoutLogs.title, like))).limit(4),
       ]).then(([p, l]) => [

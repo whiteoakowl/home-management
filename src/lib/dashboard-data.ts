@@ -27,6 +27,7 @@ import {
 } from "@/db/schema";
 import { addDays, todayIn } from "./dates";
 import { visibleTo, type Viewer } from "./dal";
+import { canViewFitness } from "./fitness";
 
 /**
  * Dashboard queries. Every function filters by the viewer's family and
@@ -270,6 +271,10 @@ export async function getGoals(s: Scope, kind: "savings" | "other") {
 
 export async function getFitness(s: Scope) {
   const memberId = s.subjectId ?? s.viewer.member.id;
+  if (memberId !== s.viewer.member.id) {
+    const [m] = await db.select({ id: familyMembers.id, role: familyMembers.role, shareFitness: familyMembers.shareFitness }).from(familyMembers).where(eq(familyMembers.id, memberId));
+    if (!m || !canViewFitness(s.viewer, m)) return null;
+  }
   const [row] = await db
     .select({
       sessions: sql<number>`count(*)::int`,

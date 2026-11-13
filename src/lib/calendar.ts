@@ -28,6 +28,7 @@ import {
   workouts,
 } from "@/db/schema";
 import { automationOn } from "./automation";
+import { fitnessVisibleIds } from "./fitness";
 import { visibleTo, type Viewer } from "./dal";
 import { addDays, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
@@ -168,7 +169,7 @@ export async function getCalendarItems(
       .innerJoin(fitnessPlans, eq(fitnessPlans.id, workouts.planId))
       .innerJoin(recurrenceRules, eq(recurrenceRules.id, workouts.recurrenceRuleId))
       .innerJoin(familyMembers, eq(familyMembers.id, fitnessPlans.memberId))
-      .where(and(eq(fitnessPlans.familyId, fid), subject ? eq(fitnessPlans.memberId, subject) : undefined));
+      .where(and(eq(fitnessPlans.familyId, fid), subject ? eq(fitnessPlans.memberId, subject) : undefined, inArray(fitnessPlans.memberId, await fitnessVisibleIds(viewer))));
     for (const r of rows) {
       for (const date of occurrencesBetween(r.rule as unknown as Rule, from, to)) {
         out.push({ key: `w:${r.w.id}:${date}`, id: r.w.id, layer: "workouts", title: `${r.name.split(" ")[0]}: ${r.w.name}`, date, startMin: null, endMin: null, color: r.color, href: "/fitness", recurring: true, people: [r.memberId] });

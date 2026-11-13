@@ -1,14 +1,40 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { bodyMetrics, fitnessPlans, personalRecords, recurrenceRules, workoutExercises, workoutLogs, workouts } from "@/db/schema";
+import { bodyMetrics, familyMembers, fitnessPlans, personalRecords, recurrenceRules, workoutExercises, workoutLogs, workouts } from "@/db/schema";
 import { getFamilyMember, type Viewer } from "./dal";
 
-/** Whose fitness are we looking at? Members: themselves. Parents: anyone. */
+/**
+ * Fitness privacy. Everyone sees their own. Parents also see the kids', and
+ * another parent's only when that parent shares it (view-only). Editing:
+ * yourself, and parents for the kids.
+ */
+type MemberLike = { id: string; role: string; shareFitness: boolean };
+
+export function canViewFitness(viewer: Viewer, m: MemberLike) {
+  if (m.id === viewer.member.id) return true;
+  if (!viewer.isParent) return false;
+  return m.role !== "parent" || m.shareFitness;
+}
+
+export function canEditFitness(viewer: Viewer, m: MemberLike) {
+  return m.id === viewer.member.id || (viewer.isParent && m.role !== "parent");
+}
+
+/** Members whose fitness the viewer may see (ids). */
+export async function fitnessVisibleIds(viewer: Viewer) {
+  const all = await db
+    .select({ id: familyMembers.id, role: familyMembers.role, shareFitness: familyMembers.shareFitness })
+    .from(familyMembers)
+    .where(eq(familyMembers.familyId, viewer.family.id));
+  return all.filter((m) => canViewFitness(viewer, m)).map((m) => m.id);
+}
+
+/** Whose fitness are we looking at? The requested member if allowed, else yourself. */
 export async function fitnessSubject(viewer: Viewer, requested: unknown) {
-  if (typeof requested === "string" && requested !== viewer.member.id && viewer.isParent) {
+  if (typeof requested === "string" && requested !== viewer.member.id) {
     const m = await getFamilyMember(viewer, requested);
-    if (m) return m;
+    if (m && canViewFitness(viewer, m)) return m;
   }
   return viewer.member;
 }

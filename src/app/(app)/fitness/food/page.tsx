@@ -13,7 +13,7 @@ import { EmptyState, PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
 import { addDays, formatLongDate, todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
-import { fitnessSubject } from "@/lib/fitness";
+import { canEditFitness, fitnessSubject, fitnessVisibleIds } from "@/lib/fitness";
 import { memberOptions } from "@/lib/queries";
 import { FitnessNav } from "../fitness-header";
 
@@ -30,7 +30,7 @@ export default async function FoodPage({ searchParams }: PageProps<"/fitness/foo
   const viewer = await getViewer();
   if (!viewer.can("fitness")) notFound();
   const sp = await searchParams;
-  const subject = await fitnessSubject(viewer, sp.member);
+  const [subject, fitnessIds] = await Promise.all([fitnessSubject(viewer, sp.member), fitnessVisibleIds(viewer)]);
   const today = todayIn(viewer.family.timezone);
   const date = typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today;
   const [members, entries, planned, week] = await Promise.all([
@@ -45,14 +45,14 @@ export default async function FoodPage({ searchParams }: PageProps<"/fitness/foo
       : Promise.resolve([]),
     db.select().from(foodJournalEntries).where(and(eq(foodJournalEntries.memberId, subject.id), gte(foodJournalEntries.date, addDays(today, -6)), lte(foodJournalEntries.date, today))).orderBy(desc(foodJournalEntries.date)),
   ]);
-  const canEdit = viewer.can("fitness", "edit") && (subject.id === viewer.member.id || viewer.isParent);
+  const canEdit = viewer.can("fitness", "edit") && canEditFitness(viewer, subject);
   const loggedPlan = new Set(entries.map((e) => e.mealPlanEntryId).filter(Boolean));
   const q = (d: string) => `/fitness/food?member=${subject.id}&date=${d}`;
 
   return (
     <>
       <PageHeader eyebrow="Personal" title="Food journal" description="A simple record of meals, linked to the family meal plan." actions={canEdit ? <FoodModal memberId={subject.id} date={date} /> : undefined} />
-      <FitnessNav active="food" subjectId={subject.id} members={members} isParent={viewer.isParent} />
+      <FitnessNav active="food" subjectId={subject.id} members={members.filter((m) => fitnessIds.includes(m.id))} isParent={viewer.isParent} />
       <div className="mb-5 flex items-center gap-2">
         <Link href={q(addDays(date, -1))} aria-label="Previous day" className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface hover:bg-sunken">
           <ChevronLeft className="size-5" />

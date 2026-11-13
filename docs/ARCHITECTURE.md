@@ -123,6 +123,12 @@ Permissions are evaluated in this order (all enforced on the server in the DAL):
 Journal entries marked `private` are visible **only to their author**, parents included. A
 private journal has to be private.
 
+**Fitness privacy.** Everyone sees their own fitness and food journal. Parents also see and manage the
+kids'. Another parent's fitness is visible only when that parent turns on *Share my fitness with the other
+parents* (`family_members.share_fitness`), and then view-only. The same rule (`src/lib/fitness.ts`) covers
+the fitness pages, server actions, portal widget, calendar workouts layer, search, reports and the
+activity feed.
+
 ### 3.1 Default member permissions
 
 | Module | Default for `member` |

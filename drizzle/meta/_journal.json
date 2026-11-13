@@ -43,6 +43,13 @@
       "when": 1794532533527,
       "tag": "0005_chores_rewards_inventory",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794591947078,
+      "tag": "0006_share_fitness",
+      "breakpoints": true
     }
   ]
 }

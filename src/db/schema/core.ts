@@ -111,6 +111,8 @@ export const familyMembers = pgTable(
     role: memberRole("role").notNull().default("member"),
     color: text("color").notNull().default("plum"),
     avatarFileId: uuid("avatar_file_id"),
+    /** Parents only: let the other parents see (not edit) my fitness & food journal. */
+    shareFitness: boolean("share_fitness").notNull().default(false),
     birthday: date("birthday"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,

@@ -1,0 +1,1 @@
+ALTER TABLE "family_members" ADD COLUMN "share_fitness" boolean DEFAULT false NOT NULL;

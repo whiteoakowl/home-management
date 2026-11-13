@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check, Dumbbell, Flame, Medal, Target, Timer } from "lucide-react";
-import { deleteWorkoutLog } from "@/app/actions/fitness";
+import { Check, Dumbbell, Flame, Lock, Medal, Target, Timer, Users } from "lucide-react";
+import { deleteWorkoutLog, setShareFitness } from "@/app/actions/fitness";
 import { LineChart } from "@/components/charts";
-import { DeleteButton } from "@/components/forms/inline";
+import { ActionButton, DeleteButton } from "@/components/forms/inline";
 import { LogWorkoutModal, MetricModal, PlanModal } from "@/components/fitness/fitness-forms";
 import { GoalFormModal } from "@/components/goals/goal-forms";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
 import { addDays, formatShortDate, startOfWeek, todayIn } from "@/lib/dates";
-import { fitnessSubject, logsFor, metricsFor, plansFor, recordsFor, templateFor } from "@/lib/fitness";
+import { canEditFitness, fitnessSubject, fitnessVisibleIds, logsFor, metricsFor, plansFor, recordsFor, templateFor } from "@/lib/fitness";
 import { listGoals, progressOf } from "@/lib/goals";
 import { memberOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
   const viewer = await getViewer();
   if (!viewer.can("fitness")) notFound();
   const sp = await searchParams;
-  const subject = await fitnessSubject(viewer, sp.member);
+  const [subject, fitnessIds] = await Promise.all([fitnessSubject(viewer, sp.member), fitnessVisibleIds(viewer)]);
   const today = todayIn(viewer.family.timezone);
   const monday = startOfWeek(today, 1);
   const week = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
@@ -35,7 +35,7 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
     recordsFor(subject.id),
     viewer.can("goals") ? listGoals(viewer, { kind: "fitness", ownerId: subject.id }) : Promise.resolve([]),
   ]);
-  const canEdit = viewer.can("fitness", "edit") && (subject.id === viewer.member.id || viewer.isParent);
+  const canEdit = viewer.can("fitness", "edit") && canEditFitness(viewer, subject);
   const allWorkouts = plans.flatMap((p) => p.workouts.map((w) => ({ ...w, plan: p.name })));
   const workoutOpts = allWorkouts.map((w) => ({ id: w.id, name: w.name, template: templateFor(w.exercises) }));
   const thisWeek = logs.filter((l) => l.date >= monday);
@@ -56,7 +56,16 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
         description="Plans, workouts, progress and personal records."
         actions={canEdit ? <LogWorkoutModal memberId={subject.id} today={today} workouts={workoutOpts} /> : undefined}
       />
-      <FitnessNav active="overview" subjectId={subject.id} members={members} isParent={viewer.isParent} />
+      {viewer.isParent && subject.id === viewer.member.id && (
+        <div className="-mt-2 mb-5 flex flex-wrap items-center gap-3 rounded-xl bg-sunken px-4 py-3 text-sm">
+          {viewer.member.shareFitness ? <Users className="size-4 text-primary-600" aria-hidden /> : <Lock className="size-4 text-muted" aria-hidden />}
+          <span className="flex-1">{viewer.member.shareFitness ? "The other parents can see (not edit) your fitness and food journal." : "Your fitness and food journal are private. Kids' fitness stays visible to you."}</span>
+          <ActionButton action={setShareFitness} fields={{ share: String(!viewer.member.shareFitness) }} className="h-9 rounded-full border border-line-strong bg-surface px-3 font-medium hover:bg-primary-50">
+            {viewer.member.shareFitness ? "Stop sharing" : "Share with the other parents"}
+          </ActionButton>
+        </div>
+      )}
+      <FitnessNav active="overview" subjectId={subject.id} members={members.filter((m) => fitnessIds.includes(m.id))} isParent={viewer.isParent} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card>

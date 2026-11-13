@@ -20,6 +20,7 @@ import {
 } from "@/db/schema";
 import type { Viewer } from "./dal";
 import { addDays, addMonths } from "./dates";
+import { fitnessVisibleIds } from "./fitness";
 
 const monthLabel = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" });
 function lastMonths(today: string, n: number) {
@@ -176,7 +177,7 @@ export async function fitnessReport(viewer: Viewer, today: string) {
     .select({ name: familyMembers.displayName, memberId: workoutLogs.memberId, date: workoutLogs.date, minutes: workoutLogs.durationMinutes })
     .from(workoutLogs)
     .innerJoin(familyMembers, eq(familyMembers.id, workoutLogs.memberId))
-    .where(and(eq(workoutLogs.familyId, viewer.family.id), gte(workoutLogs.date, from), viewer.isParent ? undefined : eq(workoutLogs.memberId, viewer.member.id)));
+    .where(and(eq(workoutLogs.familyId, viewer.family.id), gte(workoutLogs.date, from), inArray(workoutLogs.memberId, await fitnessVisibleIds(viewer))));
   const people = [...new Map(rows.map((r) => [r.memberId, r.name])).entries()];
   return {
     weekly: weeks.map((end) => ({
