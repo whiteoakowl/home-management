@@ -30,13 +30,20 @@ export function Avatar({
   color,
   size = "md",
   className,
+  photoUrl,
 }: {
   name: string;
   color?: string | null;
   size?: keyof typeof avatarSizes;
   className?: string;
+  photoUrl?: string | null;
 }) {
   const c = memberColor(color);
+  if (photoUrl)
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={photoUrl} alt="" aria-hidden className={cn("inline-block shrink-0 rounded-full object-cover ring-2 ring-surface", avatarSizes[size], className)} />
+    );
   return (
     <span
       className={cn("inline-flex shrink-0 items-center justify-center rounded-full font-semibold ring-2 ring-surface", avatarSizes[size], className)}

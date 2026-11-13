@@ -1,4 +1,5 @@
-import { getMembership } from "@/lib/dal";
+import { getMembership, getViewer } from "@/lib/dal";
+import { canReadMedicalFile } from "@/lib/medical";
 import { readFamilyFile } from "@/lib/files";
 
 /** Serves uploaded files to members of the owning family only. */
@@ -6,6 +7,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   const { id } = await params;
   const { family } = await getMembership();
   if (!family || !/^[0-9a-f-]{36}$/i.test(id)) return new Response("Not found", { status: 404 });
+  // Medical attachments are private to whoever may see the record.
+  if (!(await canReadMedicalFile(await getViewer(), id))) return new Response("Not found", { status: 404 });
   const thumb = new URL(request.url).searchParams.has("thumb");
   const file = await readFamilyFile(family.id, id, thumb);
   if (!file) return new Response("Not found", { status: 404 });

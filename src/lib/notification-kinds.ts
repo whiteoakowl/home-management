@@ -8,4 +8,8 @@ export const NOTIFICATION_KINDS = [
   { key: "goal_milestone", label: "Goal milestones", description: "When a goal reaches a milestone" },
   { key: "budget_alert", label: "Budget alerts", description: "Categories over their monthly limit (parents)" },
   { key: "fitness_reminder", label: "Workout reminders", description: "Workouts scheduled today" },
+  { key: "medical_reminder", label: "Medical reminders", description: "Refills, follow-ups and expiring medical documents (patient & parents)" },
+  { key: "pet_care", label: "Pet care", description: "Preventatives, vet visits and pet supplies" },
+  { key: "craft_reminder", label: "Moon & sabbat reminders", description: "Upcoming sabbats, full and new moons, celebrations" },
+  { key: "maintenance_due", label: "Home maintenance", description: "Maintenance due, warranties expiring, project dates" },
 ] as const;

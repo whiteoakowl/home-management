@@ -402,6 +402,33 @@ async function main() {
   }
   await db.insert(s.transactions).values(txns);
 
+  // ── Medical ──
+  await db.insert(s.medicalProfiles).values([
+    { familyId: fid, memberId: sarah!.id, createdByMemberId: sarah!.id, fullName: "Sarah Anne Vanderbilt", primaryPhysician: "Dr. Priya Patel · Valley Family Medicine · 828-555-0101", dentist: "Blue Ridge Dental · 828-555-0144", emergencyContacts: "Michael Vanderbilt · 828-555-0199", insuranceProvider: "Mountain Health Plan", insurancePolicy: "MHP-448-221", insuranceGroup: "G-7781" },
+    { familyId: fid, memberId: emma!.id, createdByMemberId: sarah!.id, fullName: "Emma Rose Vanderbilt", primaryPhysician: "Dr. Lena Ortiz · Asheville Pediatrics · 828-555-0130", specialists: "Allergist: Dr. Kim · 828-555-0120", emergencyContacts: "Sarah · 828-555-0198\nMichael · 828-555-0199", insuranceProvider: "Mountain Health Plan", insurancePolicy: "MHP-448-223" },
+  ]);
+  await db.insert(s.allergies).values([
+    { familyId: fid, memberId: emma!.id, createdByMemberId: sarah!.id, name: "Peanuts", type: "food", severity: "severe", identifiedOn: "2019-05-02", triggers: ["peanut", "peanut butter", "groundnut"], symptoms: "Hives, swelling", emergencyInstructions: "Follow the allergy action plan from Dr. Kim. Epinephrine auto-injector is in the kitchen drawer and Emma's backpack. Call 911.", visibility: "family" },
+    { familyId: fid, memberId: michael!.id, createdByMemberId: michael!.id, name: "Ragweed pollen", type: "seasonal", severity: "mild", symptoms: "Sneezing, itchy eyes in late summer" },
+  ]);
+  await db.insert(s.foodRestrictions).values([
+    { familyId: fid, memberId: jack!.id, createdByMemberId: sarah!.id, kind: "intolerance", title: "Lactose intolerance", foods: ["milk", "cream", "ice cream", "cheese"], notes: "Lactose-free milk is fine.", visibility: "family" },
+  ]);
+  const [asthma] = await db
+    .insert(s.medicalConditions)
+    .values({ familyId: fid, memberId: jack!.id, createdByMemberId: sarah!.id, name: "Mild asthma", diagnosedOn: "2022-02-10", physician: "Dr. Lena Ortiz", followUpOn: day(18), symptoms: "Coughing with colds or hard exercise", treatmentNotes: "Follow the asthma action plan from Dr. Ortiz." })
+    .returning();
+  await db.insert(s.medications).values([
+    { familyId: fid, memberId: jack!.id, createdByMemberId: sarah!.id, name: "Rescue inhaler", prescriber: "Dr. Lena Ortiz", dosage: "As prescribed", frequency: "As needed, per action plan", pharmacy: "Blue Ridge Pharmacy", refillsRemaining: 2, nextRefillOn: day(2), conditionId: asthma!.id },
+    { familyId: fid, memberId: michael!.id, createdByMemberId: michael!.id, name: "Seasonal allergy tablet", prescriber: "Dr. Priya Patel", dosage: "As prescribed", frequency: "Daily in allergy season", pharmacy: "Blue Ridge Pharmacy", refillsRemaining: 5, nextRefillOn: day(21) },
+  ]);
+  const [appt] = await db
+    .insert(s.calendarEvents)
+    .values({ familyId: fid, title: "Allergist check-up", location: "Dr. Kim · Asheville Allergy", startsAt: at(9, 15, 30), endsAt: at(9, 16, 30), reminderMinutes: 1440, visibility: "selected", source: "medical", sourceId: emma!.id, createdByMemberId: sarah!.id, description: "Ask about the updated action plan for school." })
+    .returning();
+  await db.insert(s.eventAttendees).values({ eventId: appt!.id, memberId: emma!.id });
+  await db.insert(s.recordAccess).values([sarah!.id, emma!.id].map((memberId) => ({ familyId: fid, entityType: "event" as const, entityId: appt!.id, memberId })));
+
   // ── Announcements & activity ──
   await db.insert(s.announcements).values([
     { familyId: fid, authorMemberId: sarah!.id, body: "Grandma arrives next Saturday! Rooms tidy by Friday, please 💜", pinned: true },

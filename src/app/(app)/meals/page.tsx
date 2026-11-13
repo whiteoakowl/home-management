@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
 import { addDays, startOfWeek, todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
+import { dietChecker } from "@/lib/medical";
 import { checkIngredients } from "@/lib/ingredients";
 import { activeInventory, ingredientsFor, missingFor } from "@/lib/kitchen";
 
@@ -41,12 +42,19 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
 
   const showPantry = viewer.can("kitchen");
   const recipeIds = [...new Set(rows.map((r) => r.e.recipeId).filter((x): x is string => !!x))];
-  const [ings, inv] = showPantry ? await Promise.all([ingredientsFor(recipeIds), activeInventory(viewer.family.id)]) : [[], []];
+  const [ings, inv, diet] = await Promise.all([
+    showPantry || viewer.can("medical") ? ingredientsFor(recipeIds) : [],
+    showPantry ? activeInventory(viewer.family.id) : [],
+    dietChecker(viewer),
+  ]);
   const byRecipe = Map.groupBy(ings, (i) => i.recipeId);
   const meals: PlannedMeal[] = rows.map(({ e, name, base, image }) => {
     const scale = base && e.servings ? e.servings / base : 1;
     const missing = e.recipeId && showPantry ? checkIngredients(byRecipe.get(e.recipeId) ?? [], inv, scale).filter((s) => !s.have && !s.optional).length : null;
-    return { id: e.id, date: e.date, slot: e.slot, recipeId: e.recipeId, name: name ?? e.title ?? "Meal", servings: e.servings, missing, thumbUrl: fileUrl(image, true) };
+    // Free-text meals are checked by their title; recipes by every ingredient.
+    const toCheck = e.recipeId ? (byRecipe.get(e.recipeId) ?? []).map((i) => i.name) : [e.title ?? ""];
+    const warnings = diet ? [...new Set(diet.check(toCheck).map((w) => `${w.member}: ${w.label}`))] : [];
+    return { id: e.id, date: e.date, slot: e.slot, recipeId: e.recipeId, name: name ?? e.title ?? "Meal", servings: e.servings, missing: showPantry ? missing : null, thumbUrl: fileUrl(image, true), warnings };
   });
   const weekNeeds = showPantry && recipeIds.length
     ? await missingFor(viewer.family.id, rows.filter((r) => r.e.recipeId).map((r) => ({ recipeId: r.e.recipeId!, scale: r.base && r.e.servings ? r.e.servings / r.base : 1 })))

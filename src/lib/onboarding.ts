@@ -23,7 +23,10 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     key: "home",
     title: "Set up your home",
     description: "Which rooms and spaces do you have? These organise cleaning and maintenance.",
-    modules: [{ module: "house", label: "House management", description: "Cleaning, maintenance, projects and documents" }],
+    modules: [
+      { module: "house", label: "House management", description: "Cleaning, chores and important home info" },
+      { module: "maintenance", label: "Home maintenance & remodeling", description: "Systems, maintenance schedules, repairs, projects and warranties" },
+    ],
     picks: {
       target: "rooms",
       label: "Rooms",
@@ -88,6 +91,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       { module: "fitness", label: "Fitness", description: "Workout plans and progress" },
       { module: "journal", label: "Journal", description: "Private or shared family journal" },
       { module: "reports", label: "Reports", description: "History and trends" },
+      { module: "medical", label: "Medical & health", description: "Private health records, allergies, medications and appointments" },
+      { module: "pets", label: "Pets", description: "Pet profiles, vet records, preventatives and care schedules" },
+      { module: "witchcraft", label: "Witchcraft & spirituality", description: "Moon phases, Wheel of the Year, spells, crystals and herbs" },
     ],
   },
 ];

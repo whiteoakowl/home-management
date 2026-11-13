@@ -9,7 +9,7 @@ import { CheckboxField, FormRow, NumberField, SelectField, TextField } from "@/c
 import { ActionButton } from "@/components/forms/inline";
 import { cn } from "@/lib/utils";
 
-export type PlannedMeal = { id: string; date: string; slot: string; recipeId: string | null; name: string; servings: number | null; missing: number | null; thumbUrl: string | null };
+export type PlannedMeal = { id: string; date: string; slot: string; recipeId: string | null; name: string; servings: number | null; missing: number | null; thumbUrl: string | null; warnings?: string[] };
 
 const SLOTS = [
   { key: "breakfast", label: "Breakfast" },
@@ -99,6 +99,11 @@ export function MealPlanner({
                         </Link>
                       ) : (
                         <p className="line-clamp-2 text-sm font-medium">{m.name}</p>
+                      )}
+                      {!!m.warnings?.length && (
+                        <p className="mt-0.5 rounded bg-wine-50 px-1 text-[11px] font-medium text-wine-700" title={`Allergy / diet conflict: ${m.warnings.join("; ")}`}>
+                          ⚠ {m.warnings.join("; ")}
+                        </p>
                       )}
                       {m.missing !== null && (
                         <p className={cn("text-[11px]", m.missing ? "text-olive-700" : "text-primary-600")}>{m.missing ? `${m.missing} to buy` : "✓ All in stock"}</p>

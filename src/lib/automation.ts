@@ -2,6 +2,9 @@ import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  medicalConditions,
+  medicalDocuments,
+  medications,
   animalHealthRecords,
   animals,
   budgetLimits,
@@ -47,6 +50,7 @@ export const AUTOMATIONS = [
   { key: "workoutReminders", label: "Workout reminders", description: "Notify people about workouts scheduled today." },
   { key: "workoutCalendar", label: "Workouts on calendar", description: "Show scheduled workouts on the family calendar." },
   { key: "budgetAlerts", label: "Budget alerts", description: "Notify parents when a category goes over its monthly limit." },
+  { key: "medicalReminders", label: "Medical reminders", description: "Remind the patient and parents about refills, follow-ups and expiring medical documents." },
   { key: "recurringTransactions", label: "Recurring bills & income", description: "Record repeating expenses and income automatically when they come due." },
 ] as const;
 export type AutomationKey = (typeof AUTOMATIONS)[number]["key"];
@@ -260,6 +264,28 @@ export async function runDailyAutomation(family: Family, force = false) {
         await notify(fid, [s.memberId], { kind: "fitness_reminder", title: `Workout today: ${s.name}`, href: "/fitness" }, today);
       }
     }
+  }
+
+  if (on("medicalReminders") && enabled("medical")) {
+    const parents = await parentsOf(fid);
+    const medWho = await viewersOf(fid, "medical");
+    // Only the patient (if they can open Medical) and parents: names stay private.
+    const to = (memberId: string) => [...new Set([...parents, ...(medWho.includes(memberId) ? [memberId] : [])])];
+    const refills = await db
+      .select({ name: medications.name, memberId: medications.memberId, on: medications.nextRefillOn })
+      .from(medications)
+      .where(and(eq(medications.familyId, fid), eq(medications.active, true), lte(medications.nextRefillOn, addDays(today, 3)), gte(medications.nextRefillOn, addDays(today, -7))));
+    for (const r of refills) await notify(fid, to(r.memberId), { kind: "medical_reminder", title: `Refill ${r.on! < today ? "overdue" : "due"}: ${r.name}`, href: "/medical/medications" }, today);
+    const follow = await db
+      .select({ name: medicalConditions.name, memberId: medicalConditions.memberId })
+      .from(medicalConditions)
+      .where(and(eq(medicalConditions.familyId, fid), eq(medicalConditions.active, true), lte(medicalConditions.followUpOn, addDays(today, 7)), gte(medicalConditions.followUpOn, today)));
+    for (const c of follow) await notify(fid, to(c.memberId), { kind: "medical_reminder", title: `Follow-up coming up: ${c.name}`, href: "/medical/calendar" }, today);
+    const docs = await db
+      .select({ title: medicalDocuments.title, memberId: medicalDocuments.memberId })
+      .from(medicalDocuments)
+      .where(and(eq(medicalDocuments.familyId, fid), lte(medicalDocuments.expiresOn, addDays(today, 30)), gte(medicalDocuments.expiresOn, today)));
+    for (const d of docs) await notify(fid, to(d.memberId), { kind: "medical_reminder", title: `Expires soon: ${d.title}`, href: "/medical/documents" }, today);
   }
 
   if (on("recurringTransactions") && enabled("budget")) {

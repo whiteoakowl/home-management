@@ -13,6 +13,8 @@ import { todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { checkIngredients, formatQty } from "@/lib/ingredients";
 import { activeInventory } from "@/lib/kitchen";
+import { dietChecker } from "@/lib/medical";
+import { DietWarnings } from "@/components/medical/diet-warnings";
 import { categoryOptions } from "@/lib/queries";
 import { collectionOptions, getRecipe } from "@/lib/recipes";
 import { cn } from "@/lib/utils";
@@ -31,7 +33,9 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const servings = Math.max(1, Math.min(50, Number(sp.servings) || base || 1));
   const scale = base ? servings / base : 1;
   const showPantry = viewer.can("kitchen");
-  const [cats, cols, inventory] = await Promise.all([categoryOptions(viewer, "recipe"), collectionOptions(viewer), showPantry ? activeInventory(viewer.family.id) : Promise.resolve([])]);
+  const [cats, cols, inventory, diet] = await Promise.all([categoryOptions(viewer, "recipe"), collectionOptions(viewer), showPantry ? activeInventory(viewer.family.id) : Promise.resolve([]), dietChecker(viewer)]);
+  const warnings = diet ? diet.check(ingredients.map((i) => i.name)) : [];
+  const flagged = new Set(warnings.map((w) => w.ingredient));
   const status = checkIngredients(ingredients, inventory, scale);
   const missing = status.filter((s) => !s.have && !s.optional).length;
   const mine = ratings.find((x) => x.memberId === viewer.member.id)?.rating ?? null;
@@ -128,6 +132,8 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         )}
       </div>
 
+      {diet && <DietWarnings warnings={warnings} hasRules={diet.hasRules} />}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
         <Card className="h-fit">
           <CardHeader
@@ -154,7 +160,8 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
                   <span className="flex-1">
                     {s.quantity !== null && <strong className="font-semibold">{formatQty(s.quantity)} </strong>}
                     {s.unit && `${s.unit} `}
-                    {s.name}
+                    <span className={cn(flagged.has(s.name) && "rounded bg-wine-50 px-1 font-semibold text-wine-700")}>{s.name}</span>
+                    {flagged.has(s.name) && <span className="sr-only"> (allergy or diet warning)</span>}
                     {s.optional && <span className="text-muted"> (optional)</span>}
                     {s.shortBy !== null && <span className="block text-xs text-olive-700">Need {formatQty(s.shortBy)} more {s.unit ?? ""}</span>}
                   </span>
