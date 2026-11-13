@@ -593,6 +593,18 @@ async function main() {
   for (const [text, price] of [["Chicken", 899], ["Mozzarella", 449], ["Tomatoes", 329], ["Coffee", 1199]] as const) {
     await db.update(s.listItems).set({ priceCents: price }).where(and(eq(s.listItems.listId, groceries!.id), eq(s.listItems.text, text)));
   }
+  // Last week's finished trip gives "Buy again" something to suggest.
+  const [lastTrip] = await db.insert(s.lists).values({ familyId: fid, title: "Groceries (last week)", kind: "shopping", store: "Ingles", archivedAt: new Date(), createdByMemberId: sarah!.id }).returning();
+  await db.insert(s.listItems).values(
+    ([["Milk", 389, "dairy"], ["Bread", 349, "pantry"], ["Bananas", 159, "produce"], ["Eggs", 429, "dairy"], ["Apples", 499, "produce"], ["Paper towels", 899, "household"]] as const).map(([text, priceCents, shoppingCategory], i) => ({
+      listId: lastTrip!.id,
+      text,
+      priceCents,
+      shoppingCategory,
+      checked: true,
+      position: i,
+    })),
+  );
   const [plumber, garageCo] = await db
     .insert(s.vendors)
     .values([

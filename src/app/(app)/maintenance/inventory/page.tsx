@@ -94,7 +94,7 @@ export default async function InventoryPage({ searchParams }: PageProps<"/mainte
                 const img = fileUrl(i.imageFileId, true);
                 const warranty = i.warrantyExpiresOn && i.warrantyExpiresOn >= today;
                 return (
-                  <li key={i.id} className="flex gap-3 rounded-2xl border border-line bg-surface p-3">
+                  <li key={i.id} className="flex min-w-0 gap-3 rounded-2xl border border-line bg-surface p-3">
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={img} alt="" className="size-16 shrink-0 rounded-xl object-cover" />

@@ -273,6 +273,29 @@ Shopping lists are lists with `kind = 'shopping'`: one list engine.
 * `home_documents` gained `doc_type`, room, project, appliance; House's old project/document pages
   redirect here (one set of records).
 
+### Everyday extras (`extras.ts` + columns), phase 9
+* **Points & rewards**: `chores.points`; `chore_occurrences.points_awarded` is captured at completion
+  (credited to whoever completed it). `rewards` (cost, optional cash value, optional members),
+  `reward_redemptions` (requested → approved/denied; requested points are held), `point_adjustments`
+  (parent bonuses/deductions). Approved cash rewards become an "Allowance" budget expense.
+* **Rotation**: `chores.rotation_member_ids`; the materialiser assigns the nth occurrence (counting every
+  generated date) to `rotation[n % size]`, so regenerating never reshuffles past turns.
+* **Cleanliness meters** (`src/lib/cleanliness.ts`, pure): condition = 1 − days since last done ÷ typical
+  interval; rooms score the average. "Clean now" completes the due occurrence or logs an extra one.
+* **Recipe import** (`src/lib/recipe-import.ts`, pure): schema.org Recipe JSON-LD (incl. `@graph`,
+  HowToSection, ISO-8601 durations) and a pasted-text parser; pages are fetched with `safeFetch`
+  (`src/lib/safe-fetch.ts`: http(s) only, DNS-checked against private/loopback ranges on every redirect,
+  timeout and size cap). Cook mode detects timers in steps (`timersIn`) and holds a screen wake lock.
+* **Shopping**: `list_items.price_cents` (remembered per item name), list totals, "buy again" from the
+  family's shopping history; a checked-item total pre-fills the shopping-trip expense.
+* **Pantry cooking**: `/kitchen/cook` ranks recipes by missing ingredients, then by use of items expiring
+  within 5 days. `activeInventory` only counts food locations (pet food and craft/home supplies never
+  satisfy a recipe).
+* **Home inventory & providers**: `home_items` (room, value, serial, photo, receipt, warranty) with a
+  printable insurance report; `vendors` (trade, contact, rating) linked from `home_repairs.vendor_id`;
+  `/maintenance/manual` assembles a printable household manual from info, providers, systems,
+  appliances & manuals, paint colors, upkeep and pet care notes.
+
 ### Key relationships (the "interconnected" principle)
 
 ```
@@ -366,6 +389,7 @@ terracotta and honey accents, soft shadows, generous radius.
 | 8a. Medical | Health profiles, allergies, food restrictions, conditions, medications (refills), documents, medical calendar, privacy per record, allergy & diet warnings in recipes and meal plans | ✅ Done |
 | 8b. Pets | Pet profiles & galleries, medical records, preventatives with reminders, food & supplies (inventory → shopping), care schedules (chores), special care, memories (journal) | ✅ Done |
 | 8c. Witchcraft | Accurate moon phases & signs, Wheel of the Year with detail pages and custom dates, celebration planner, spells, rituals, printable grimoire, crystals & collection, herbs (safety-first, garden-linked), tools, magical wellness, supplies | ✅ Done |
+| 9. Everyday extras | Points & rewards with approvals and fair-share view, take-turns rotation, cleanliness meters, recipe import & cook mode, “What can I cook?”, shopping prices / totals / buy again, copy meal week, home inventory & insurance report, service providers, household manual | ✅ Done |
 | 8d. Home maintenance | Rooms & systems, preventative schedules with costs & history, repair log with photos & warranties, remodeling projects (stages, tasks, materials, budget, photos), to-do lists, documents & warranties, 12-month calendar | ✅ Done |
 
 ## 11. How the areas connect (implemented)
@@ -395,6 +419,7 @@ terracotta and honey accents, soft shadows, generous radius.
 
 * `npm test`: unit tests for the recurrence engine, timezone maths, ingredient parsing/matching,
   allergen matching, moon phases/signs (against published USNO times), equinoxes/solstices and the
-  Wheel of the Year (both hemispheres, overrides).
+  Wheel of the Year (both hemispheres, overrides), cleanliness meters, and recipe import (JSON-LD,
+  pasted text, step timers).
 * `npm run typecheck`, `npm run lint`, `npm run build`.
 * `npm run db:seed`: demo Vanderbilt family covering every area.

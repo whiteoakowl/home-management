@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, use, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import type { ActionState } from "@/lib/action-state";
 import { Button } from "@/components/ui/button";
 import { FormMessage, SubmitButton } from "@/components/ui/form";
@@ -103,7 +103,7 @@ export function FormModal({
   size?: "sm" | "md" | "lg";
   defaultOpen?: boolean;
 }) {
-  const triggerIcon = triggerIconProp ?? <Plus className="size-4" />;
+  const triggerIcon = triggerIconProp ?? (triggerLabel === "Edit" ? <Pencil className="size-4" /> : <Plus className="size-4" />);
   const [open, setOpen] = useState(defaultOpen);
   // Remount the form each time the modal opens so it starts clean.
   const [key, setKey] = useState(0);

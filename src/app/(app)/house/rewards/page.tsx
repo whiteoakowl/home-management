@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Check, Gift, Scale, Trophy, X } from "lucide-react";
+import { Check, Gift, Pencil, Scale, Trophy, X } from "lucide-react";
 import { adjustPoints, cancelRedemption, decideRedemption, deleteReward, requestReward, saveReward } from "@/app/actions/rewards";
 import { FormModal } from "@/components/forms/action-form";
 import { CheckboxField, MemberChips, MemberSelect, NumberField, TextField } from "@/components/forms/fields";
@@ -28,6 +28,7 @@ function RewardModal({ r, members }: { r?: Reward; members: { id: string; displa
       triggerLabel={r ? "Edit" : "New reward"}
       triggerVariant={r ? "ghost" : "primary"}
       triggerSize={r ? "sm" : "md"}
+      triggerIcon={r ? <Pencil className="size-4" /> : undefined}
       size="md"
     >
       {r && <input type="hidden" name="id" value={r.id} />}

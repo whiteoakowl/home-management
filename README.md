@@ -46,17 +46,17 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 
 | Area | Highlights |
 |---|---|
-| Home | Today-first dashboard with 21 customizable widgets, announcements, family activity |
+| Home | Today-first dashboard with 22 customizable widgets, announcements, family activity |
 | Family | Member portals (“Emma's Home”), roles, logins, per-area permissions |
 | Calendar | Month / week / day / agenda, recurring events, per-event visibility, layers for chores, workouts, meals, harvests, animal care, pets, home projects and moon & sabbats |
-| House | Cleaning (daily → annual), chores with per-person checklists, tasks, important info |
-| Home Maintenance | Rooms & systems, maintenance schedules with costs, repair log with photos & warranties, remodeling projects, to-do lists, documents & warranties, calendar |
+| House | Cleaning (daily → annual) with room-by-room cleanliness meters, chores with per-person checklists and take-turns rotation, tasks, points & rewards with parent approval and a fair-share view, important info |
+| Home Maintenance | Rooms & systems, maintenance schedules with costs, repair log with photos & warranties, remodeling projects, to-do lists, documents & warranties, home inventory with insurance report, service providers, printable household manual, calendar |
 | Medical | Private health profiles, allergies & food restrictions (flagged in recipes and meal plans), conditions, medications with refill reminders, documents, appointments |
 | Pets | Pet profiles & photos, vet records, flea/tick/heartworm reminders, food & supplies, care chores, memories |
 | Witchcraft | Moon phases, Wheel of the Year, celebrations, spells, rituals, printable grimoire, crystals, herbs (with safety notes), tools, wellness, supplies |
 | Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared |
-| Kitchen | Pantry / fridge / freezer / supplies, gentle expiration alerts, barcode scanning, waste tracking |
-| Meals & recipes | Recipe book with pantry check and printable books, weekly planner, auto-built shopping lists |
+| Kitchen | Pantry / fridge / freezer / supplies, gentle expiration alerts, barcode scanning, waste tracking, “What can I cook?” with use-it-up suggestions |
+| Meals & recipes | Recipe book with pantry check and printable books, import from a link or pasted text, cook mode with step-by-step view and timers, weekly planner (copy last week), auto-built shopping lists with prices, totals and “buy again” |
 | Garden | Plant database, drag-and-drop bed planner, plantings, garden log, harvest totals, seeds |
 | Farm | Animals & flocks, health records, feed, production charts, drag-and-drop farm map |
 | Journal | Private or shared entries with moods, photos and tags; timeline, calendar and search |
