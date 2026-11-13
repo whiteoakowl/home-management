@@ -100,8 +100,9 @@ membership and medical privacy, so the bucket stays private and the key never re
 Without these, uploads use Netlify Blobs on Netlify, or `./storage` locally. `STORAGE_DRIVER` =
 `supabase` | `blobs` | `disk` forces a choice.
 
-Then redeploy and sign in with `sarah@vanderbilt.family` / `vanderbilt123`. Create your own accounts and
-change or remove the demo ones before adding real information.
+Then redeploy and sign in with `sarah@vanderbilt.family` / `vanderbilt123`. Change passwords under the
+avatar menu → **Account & password** (parents can reset a member's password from Family → person →
+**Manage**), and change or remove the demo accounts before adding real information.
 
 ## Project layout
 

@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
 
@@ -46,4 +46,10 @@ export async function destroySession() {
   const token = store.get(SESSION_COOKIE)?.value;
   if (token) await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
   store.delete(SESSION_COOKIE);
+}
+
+/** Sign a user out everywhere except (optionally) the current browser. */
+export async function revokeSessions(userId: string, opts: { keepCurrent?: boolean } = {}) {
+  const token = opts.keepCurrent ? (await cookies()).get(SESSION_COOKIE)?.value : undefined;
+  await db.delete(sessions).where(token ? and(eq(sessions.userId, userId), ne(sessions.tokenHash, hashToken(token))) : eq(sessions.userId, userId));
 }

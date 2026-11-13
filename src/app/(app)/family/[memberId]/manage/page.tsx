@@ -11,6 +11,7 @@ import { MODULES } from "@/db/schema/_shared";
 import { getFamilyMember, requireParent } from "@/lib/dal";
 import { getStoredPermissions } from "@/lib/family";
 import { LoginForm, PermissionsForm } from "./forms";
+import { ResetPasswordForm } from "../../../account/forms";
 
 export const metadata: Metadata = { title: "Profile & access" };
 
@@ -54,7 +55,19 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
       <Card>
         <CardHeader title="Login" />
         {member.userId ? (
-          <p className="text-[15px] text-muted">{member.displayName} signs in with their own account.</p>
+          member.id === viewer.member.id ? (
+            <p className="text-[15px] text-muted">
+              Change your own password on your{" "}
+              <a href="/account" className="font-medium text-primary-700 underline">
+                Account page
+              </a>
+              .
+            </p>
+          ) : member.role !== "parent" || viewer.family.ownerMemberId === viewer.member.id ? (
+            <ResetPasswordForm memberId={member.id} name={member.displayName} />
+          ) : (
+            <p className="text-[15px] text-muted">{member.displayName} signs in with their own account. Only the family&apos;s owner can reset another parent&apos;s password.</p>
+          )
         ) : (
           <LoginForm memberId={member.id} name={member.displayName} />
         )}
