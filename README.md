@@ -81,8 +81,9 @@ from the brand mark with `node scripts/generate-icons.mjs`.
 
 ## Deploying (Netlify + Supabase)
 
-**Database (required).** Create a Supabase project, open **Connect**, copy the **Session pooler**
-connection string (password filled in), and add it in Netlify as `DATABASE_URL`. Netlify DB
+**Database (required).** Create a Supabase project, open **Connect**, copy the **Transaction pooler**
+connection string (port 6543, password filled in; best for serverless hosting like Netlify), and add it in
+Netlify as `DATABASE_URL`. Netlify DB
 (`NETLIFY_DB_URL`) or any other Postgres also works. Every deploy runs `npm run db:setup`
 (`netlify.toml`): migrations, plus the demo family on a brand-new empty database only. It never resets
 existing data. Set `SEED_DEMO=0` to skip the demo family.
@@ -99,6 +100,9 @@ automatically; override with `SUPABASE_BUCKET`). The app serves files itself aft
 membership and medical privacy, so the bucket stays private and the key never reaches a browser.
 Without these, uploads use Netlify Blobs on Netlify, or `./storage` locally. `STORAGE_DRIVER` =
 `supabase` | `blobs` | `disk` forces a choice.
+
+Something wrong? Open **`/api/health`** on your site: it checks the database and storage setup and explains
+the problem in plain English (it shows no passwords or family data).
 
 Then redeploy and sign in with `sarah@vanderbilt.family` / `vanderbilt123`. Change passwords under the
 avatar menu → **Account & password** (parents can reset a member's password from Family → person →
