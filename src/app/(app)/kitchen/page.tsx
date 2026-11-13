@@ -27,8 +27,12 @@ const VIEWS = [
   { key: "fridge", label: "Refrigerator" },
   { key: "freezer", label: "Freezer" },
   { key: "supplies", label: "Supplies" },
+  { key: "pets", label: "Pet supplies", optional: true },
+  { key: "craft", label: "Craft supplies", optional: true },
+  { key: "home", label: "Home supplies", optional: true },
   { key: "expiring", label: "Expiring" },
 ];
+const LOCATION_VIEWS = ["pantry", "fridge", "freezer", "supplies", "pets", "craft", "home"];
 
 const EMPTY_COPY: Record<string, { title: string; desc: string; example: string }> = {
   all: { title: "Your kitchen is empty", desc: "Add what's in your pantry, fridge and freezer and we'll keep an eye on expiry dates.", example: "Scan a barcode, or add “Eggs: 12, fridge”" },
@@ -57,7 +61,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
         and(
           eq(inventoryItems.familyId, viewer.family.id),
           isNull(inventoryItems.archivedAt),
-          ["pantry", "fridge", "freezer", "supplies"].includes(view) ? eq(inventoryItems.location, view as "pantry") : undefined,
+          LOCATION_VIEWS.includes(view) ? eq(inventoryItems.location, view as "pantry") : undefined,
           view === "expiring" ? sql`${inventoryItems.expiresOn} <= ${today}::date + 30` : undefined,
         ),
       )
@@ -92,7 +96,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
       : [{ key: "all", label: "", items }];
 
   const copy = EMPTY_COPY[view]!;
-  const add = <InventoryFormModal categories={cats} defaults={{ location: ["pantry", "fridge", "freezer", "supplies"].includes(view) ? view : "pantry" }} defaultOpen={sp.new === "1"} />;
+  const add = <InventoryFormModal categories={cats} defaults={{ location: LOCATION_VIEWS.includes(view) ? view : "pantry" }} defaultOpen={sp.new === "1"} />;
 
   return (
     <>
@@ -111,7 +115,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
           ) : undefined
         }
       />
-      <LinkTabs active={view} tabs={VIEWS.map((v) => ({ key: v.key, href: `/kitchen?view=${v.key}`, label: v.label, count: countFor(v.key) }))} />
+      <LinkTabs active={view} tabs={VIEWS.filter((v) => !("optional" in v) || countFor(v.key) > 0 || v.key === view).map((v) => ({ key: v.key, href: `/kitchen?view=${v.key}`, label: v.label, count: countFor(v.key) }))} />
 
       {lowCount > 0 && viewer.can("shopping", "edit") && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-olive-100 bg-olive-50 px-4 py-3">

@@ -2,6 +2,9 @@ import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  petMedicalRecords,
+  petPreventatives,
+  pets,
   medicalConditions,
   medicalDocuments,
   medications,
@@ -51,6 +54,7 @@ export const AUTOMATIONS = [
   { key: "workoutCalendar", label: "Workouts on calendar", description: "Show scheduled workouts on the family calendar." },
   { key: "budgetAlerts", label: "Budget alerts", description: "Notify parents when a category goes over its monthly limit." },
   { key: "medicalReminders", label: "Medical reminders", description: "Remind the patient and parents about refills, follow-ups and expiring medical documents." },
+  { key: "petReminders", label: "Pet care reminders", description: "Preventatives and vet follow-ups that are due (to whoever gives them, plus parents)." },
   { key: "recurringTransactions", label: "Recurring bills & income", description: "Record repeating expenses and income automatically when they come due." },
 ] as const;
 export type AutomationKey = (typeof AUTOMATIONS)[number]["key"];
@@ -288,6 +292,26 @@ export async function runDailyAutomation(family: Family, force = false) {
     for (const d of docs) await notify(fid, to(d.memberId), { kind: "medical_reminder", title: `Expires soon: ${d.title}`, href: "/medical/documents" }, today);
   }
 
+  if (on("petReminders") && enabled("pets")) {
+    const parents = await parentsOf(fid);
+    const prev = await db
+      .select({ pet: pets.name, petId: pets.id, product: petPreventatives.productName, assigneeId: petPreventatives.assigneeId, due: petPreventatives.nextDueOn })
+      .from(petPreventatives)
+      .innerJoin(pets, eq(pets.id, petPreventatives.petId))
+      .where(and(eq(pets.familyId, fid), eq(pets.status, "active"), lte(petPreventatives.nextDueOn, addDays(today, 1)), gte(petPreventatives.nextDueOn, addDays(today, -14))));
+    for (const p of prev) {
+      const to = [...new Set([...parents, ...(p.assigneeId ? [p.assigneeId] : [])])];
+      await notify(fid, to, { kind: "pet_care", title: `${p.pet}: ${p.product} ${p.due! < today ? "overdue" : "due"}`, href: `/pets/${p.petId}` }, today);
+    }
+    const vet = await db
+      .select({ pet: pets.name, petId: pets.id, title: petMedicalRecords.title })
+      .from(petMedicalRecords)
+      .innerJoin(pets, eq(pets.id, petMedicalRecords.petId))
+      .where(and(eq(pets.familyId, fid), eq(pets.status, "active"), gte(petMedicalRecords.nextDueOn, today), lte(petMedicalRecords.nextDueOn, addDays(today, 7))));
+    const who = await viewersOf(fid, "pets");
+    for (const v of vet) await notify(fid, who, { kind: "pet_care", title: `${v.pet}: ${v.title} due soon`, href: `/pets/${v.petId}` }, today);
+  }
+
   if (on("recurringTransactions") && enabled("budget")) {
     await materializeRecurringTransactions(fid, today);
   }
@@ -308,6 +332,15 @@ export async function runDailyAutomation(family: Family, force = false) {
       if (r.spent > r.limit) await notify(fid, parents, { kind: "budget_alert", title: `${r.name} is over budget this month`, href: "/budget" }, today);
     }
   }
+}
+
+type ShoppingCat = "frozen" | "household" | "pantry" | "farm" | "garden" | "other";
+/** Aisle for an inventory location (pet food, craft and home supplies shop as household). */
+export function shoppingCategoryFor(location: string): ShoppingCat {
+  if (location === "freezer") return "frozen";
+  if (location === "farm" || location === "garden") return location;
+  if (["supplies", "pets", "craft", "home"].includes(location)) return "household";
+  return "pantry";
 }
 
 /** Low-stock inventory → unchecked items on the main shopping list (no duplicates). */
@@ -337,7 +370,7 @@ export async function addLowStockToShopping(familyId: string) {
       unit: l.unit,
       source: "low_stock" as const,
       sourceId: l.id,
-      shoppingCategory: (l.location === "freezer" ? "frozen" : l.location === "supplies" ? "household" : "pantry") as "frozen" | "household" | "pantry",
+      shoppingCategory: shoppingCategoryFor(l.location),
       position: 1000 + i,
     }));
   if (rows.length) await db.insert(listItems).values(rows);

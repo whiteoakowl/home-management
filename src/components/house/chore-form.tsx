@@ -34,6 +34,7 @@ export type ChoreDefaults = {
   notes: string | null;
   rule: (RuleDefaults & { startsOn?: string }) | null;
   checklist: { text: string; assigneeId: string | null }[];
+  estimatedCostCents?: number | null;
 };
 
 const KIND_LABEL = { chore: "chore", cleaning: "cleaning task", maintenance: "maintenance task", task: "task" } as const;
@@ -90,6 +91,9 @@ export function ChoreFormModal({
   defaults,
   trigger,
   defaultOpen,
+  links,
+  showCost,
+  label,
 }: {
   kind: keyof typeof KIND_LABEL;
   members: MemberOption[];
@@ -98,13 +102,19 @@ export function ChoreFormModal({
   defaults?: ChoreDefaults;
   trigger?: (open: () => void) => ReactNode;
   defaultOpen?: boolean;
+  /** Hidden links to other modules (pet care, remodeling project tasks). */
+  links?: { petId?: string; projectId?: string; projectStageId?: string };
+  /** Show an estimated-cost field (maintenance). */
+  showCost?: boolean;
+  /** Custom trigger label (server-safe alternative to `trigger`). */
+  label?: string;
 }) {
   const [cadence, setCadence] = useState(defaults?.cleaningCadence ?? "weekly");
   const editing = !!defaults;
   return (
     <FormModal
       title={editing ? `Edit ${KIND_LABEL[kind]}` : `New ${KIND_LABEL[kind]}`}
-      triggerLabel={`Add ${KIND_LABEL[kind]}`}
+      triggerLabel={label ?? `Add ${KIND_LABEL[kind]}`}
       action={saveChore}
       submitLabel={editing ? "Save changes" : "Add"}
       size="lg"
@@ -122,6 +132,7 @@ export function ChoreFormModal({
     >
       <input type="hidden" name="kind" value={kind} />
       {defaults && <input type="hidden" name="id" value={defaults.id} />}
+      {Object.entries(links ?? {}).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
       <TextField
         name="title"
         label="Name"
@@ -185,6 +196,9 @@ export function ChoreFormModal({
 
       <FormRow>
         <NumberField name="estimatedMinutes" label="Estimated minutes" min={0} defaultValue={defaults?.estimatedMinutes ?? ""} />
+        {(showCost || kind === "maintenance") && (
+          <NumberField name="estimatedCost" label="Estimated cost ($)" min={0} step="0.01" defaultValue={defaults?.estimatedCostCents != null ? defaults.estimatedCostCents / 100 : ""} />
+        )}
       </FormRow>
       <TextAreaField name="instructions" label="Instructions" rows={2} defaultValue={defaults?.instructions ?? ""} placeholder="How to do it well…" />
       <ChecklistEditor members={members} initial={defaults?.checklist ?? []} />

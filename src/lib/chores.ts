@@ -46,6 +46,8 @@ export async function listOccurrences(
     statuses?: ("pending" | "done" | "skipped" | "missed")[];
     assigneeId?: string;
     choreId?: string;
+    petIds?: string[];
+    projectId?: string;
     order?: "asc" | "desc";
     limit?: number;
   },
@@ -85,6 +87,8 @@ export async function listOccurrences(
         opts.to ? lte(choreOccurrences.dueDate, opts.to) : undefined,
         opts.statuses ? inArray(choreOccurrences.status, opts.statuses) : undefined,
         opts.choreId ? eq(choreOccurrences.choreId, opts.choreId) : undefined,
+        opts.petIds ? (opts.petIds.length ? inArray(chores.petId, opts.petIds) : sql`false`) : undefined,
+        opts.projectId ? eq(chores.projectId, opts.projectId) : undefined,
         opts.assigneeId
           ? or(
               eq(choreOccurrences.assigneeId, opts.assigneeId),

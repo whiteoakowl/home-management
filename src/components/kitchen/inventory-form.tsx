@@ -14,6 +14,9 @@ export const LOCATION_OPTIONS = [
   { value: "supplies", label: "Kitchen supplies" },
   { value: "farm", label: "Farm storage" },
   { value: "garden", label: "Garden / root cellar" },
+  { value: "pets", label: "Pet supplies" },
+  { value: "craft", label: "Craft & ritual supplies" },
+  { value: "home", label: "Home maintenance supplies" },
   { value: "other", label: "Other" },
 ];
 

@@ -429,6 +429,42 @@ async function main() {
   await db.insert(s.eventAttendees).values({ eventId: appt!.id, memberId: emma!.id });
   await db.insert(s.recordAccess).values([sarah!.id, emma!.id].map((memberId) => ({ familyId: fid, entityType: "event" as const, entityId: appt!.id, memberId })));
 
+  // ── Pets ──
+  const [biscuit, pepper] = await db
+    .insert(s.pets)
+    .values([
+      { familyId: fid, name: "Biscuit", species: "dog", breed: "Golden retriever", sex: "male_neutered", birthday: "2020-06-14", adoptedOn: "2020-08-20", colorMarkings: "Golden, white blaze on chest", weight: "68", weightUnit: "lb", microchipNumber: "985112004455667", microchipCompany: "HomeAgain", veterinarian: "Blue Ridge Animal Hospital", vetPhone: "828-555-0175", caretakerMemberId: michael!.id, personality: "Gentle, goofy, afraid of the vacuum.", favoriteThings: "Tennis balls, creek walks, peanut-free biscuits" },
+      { familyId: fid, name: "Pepper", species: "cat", breed: "Domestic shorthair", sex: "female_spayed", birthday: "2019-03-01", adoptedOn: "2019-05-11", colorMarkings: "Black with white socks", weight: "9.5", weightUnit: "lb", veterinarian: "Blue Ridge Animal Hospital", vetPhone: "828-555-0175", caretakerMemberId: emma!.id, personality: "Independent, loves sunny windowsills." },
+    ])
+    .returning();
+  await db.insert(s.petPreventatives).values([
+    { petId: biscuit!.id, kind: "heartworm", productName: "Monthly heartworm chewable", lastGivenOn: day(-29), intervalDays: 30, nextDueOn: day(1), assigneeId: michael!.id },
+    { petId: biscuit!.id, kind: "flea_tick", productName: "Flea & tick chew", lastGivenOn: day(-80), intervalDays: 90, nextDueOn: day(10), assigneeId: michael!.id },
+    { petId: pepper!.id, kind: "flea", productName: "Topical flea treatment", lastGivenOn: day(-25), intervalDays: 30, nextDueOn: day(5), assigneeId: emma!.id },
+  ]);
+  await db.insert(s.petMedicalRecords).values([
+    { petId: biscuit!.id, kind: "vet_visit", title: "Annual wellness exam", date: day(-120), veterinarian: "Dr. Hale", costCents: 18500, nextDueOn: day(245), description: "Healthy weight; teeth look good." },
+    { petId: biscuit!.id, kind: "vaccination", title: "Rabies booster (3-year)", date: day(-120), veterinarian: "Dr. Hale" },
+    { petId: pepper!.id, kind: "dental", title: "Dental cleaning", date: day(-200), veterinarian: "Dr. Hale", costCents: 32000 },
+  ]);
+  const [kibble] = await db.insert(s.inventoryItems).values({ familyId: fid, name: "Salmon & rice kibble", quantity: "1", unit: "bag", location: "pets", lowStockThreshold: "1" }).returning();
+  const [litter] = await db.insert(s.inventoryItems).values({ familyId: fid, name: "Clumping litter", quantity: "3", unit: "box", location: "pets", lowStockThreshold: "1" }).returning();
+  await db.insert(s.petSupplies).values([
+    { petId: biscuit!.id, inventoryItemId: kibble!.id, kind: "food", brand: "Trailside", foodType: "Dry", flavor: "Salmon & rice", feedingSchedule: "7am & 5pm", feedingInstructions: "2 cups per meal" },
+    { petId: pepper!.id, inventoryItemId: litter!.id, kind: "supply" },
+  ]);
+  await db.insert(s.petCareNotes).values([
+    { petId: biscuit!.id, kind: "emergency", body: "Emergency vet: Asheville Animal ER, 828-555-0911 (open 24/7)." },
+    { petId: pepper!.id, kind: "feeding", body: "½ can wet food morning, dry food free-fed. No milk." },
+  ]);
+  await db.insert(s.journalEntries).values([
+    { familyId: fid, authorMemberId: emma!.id, date: "2020-08-20", title: "Biscuit comes home", body: "He slept the whole car ride with his head on my lap.", book: "pet", linkedId: biscuit!.id, category: "Adoption day", visibility: "family" },
+    { familyId: fid, authorMemberId: sarah!.id, date: day(-30), title: "First snow", body: "Pepper watched the snow from the window for an hour.", book: "pet", linkedId: pepper!.id, visibility: "family" },
+  ]);
+  const [walk] = await db.insert(s.chores).values({ familyId: fid, kind: "chore", title: "Walk Biscuit", petId: biscuit!.id, defaultAssigneeId: emma!.id, createdByMemberId: sarah!.id, estimatedMinutes: 30 }).returning();
+  const [walkRule] = await db.insert(s.recurrenceRules).values({ familyId: fid, freq: "daily", interval: 1, startsOn: day(0) }).returning();
+  await db.update(s.chores).set({ recurrenceRuleId: walkRule!.id }).where(eq(s.chores.id, walk!.id));
+
   // ── Announcements & activity ──
   await db.insert(s.announcements).values([
     { familyId: fid, authorMemberId: sarah!.id, body: "Grandma arrives next Saturday! Rooms tidy by Friday, please 💜", pinned: true },

@@ -122,7 +122,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         .from(inventoryItems)
         .where(and(eq(inventoryItems.familyId, fid), isNull(inventoryItems.archivedAt), ilike(inventoryItems.name, like)))
         .limit(LIMIT)
-        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${Number(x.qty)} ${x.unit ?? ""} · ${x.location}`, href: `/kitchen?view=${["pantry", "fridge", "freezer", "supplies"].includes(x.location) ? x.location : "all"}` }))),
+        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${Number(x.qty)} ${x.unit ?? ""} · ${x.location}`, href: `/kitchen?view=${["pantry", "fridge", "freezer", "supplies", "pets", "craft", "home"].includes(x.location) ? x.location : "all"}` }))),
     );
   }
 

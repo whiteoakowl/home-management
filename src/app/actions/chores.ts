@@ -4,14 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { choreChecklistItems, choreOccurrenceItems, choreOccurrences, chores } from "@/db/schema";
+import { choreChecklistItems, choreOccurrenceItems, choreOccurrences, chores, homeProjects, pets } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { materializeChore, rematerializeChore } from "@/lib/automation";
 import { kindModule, type ChoreKind } from "@/lib/chores";
 import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
-import { ownedCategoryId, ownedRoomId } from "@/lib/queries";
+import { ownedCategoryId, ownedId, ownedRoomId, ownedStageId } from "@/lib/queries";
 import { f, familyMemberIdOrNull, upsertRule } from "@/lib/records";
 import { CADENCE_PRESETS, ruleFromForm, type Rule } from "@/lib/recurrence";
 
@@ -72,6 +72,11 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       defaultAssigneeId: await familyMemberIdOrNull(viewer.family.id, f.str(fd, "assigneeId")),
       dueDate: rule ? null : f.date(fd, "dueDate"),
       notes: f.str(fd, "notes"),
+      ...(fd.has("estimatedCost") ? { estimatedCostCents: f.cents(fd, "estimatedCost") } : {}),
+      // Cross-module links are only touched when the form carries them.
+      ...(fd.has("petId") ? { petId: await ownedId(viewer, pets, f.str(fd, "petId")) } : {}),
+      ...(fd.has("projectId") ? { projectId: await ownedId(viewer, homeProjects, f.str(fd, "projectId")) } : {}),
+      ...(fd.has("projectStageId") ? { projectStageId: await ownedStageId(viewer, f.str(fd, "projectStageId")) } : {}),
     };
 
     // Checklist rows come as parallel arrays: item[] + itemAssignee[]
