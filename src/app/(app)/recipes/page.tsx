@@ -58,7 +58,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
         }
       />
       <FoodSpaceNav viewer={viewer} active="recipes" space={space} others={others} />
-      <PrivateSpaceNote space={space} />
+      <PrivateSpaceNote space={space} viewer={viewer} />
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
         <form className="relative flex-1" action="/recipes">
           {isPrivate && <input type="hidden" name="space" value={space.own ? "mine" : space.memberId} />}

@@ -20,7 +20,7 @@ import {
 } from "@/db/schema";
 import { fieldErrors, guard, type ActionState } from "@/lib/action-state";
 import { MEMBER_COLOR_KEYS } from "@/lib/colors";
-import { getFamilyMember, getMembership, requireParent } from "@/lib/dal";
+import { getFamilyMember, getMembership, getViewer, requireParent } from "@/lib/dal";
 import {
   addMember,
   createFamilyForUser,
@@ -213,16 +213,11 @@ export async function savePrivateFood(_: ActionState, formData: FormData): Promi
   return { ok: true, message: enabled ? `${target.displayName}'s private food space is on. Only they can see what they put there.` : `${target.displayName}'s private food space is off. Anything already in it stays private and comes back if you turn it on again.` };
 }
 
-/** Whether parents may open members' private food spaces (read-only). Off by default. */
-export async function savePantryPrivacy(_: ActionState, formData: FormData): Promise<ActionState> {
-  const viewer = await requireParent();
-  const on = formData.get("parentsSeePrivateFood") === "on";
-  await db
-    .update(families)
-    .set({ settings: { ...viewer.family.settings, parentsSeePrivateFood: on } })
-    .where(eq(families.id, viewer.family.id));
+/** My own choice: let parents open (read-only) my private food space. */
+export async function setShareFood(formData: FormData) {
+  const viewer = await getViewer();
+  await db.update(familyMembers).set({ shareFoodWithParents: formData.get("share") === "true" }).where(eq(familyMembers.id, viewer.member.id));
   revalidatePath("/", "layout");
-  return { ok: true, message: on ? "Parents can now open members' private food spaces (read-only)." : "Private food spaces are private to each member." };
 }
 
 export async function savePermissions(_: ActionState, formData: FormData): Promise<ActionState> {

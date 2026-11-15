@@ -40,7 +40,7 @@ export default async function ShoppingPage({ searchParams }: PageProps<"/shoppin
         actions={canEdit ? add : undefined}
       />
       <FoodSpaceNav viewer={viewer} active="shopping" space={space} others={others} />
-      <PrivateSpaceNote space={space} />
+      <PrivateSpaceNote space={space} viewer={viewer} />
       {lists.length === 0 ? (
         <Card>
           <EmptyState icon={<ShoppingBasket />} title="No shopping lists" description="Create a list per store, or one for everything." action={canEdit ? cloneElement(add, { defaultOpen: false }) : undefined} />

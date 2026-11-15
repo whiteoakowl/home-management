@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNull, type SQL } from "drizzle-orm";
+import { and, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { familyMembers, type Module } from "@/db/schema";
@@ -30,18 +30,19 @@ export const FOOD_LABELS: Record<"kitchen" | "recipes" | "meals" | "shopping", {
 };
 
 export const hasPrivateFood = (viewer: Viewer) => viewer.member.privateFood;
-export const parentsSeePrivateFood = (viewer: Viewer) => viewer.isParent && !!viewer.family.settings?.parentsSeePrivateFood;
+/** May this parent open (read-only) that member's private food space? Only if the member chose to share it. */
+export const canPeekFood = (viewer: Viewer, ownerMemberId: string) => viewer.isParent && viewer.sharedFoodOwners.includes(ownerMemberId);
 
 /**
  * Resolve the `?space=` search param: "mine" (own private space), a member id
- * (a parent opening a member's space, when the family allows it), or the
+ * (a parent opening a member's space, when that member shares it), or the
  * family space. Anything not allowed falls back to the family space.
  */
 export async function resolveSpace(viewer: Viewer, raw: unknown): Promise<FoodSpace> {
   if (raw === "mine" && hasPrivateFood(viewer)) return { kind: "private", memberId: viewer.member.id, memberName: viewer.member.displayName, own: true };
   if (typeof raw === "string" && /^[0-9a-f-]{36}$/i.test(raw)) {
     if (raw === viewer.member.id && hasPrivateFood(viewer)) return { kind: "private", memberId: raw, memberName: viewer.member.displayName, own: true };
-    if (parentsSeePrivateFood(viewer)) {
+    if (canPeekFood(viewer, raw)) {
       const [m] = await db
         .select({ id: familyMembers.id, name: familyMembers.displayName, privateFood: familyMembers.privateFood })
         .from(familyMembers)
@@ -105,18 +106,17 @@ export const withSpace = (href: string, space: FoodSpace) => {
   return p ? `${href}${href.includes("?") ? "&" : "?"}${p}` : href;
 };
 
-/** Members whose private spaces a parent may open (when the family allows it). */
+/** Members whose private spaces a parent may open (those who chose to share with parents). */
 export async function privateSpaceMembers(viewer: Viewer) {
-  if (!parentsSeePrivateFood(viewer)) return [];
-  const rows = await db
+  if (!viewer.sharedFoodOwners.length) return [];
+  return db
     .select({ id: familyMembers.id, displayName: familyMembers.displayName })
     .from(familyMembers)
-    .where(and(eq(familyMembers.familyId, viewer.family.id), eq(familyMembers.privateFood, true)));
-  return rows.filter((r) => r.id !== viewer.member.id);
+    .where(and(eq(familyMembers.familyId, viewer.family.id), inArray(familyMembers.id, viewer.sharedFoodOwners)));
 }
 
 /** May the viewer read a record in this owner's space? (family: module access; private: owner, or parent when allowed) */
 export function canReadOwned(viewer: Viewer, module: Module, ownerMemberId: string | null) {
   if (!ownerMemberId) return viewer.can(module);
-  return ownerMemberId === viewer.member.id || parentsSeePrivateFood(viewer);
+  return ownerMemberId === viewer.member.id || canPeekFood(viewer, ownerMemberId);
 }

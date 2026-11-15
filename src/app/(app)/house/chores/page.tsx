@@ -132,7 +132,7 @@ export default async function ChoresPage({ searchParams }: PageProps<"/house/cho
                 icon={<Repeat />}
                 title="No chores yet"
                 description="Create recurring chores and assign them. They'll show up on everyone's list automatically."
-                example="“Feed the dog: daily, Emma” · “Take out trash: Mon & Thu, Jack”"
+                example="“Feed the dog: daily, Serenity” · “Take out trash: Mon & Thu, Jack”"
                 action={canManage ? <ChoreFormModal kind="chore" members={members} rooms={rooms} categories={cats} /> : undefined}
               />
             </Card>

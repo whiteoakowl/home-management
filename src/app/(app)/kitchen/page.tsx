@@ -131,7 +131,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
         }
       />
       <FoodSpaceNav viewer={viewer} active="kitchen" space={space} others={others} />
-      <PrivateSpaceNote space={space} />
+      <PrivateSpaceNote space={space} viewer={viewer} />
       <LinkTabs active={view} tabs={VIEWS.filter((v) => !(isPrivate && "optional" in v) && (!("optional" in v) || countFor(v.key) > 0 || v.key === view)).map((v) => ({ key: v.key, href: withSpace(`/kitchen?view=${v.key}`, space), label: v.label, count: countFor(v.key) }))} />
 
       {lowCount > 0 && !isPrivate && viewer.can("shopping", "add") && (

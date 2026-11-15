@@ -3,6 +3,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle
 import { db } from "@/db";
 import { categories, familyMembers, listItems, lists, recurrenceRules } from "@/db/schema";
 import { AuthorizationError, visibleTo, type Viewer } from "./dal";
+import { canPeekFood } from "./food-space";
 import { describeRule, type Rule } from "./recurrence";
 
 type Kind = (typeof lists.$inferSelect)["kind"];
@@ -28,7 +29,7 @@ export async function loadList(viewer: Viewer, id: string, edit = false) {
   if (!l) throw new AuthorizationError("List not found.");
   if (l.ownerMemberId) {
     if (l.ownerMemberId === viewer.member.id) return l;
-    if (!edit && viewer.isParent && viewer.family.settings?.parentsSeePrivateFood) return l;
+    if (!edit && canPeekFood(viewer, l.ownerMemberId)) return l;
     throw new AuthorizationError("List not found.");
   }
   const mine = l.createdByMemberId === viewer.member.id;

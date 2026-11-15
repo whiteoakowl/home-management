@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/display";
 import { AUTOMATIONS } from "@/lib/automation";
 import { requireParent } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
-import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, ModulesForm, PantryPrivacyForm } from "./forms";
+import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, ModulesForm } from "./forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -70,13 +70,6 @@ export default async function SettingsPage() {
         <CardHeader title="Automations" />
         <p className="mb-3 text-[15px] text-muted">Repetitive work happens automatically once a day. Switch off anything you&apos;d rather do by hand.</p>
         <AutomationsForm automations={AUTOMATIONS.map((a) => ({ ...a }))} settings={f.settings ?? {}} />
-      </Card>
-      <Card>
-        <CardHeader title="Family Pantry privacy" />
-        <p className="mb-3 text-[15px] text-muted">
-          Turn on a private food space for a member from Family → their name → Manage. Choose here whether parents can look inside them.
-        </p>
-        <PantryPrivacyForm enabled={!!f.settings?.parentsSeePrivateFood} />
       </Card>
       <Card>
         <CardHeader title="Categories" />

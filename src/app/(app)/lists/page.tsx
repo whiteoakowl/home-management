@@ -69,7 +69,7 @@ export default async function ListsPage({ searchParams }: PageProps<"/lists">) {
                         {l.open} open{l.total - l.open > 0 && ` · ${l.total - l.open} done`}
                       </p>
                     </div>
-                    {(l.visibility === "private" || l.visibility === "parents") && <Lock className="size-4 text-muted" aria-label={l.visibility === "parents" ? "Parents only" : "Only me"} />}
+                    {(l.visibility === "private" || l.visibility === "parents") && <Lock className="size-4 text-muted" aria-label={l.visibility === "parents" ? "Parents & me" : "Only me"} />}
                     {l.visibility === "selected" && <Users className="size-4 text-muted" aria-label="Shared with selected people" />}
                   </div>
                   {l.preview.length > 0 && (

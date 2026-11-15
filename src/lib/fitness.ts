@@ -5,26 +5,29 @@ import { bodyMetrics, familyMembers, fitnessPlans, personalRecords, recurrenceRu
 import { getFamilyMember, type Viewer } from "./dal";
 
 /**
- * Fitness privacy. Everyone sees their own. Parents also see the kids', and
- * another parent's only when that parent shares it (view-only). Editing:
- * yourself, and parents for the kids.
+ * Fitness privacy. Everyone sees their own, and nobody else's unless that person
+ * turns on "Share my fitness with parents" (family_members.share_fitness): then
+ * parents can see it, read-only. Family members without a login (young kids) can't
+ * choose, so parents see and manage theirs.
  */
-type MemberLike = { id: string; role: string; shareFitness: boolean };
+type MemberLike = { id: string; role: string; shareFitness: boolean; userId: string | null };
+
+const managedByParents = (m: MemberLike) => m.role !== "parent" && m.userId === null;
 
 export function canViewFitness(viewer: Viewer, m: MemberLike) {
   if (m.id === viewer.member.id) return true;
   if (!viewer.isParent) return false;
-  return m.role !== "parent" || m.shareFitness;
+  return m.shareFitness || managedByParents(m);
 }
 
 export function canEditFitness(viewer: Viewer, m: MemberLike) {
-  return m.id === viewer.member.id || (viewer.isParent && m.role !== "parent");
+  return m.id === viewer.member.id || (viewer.isParent && managedByParents(m));
 }
 
 /** Members whose fitness the viewer may see (ids). */
 export async function fitnessVisibleIds(viewer: Viewer) {
   const all = await db
-    .select({ id: familyMembers.id, role: familyMembers.role, shareFitness: familyMembers.shareFitness })
+    .select({ id: familyMembers.id, role: familyMembers.role, shareFitness: familyMembers.shareFitness, userId: familyMembers.userId })
     .from(familyMembers)
     .where(eq(familyMembers.familyId, viewer.family.id));
   return all.filter((m) => canViewFitness(viewer, m)).map((m) => m.id);

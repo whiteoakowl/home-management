@@ -54,7 +54,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
               </Badge>
             ) : list.visibility === "parents" && (
               <Badge tone="mist">
-                <Lock className="size-3" /> Parents only
+                <Lock className="size-3" /> Parents &amp; me
               </Badge>
             )}
             {list.visibility === "selected" && (

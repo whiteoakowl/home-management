@@ -1,9 +1,10 @@
+import { MEDICAL_VISIBILITY } from "@/lib/medical-config";
 import { CalendarPlus, Pencil } from "lucide-react";
 import { saveMedicalAppointment } from "@/app/actions/medical";
 import { FormModal } from "@/components/forms/action-form";
 import { DateField, FormRow, MemberSelect, NumberField, SelectField, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
 
-export type ApptDefaults = { id?: string; title?: string; memberId?: string; date?: string; time?: string; duration?: number; location?: string | null; description?: string | null; notes?: string | null; reminderMinutes?: number | null; visibility?: "family" | "selected"; selected?: string[] };
+export type ApptDefaults = { id?: string; title?: string; memberId?: string; date?: string; time?: string; duration?: number; location?: string | null; description?: string | null; notes?: string | null; reminderMinutes?: number | null; visibility?: "family" | "private" | "selected" | "parents"; selected?: string[] };
 
 export function AppointmentModal({ members, d = {}, edit, defaultOpen }: { members: MemberOption[]; d?: ApptDefaults; edit?: boolean; defaultOpen?: boolean }) {
   return (
@@ -43,7 +44,7 @@ export function AppointmentModal({ members, d = {}, edit, defaultOpen }: { membe
       />
       <TextAreaField name="description" label="Reason / questions to ask" rows={2} defaultValue={d.description ?? ""} />
       <TextAreaField name="notes" label="Notes after the visit" rows={2} defaultValue={d.notes ?? ""} />
-      <VisibilityField members={members} defaultValue={d.visibility === "family" ? "family" : d.selected?.length ? "selected" : "private"} defaultSelected={d.selected} privateLabel="Patient & parents" parentsOption={false} />
+      <VisibilityField members={members} defaultValue={d.visibility ?? "parents"} defaultSelected={d.selected} {...MEDICAL_VISIBILITY} />
     </FormModal>
   );
 }

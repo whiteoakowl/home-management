@@ -14,8 +14,8 @@ const owner = () => ({
   memberId: uuid("member_id")
     .notNull()
     .references(() => familyMembers.id, { onDelete: "cascade" }),
-  /** Medical records default to private (parents + selected people). */
-  visibility: visibility("visibility").notNull().default("private"),
+  /** Medical records default to "Patient & parents"; "private" = only the patient (and whoever added it). */
+  visibility: visibility("visibility").notNull().default("parents"),
   createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
 });
 

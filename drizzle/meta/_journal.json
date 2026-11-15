@@ -78,6 +78,20 @@
       "when": 1794769429362,
       "tag": "0010_personal_items_and_parents_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794770041366,
+      "tag": "0011_medical_patient_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794770183302,
+      "tag": "0012_share_food_with_parents",
+      "breakpoints": true
     }
   ]
 }

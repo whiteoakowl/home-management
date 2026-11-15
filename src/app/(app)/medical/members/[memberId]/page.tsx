@@ -12,7 +12,7 @@ import { Avatar, PageHeader } from "@/components/ui/display";
 import { getFamilyMember } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
 import { listMedical, medicalAppointments } from "@/lib/medical";
-import { KIND_LABEL, MEDICAL_FIELDS, type MedicalKind } from "@/lib/medical-config";
+import { KIND_LABEL, MEDICAL_FIELDS, type MedicalKind, MEDICAL_VISIBILITY } from "@/lib/medical-config";
 import { memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import { AppointmentList } from "../../appointment-list";
@@ -46,7 +46,7 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
   const profile = profileRows[0]?.r;
   const ids = [...(profile ? [profile.id] : []), ...lists.flatMap((l) => l.map(({ r }) => r.id))];
   const access = await getRecordAccess("medical", ids);
-  const vis = { privateLabel: "Private (patient & parents)", parentsOption: false };
+  const vis = MEDICAL_VISIBILITY;
   const canPhoto = viewer.isParent || viewer.member.id === memberId;
   const now = new Date();
   return (
@@ -90,7 +90,7 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
                   defaults={profile ? medicalDefaults("profile", profile as never) : { fullName: member.displayName }}
                   hidden={{ kind: "profile", memberId: member.id, ...(profile ? { id: profile.id } : {}) }}
                   members={members}
-                  visibility={{ ...vis, defaultValue: profile?.visibility ?? "private", selected: profile ? access.get(profile.id) : [] }}
+                  visibility={{ ...vis, defaultValue: profile?.visibility ?? "parents", selected: profile ? access.get(profile.id) : [] }}
                 />
               </span>
             )
@@ -125,7 +125,7 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
                 defaults={{ active: true }}
                 hidden={{ kind: s.kind, memberId: member.id }}
                 members={members}
-                visibility={{ ...vis, defaultValue: "private" }}
+                visibility={{ ...vis, defaultValue: "parents" }}
               />
             )}
           </div>

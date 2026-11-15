@@ -20,15 +20,18 @@ export const MEDICAL_TABLES = {
 export const medTable = (kind: MedicalKind) => MEDICAL_TABLES[kind] as unknown as typeof allergies;
 
 /**
- * Medical privacy: parents see everything; a member sees records about
- * themselves, records shared with the family, and records shared with them.
+ * Medical privacy. The patient and whoever added a record always see it. Beyond that:
+ *   family   → everyone with Medical access
+ *   parents  → parents too ("Patient & parents")
+ *   selected → the people picked (parents only if picked)
+ *   private  → nobody else ("Only the patient")
  */
 export function medicalVisible(viewer: Viewer, t: { id: PgColumn; memberId: PgColumn; visibility: PgColumn; createdByMemberId: PgColumn }): SQL {
-  if (viewer.isParent) return sql`true`;
   return or(
     eq(t.memberId, viewer.member.id),
     eq(t.createdByMemberId, viewer.member.id),
     sql`${t.visibility} = 'family'`,
+    viewer.isParent ? sql`${t.visibility} = 'parents'` : sql`false`,
     and(
       sql`${t.visibility} = 'selected'`,
       inArray(t.id, db.select({ id: recordAccess.entityId }).from(recordAccess).where(and(eq(recordAccess.entityType, "medical"), eq(recordAccess.memberId, viewer.member.id)))),
@@ -122,14 +125,13 @@ export async function medicalAppointments(viewer: Viewer, opts: { from?: Date; m
         eq(calendarEvents.source, "medical"),
         opts.from ? gte(calendarEvents.startsAt, opts.from) : undefined,
         opts.memberId ? eq(calendarEvents.sourceId, opts.memberId) : undefined,
-        viewer.isParent
-          ? undefined
-          : or(
-              eq(calendarEvents.sourceId, viewer.member.id),
-              eq(calendarEvents.createdByMemberId, viewer.member.id),
-              sql`${calendarEvents.visibility} = 'family'`,
-              inArray(calendarEvents.id, db.select({ id: recordAccess.entityId }).from(recordAccess).where(and(eq(recordAccess.entityType, "event"), eq(recordAccess.memberId, viewer.member.id)))),
-            ),
+        or(
+          eq(calendarEvents.sourceId, viewer.member.id),
+          eq(calendarEvents.createdByMemberId, viewer.member.id),
+          sql`${calendarEvents.visibility} = 'family'`,
+          viewer.isParent ? sql`${calendarEvents.visibility} = 'parents'` : sql`false`,
+          inArray(calendarEvents.id, db.select({ id: recordAccess.entityId }).from(recordAccess).where(and(eq(recordAccess.entityType, "event"), eq(recordAccess.memberId, viewer.member.id)))),
+        ),
       ),
     )
     .orderBy(asc(calendarEvents.startsAt));

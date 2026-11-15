@@ -27,6 +27,8 @@ export type Viewer = {
   isOwner: boolean;
   access: Record<Module, AccessLevel>;
   can: (module: Module, level?: AccessLevel) => boolean;
+  /** Parents: members who chose to let parents see their private food space. */
+  sharedFoodOwners: string[];
 };
 
 /** Signed-in user, or redirect to /login. Does not require a family. */
@@ -69,10 +71,23 @@ export const getViewer = cache(async (opts?: { allowOnboarding?: boolean }): Pro
     ]),
   ) as Record<Module, AccessLevel>;
 
+  const sharedFoodOwners =
+    member.role === "parent"
+      ? (
+          await db
+            .select({ id: familyMembers.id })
+            .from(familyMembers)
+            .where(and(eq(familyMembers.familyId, family.id), eq(familyMembers.isActive, true), eq(familyMembers.privateFood, true), eq(familyMembers.shareFoodWithParents, true)))
+        )
+          .map((r) => r.id)
+          .filter((id) => id !== member.id)
+      : [];
+
   return {
     user,
     member,
     family,
+    sharedFoodOwners,
     isParent: member.role === "parent",
     isOwner: family.ownerMemberId === member.id,
     access,
@@ -116,24 +131,20 @@ export async function listFamilyMembers(familyId: string) {
 
 /**
  * SQL filter implementing record visibility (§3 layer 3) for any table with
- * `visibility`, an author column and an id:
+ * `visibility`, an author column and an id. Parents get no special access: what
+ * each person sees is what the creator chose.
  *   family   → everyone (with module access)
- *   selected → the creator, the listed people and parents
- *   parents  → the creator and parents
- *   private  → the creator only ("Only me" means only me, parents included)
- * `parentsSeePrivate` lets parents also see private records (not used by default).
+ *   selected → the creator and the people they picked (parents only if picked)
+ *   parents  → the creator and parents ("Parents & me")
+ *   private  → the creator only ("Only me")
+ * Anyone listed in record_access for the record can see it, whatever the visibility.
  */
 export function visibleTo(
   viewer: Viewer,
   t: { id: PgColumn; visibility: PgColumn; author: PgColumn | null },
   entityType: (typeof recordAccess.$inferSelect)["entityType"],
-  opts: { parentsSeePrivate?: boolean } = {},
 ): SQL {
-  const parentsSeePrivate = opts.parentsSeePrivate ?? false;
   const own = t.author ? eq(t.author, viewer.member.id) : sql`false`;
-  if (viewer.isParent) {
-    return parentsSeePrivate ? sql`true` : or(sql`${t.visibility} <> 'private'`, own)!;
-  }
   const shared = inArray(
     t.id,
     db
@@ -144,7 +155,8 @@ export function visibleTo(
   return or(
     sql`${t.visibility} = 'family'`,
     own,
-    and(sql`${t.visibility} = 'selected'`, shared),
+    viewer.isParent ? sql`${t.visibility} = 'parents'` : sql`false`,
+    shared,
   )!;
 }
 

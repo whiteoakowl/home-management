@@ -43,7 +43,7 @@ export default async function JournalEntryPage({ params }: PageProps<"/journal/[
           )}
           {x.e.visibility === "parents" && (
             <Badge tone="mist">
-              <Lock className="size-3" /> Parents only
+              <Lock className="size-3" /> Parents &amp; me
             </Badge>
           )}
         </p>

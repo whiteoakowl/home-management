@@ -145,8 +145,8 @@ export async function saveMedicalAppointment(_: ActionState, fd: FormData): Prom
       allDay: false,
       reminderMinutes: f.int(fd, "reminderMinutes") ?? 1440,
       notes: f.str(fd, "notes"),
-      // "Private" here means the patient + parents, so store it as selected.
-      visibility: visibility === "family" ? ("family" as const) : ("selected" as const),
+      // The patient is always on the access list (below), so they see it on the calendar too.
+      visibility,
       source: "medical" as const,
       sourceId: memberId,
     };
@@ -164,7 +164,7 @@ export async function saveMedicalAppointment(_: ActionState, fd: FormData): Prom
         eventId = row!.id;
       }
       await tx.insert(eventAttendees).values({ eventId: eventId!, memberId });
-      const access = new Set([memberId, viewer.member.id, ...(visibility === "selected" ? shareWith : [])]);
+      const access = new Set([memberId, ...(visibility === "selected" ? shareWith : [])]);
       await saveRecordAccess(tx, viewer.family.id, "event", eventId!, [...access]);
     });
     revalidatePath("/medical", "layout");

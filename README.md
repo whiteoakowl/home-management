@@ -24,7 +24,7 @@ npm run dev                     # http://localhost:3000
 ```
 
 Sample logins after `db:seed` (password `vanderbilt123`): `sarah@vanderbilt.family` (parent, owner),
-`michael@vanderbilt.family` (parent), `emma@vanderbilt.family` (family member with limited access).
+`michael@vanderbilt.family` (parent), `serenity@vanderbilt.family` (family member with limited access).
 Or create your own account at `/signup`; the setup wizard walks you through the rest.
 
 Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to change it).
@@ -48,7 +48,7 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Area | Highlights |
 |---|---|
 | Home | Today-first dashboard with 22 customizable widgets, announcements, family activity |
-| Family | Member portals (“Emma's Home”), roles, logins, per-area permissions |
+| Family | Member portals (“Serenity's Home”), roles, logins, per-area permissions |
 | Calendar | Month (named colour bars) / week / day (full details) / List with filters (member, category, type, visibility, colour, search; Today / This Week / This Month / Upcoming / custom range), recurring events, per-event visibility, layers for chores, workouts, meals, harvests, animal care, pets, home projects and moon & sabbats |
 | House | Cleaning (daily → annual) with room-by-room cleanliness meters, chores with per-person checklists and take-turns rotation, tasks, points & rewards with parent approval and a fair-share view, important info |
 | Home Maintenance | Rooms & systems, maintenance schedules with costs, repair log with photos & warranties, remodeling projects, to-do lists, documents & warranties, home inventory with insurance report, service providers, printable household manual, calendar |

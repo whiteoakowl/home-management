@@ -126,36 +126,37 @@ export function MemberChips({
 }
 
 /**
- * Who can see this record: whole family / selected people / parents only / only me.
- * Posts `visibility` and repeated `visibleTo`. Pass `parentsOption={false}` where
- * "Parents only" makes no sense (e.g. medical records, which are always visible to parents).
+ * Who can see this record: whole family / selected people / parents & me / only me.
+ * Posts `visibility` and repeated `visibleTo`. Parents get no automatic access:
+ * they see a record only if the creator picks an option that includes them.
  */
 export function VisibilityField({
   members,
   defaultValue = "family",
   defaultSelected = [],
   privateLabel = "Only me",
+  parentsLabel = "Parents & me",
+  privateHint = "Only you will see this. Nobody else, parents included.",
+  parentsHint = "Only you and the parents will see this. Other family members won't.",
   parentsOption = true,
 }: {
   members: MemberOption[];
   defaultValue?: "family" | "private" | "selected" | "parents";
   defaultSelected?: string[];
   privateLabel?: string;
+  parentsLabel?: string;
+  privateHint?: string;
+  parentsHint?: string;
   parentsOption?: boolean;
 }) {
   const [v, setV] = useState(defaultValue);
   const opts = [
     { value: "family", label: "Whole family", icon: UsersRound },
     { value: "selected", label: "Selected people", icon: Users },
-    ...(parentsOption ? [{ value: "parents", label: "Parents only", icon: ShieldCheck } as const] : []),
+    ...(parentsOption ? [{ value: "parents", label: parentsLabel, icon: ShieldCheck } as const] : []),
     { value: "private", label: privateLabel, icon: Lock },
   ] as const;
-  const hint =
-    v === "private" && privateLabel === "Only me"
-      ? "Only you will see this. Nobody else, parents included."
-      : v === "parents"
-        ? "Only parents (and you) will see this."
-        : null;
+  const hint = v === "private" ? privateHint : v === "parents" ? parentsHint : v === "family" ? "Everyone in the family can see this." : null;
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1.5 text-sm font-medium text-ink-soft">Who can see this</legend>
@@ -178,7 +179,7 @@ export function VisibilityField({
       {v === "selected" && (
         <div className="mt-1">
           <MemberChips name="visibleTo" members={members} defaultValue={defaultSelected} />
-          <p className="mt-1.5 text-xs text-muted">Parents can always see shared records.</p>
+          <p className="mt-1.5 text-xs text-muted">Only the people you pick (and you) will see this. Parents too only if you pick them.</p>
         </div>
       )}
     </fieldset>

@@ -6,7 +6,7 @@ import { ActionButton, DeleteButton } from "@/components/forms/inline";
 import { DetailList } from "@/components/records/detail-list";
 import { Avatar, Badge } from "@/components/ui/display";
 import { fileUrl } from "@/lib/files";
-import { KIND_LABEL, MEDICAL_FIELDS, SEVERITY_TONE, type MedicalKind } from "@/lib/medical-config";
+import { KIND_LABEL, MEDICAL_FIELDS, SEVERITY_TONE, type MedicalKind, MEDICAL_VISIBILITY } from "@/lib/medical-config";
 import type { FieldValue } from "@/lib/record-fields";
 
 type Rec = { id: string; memberId: string; visibility: "family" | "private" | "selected" | "parents"; fileId?: string | null; [k: string]: unknown };
@@ -92,7 +92,7 @@ export function MedicalRecordCard({
               defaults={medicalDefaults(kind, r)}
               hidden={{ kind, id: r.id }}
               members={members}
-              visibility={{ defaultValue: r.visibility, selected: sharedWith, privateLabel: "Private (patient & parents)", parentsOption: false }}
+              visibility={{ defaultValue: r.visibility, selected: sharedWith, ...MEDICAL_VISIBILITY }}
             />
             <DeleteButton action={deleteMedicalRecord} fields={{ kind, id: r.id }} what={`this ${KIND_LABEL[kind].toLowerCase()}`} />
           </div>

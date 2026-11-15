@@ -58,7 +58,7 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
 
       <Card>
         <CardHeader title="Family Pantry: private food space" />
-        <PrivateFoodForm memberId={member.id} name={member.displayName} enabled={member.privateFood} parentsCanSee={!!viewer.family.settings?.parentsSeePrivateFood} />
+        <PrivateFoodForm memberId={member.id} name={member.displayName} enabled={member.privateFood} parentsCanSee={member.shareFoodWithParents} />
       </Card>
 
       <Card>

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { canPeekFood } from "./food-space";
 import { categories, familyMembers, recipeCollectionItems, recipeCollections, recipeIngredients, recipeRatings, recipes } from "@/db/schema";
 import type { Viewer } from "./dal";
 import { fileUrl } from "./files";
@@ -60,8 +61,8 @@ export async function getRecipe(viewer: Viewer, id: string) {
     .leftJoin(familyMembers, eq(familyMembers.id, recipes.createdByMemberId))
     .where(and(eq(recipes.id, id), eq(recipes.familyId, viewer.family.id)));
   if (!row) return null;
-  // Private recipes: their owner, or a parent (read-only) when the family allows it.
-  if (row.r.ownerMemberId && row.r.ownerMemberId !== viewer.member.id && !(viewer.isParent && viewer.family.settings?.parentsSeePrivateFood)) return null;
+  // Private recipes: their owner, or a parent (read-only) when that member shares their food space.
+  if (row.r.ownerMemberId && row.r.ownerMemberId !== viewer.member.id && !canPeekFood(viewer, row.r.ownerMemberId)) return null;
   if (!row.r.ownerMemberId && !viewer.can("recipes")) return null;
   const [ings, ratings, cols] = await Promise.all([
     db.select().from(recipeIngredients).where(eq(recipeIngredients.recipeId, id)).orderBy(asc(recipeIngredients.position)),

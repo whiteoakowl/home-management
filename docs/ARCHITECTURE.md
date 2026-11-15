@@ -60,7 +60,7 @@ widgets, quick-add, and search. This is the main way progressive disclosure work
 /onboarding                          first-time setup wizard (10 skippable steps)
 /                                    dashboard ("What do I need to do today?")
 /family                              members list, roles, invites
-/family/[memberId]                   member portal ("Emma's Home")
+/family/[memberId]                   member portal ("Serenity's Home")
 /family/[memberId]/manage            profile, permissions, login, removal (parents only)
 /calendar                            day / week / month / agenda
 /house                               house overview
@@ -115,13 +115,15 @@ Permissions are evaluated in this order (all enforced on the server in the DAL):
 3. **Record visibility.** Shareable records (events, lists, journal entries, documents, goals,
    household info) have a `visibility` column:
    * `family`: everyone with module `view`.
-   * `selected`: only members listed in `record_access` (plus parents and the creator).
-   * `parents`: parents only (plus the creator). "Parents only" in the picker.
-   * `private`: only the creator, parents included. "Only me" in the picker.
-   Medical records keep their own rule (`medicalVisible`): "private" there means patient & parents,
-   and their forms hide the "Parents only" option.
+   * `selected`: the creator and the members listed in `record_access` (parents only if listed).
+   * `parents`: the creator and parents. "Parents & me" in the picker.
+   * `private`: only the creator. "Only me" in the picker.
+   Parents get **no automatic access**: they see a member's record only when the creator picks an
+   option that includes them. Medical uses the same values via `medicalVisible`, where the patient and
+   whoever added the record always see it: `parents` = "Patient & parents" (the default), `private` =
+   "Only the patient". Medical reminders go to parents only for `family` / `parents` records.
    `record_access(entity_type, entity_id, member_id, can_edit)` holds the explicit list. This is the
-   "Visible to ☑ Mom ☑ Dad ☑ Emma ☐ Jack" control.
+   "Visible to ☑ Mom ☑ Dad ☑ Serenity ☐ Jack" control.
 4. **Assignment.** Members can always see and complete items assigned to them (chores, tasks,
    checklist items), even if they only have `view` on the module.
 
@@ -134,16 +136,16 @@ on Lists / Calendar to make their own lists and events.
 
 **Personal shopping items** (`list_items.personal_for_member_id`). Anyone who can see a family shopping
 list can add personal items for themselves (parents can add them for anyone). Only parents, the person
-it's for and whoever added it see the item; it shows as "For Hunter" in a "Personal items" section, and
+it's for and whoever added it see the item; it shows as "For Serenity" in a "Personal items" section, and
 is left out of Buy again, activity and everyone else's counts, previews and search.
 
 **Personal library** (`books.owner_member_id`). The Book Library has a Family Library / My Library switch
 (remembered in a cookie). Books in My Library are visible only to their owner, parents included; anyone
 with library `view` can keep one. Personal books never appear in the activity feed.
 
-**Fitness privacy.** Everyone sees their own fitness and food journal. Parents also see and manage the
-kids'. Another parent's fitness is visible only when that parent turns on *Share my fitness with the other
-parents* (`family_members.share_fitness`), and then view-only. The same rule (`src/lib/fitness.ts`) covers
+**Fitness privacy.** Everyone sees their own fitness and food journal, and nobody else's unless that
+person turns on *Share with parents* (`family_members.share_fitness`): then parents can view it, not
+edit it. Members without a login (young kids) can't choose, so parents see and manage theirs. The same rule (`src/lib/fitness.ts`) covers
 the fitness pages, server actions, portal widget, calendar workouts layer, search, reports and the
 activity feed.
 
@@ -151,8 +153,8 @@ activity feed.
 plans and shopping lists have `owner_member_id`: `NULL` = the family's (governed by module access),
 set = that member's **private food space** (My Pantry / My Recipes / My Meal Plans / My Shopping
 List). Parents enable a private space per member (`family_members.private_food`). Private rows are
-visible only to their owner; parents may open them read-only only when the family turns on
-`settings.parentsSeePrivateFood` (off by default). Pages take `?space=mine` (or a member id for
+visible only to their owner; parents may open them read-only only when that member turns on *Share with
+parents* (`family_members.share_food_with_parents`, off by default, the member's own choice). Pages take `?space=mine` (or a member id for
 parents); every shared view (dashboards, search for other people, calendar, reports, automations,
 low-stock, put-away, craft/celebration links) filters to the family space.
 
@@ -190,7 +192,7 @@ Full definitions live in `src/db/schema/*.ts`. Entity map by domain:
 * `files`: uploaded images/documents (storage key, mime, size, width/height, thumbnail key)
 * `dashboard_layouts`: per member: ordered widget list with visibility & size
 * `announcements`: household announcements (with visibility)
-* `activity_log`: family feed ("Emma completed Clean Kitchen")
+* `activity_log`: family feed ("Serenity completed Clean Kitchen")
 * `notifications` + `notification_preferences`
 
 ### Household (`household.ts`)

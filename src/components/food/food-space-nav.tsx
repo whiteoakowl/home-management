@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Lock, Users } from "lucide-react";
+import { setShareFood } from "@/app/actions/family";
+import { ActionButton } from "@/components/forms/inline";
 import type { Viewer } from "@/lib/dal";
 import { FOOD_LABELS, type FoodSpace } from "@/lib/food-space";
 import { cn } from "@/lib/utils";
@@ -55,13 +57,25 @@ export function FoodSpaceNav({ viewer, active, space, others = [] }: { viewer: V
   );
 }
 
-/** Banner on private pages so it's always obvious whose food this is. */
-export function PrivateSpaceNote({ space }: { space: FoodSpace }) {
+/** Banner on private pages so it's always obvious whose food this is, with the owner's share-with-parents choice. */
+export function PrivateSpaceNote({ space, viewer }: { space: FoodSpace; viewer: Viewer }) {
   if (space.kind !== "private") return null;
+  const shared = viewer.member.shareFoodWithParents;
   return (
-    <p className="mb-5 flex items-center gap-2 rounded-xl border border-dashed border-olive-400 bg-olive-50 px-4 py-2.5 text-sm text-olive-700">
+    <div className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-olive-400 bg-olive-50 px-4 py-2.5 text-sm text-olive-700">
       <Lock className="size-4 shrink-0" aria-hidden />
-      {space.own ? "Only you can see your private food space. Nothing here appears in the family's pantry, lists or dashboards." : `${space.memberName}'s private food space (read-only).`}
-    </p>
+      <span className="flex-1">
+        {space.own
+          ? shared
+            ? "Parents can see (not change) your private food space. Nobody else can."
+            : "Only you can see your private food space, parents included. Nothing here appears in the family's pantry, lists or dashboards."
+          : `${space.memberName}'s private food space (read-only). They chose to share it with parents.`}
+      </span>
+      {space.own && !viewer.isParent && (
+        <ActionButton action={setShareFood} fields={{ share: String(!shared) }} className="h-8 rounded-full border border-olive-400 bg-surface px-3 text-sm font-medium hover:bg-olive-100">
+          {shared ? "Stop sharing with parents" : "Share with parents"}
+        </ActionButton>
+      )}
+    </div>
   );
 }

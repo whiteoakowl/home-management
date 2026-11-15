@@ -1,3 +1,4 @@
+import type { Visibility } from "@/db/schema";
 import { MapPin } from "lucide-react";
 import { deleteMedicalAppointment } from "@/app/actions/medical";
 import type { MemberOption } from "@/components/forms/fields";
@@ -67,7 +68,7 @@ export async function AppointmentList({ viewer, rows, members, empty }: { viewer
                     description: a.description,
                     notes: a.notes,
                     reminderMinutes: a.reminderMinutes,
-                    visibility: a.visibility === "family" ? "family" : "selected",
+                    visibility: a.visibility as Visibility,
                     selected,
                   }}
                 />

@@ -12,7 +12,7 @@ import { WIDGETS } from "@/lib/widgets";
 export const metadata: Metadata = { title: "Member home" };
 
 /**
- * A member's personal portal ("Emma's Home"): their chores, events, tasks,
+ * A member's personal portal ("Serenity's Home"): their chores, events, tasks,
  * goals, fitness and journal. Members can open their own; parents can open anyone's.
  */
 export default async function MemberPortalPage({ params }: PageProps<"/family/[memberId]">) {

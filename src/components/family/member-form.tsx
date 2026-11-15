@@ -63,7 +63,7 @@ export function AddMemberForm({
       <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" htmlFor="displayName" error={state?.errors?.displayName}>
-          <Input id="displayName" name="displayName" placeholder="e.g. Emma" required />
+          <Input id="displayName" name="displayName" placeholder="e.g. Serenity" required />
         </Field>
         {lockRole ? (
           <input type="hidden" name="role" value={defaultRole} />

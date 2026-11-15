@@ -2,7 +2,7 @@
  * Sample data for local development and automated tests only: `npm run db:seed`.
  * It is never loaded on deploy. Do not run it against a real database.
  * Logins (password: vanderbilt123): sarah@vanderbilt.family (parent, owner),
- * michael@vanderbilt.family (parent), emma@vanderbilt.family (member).
+ * michael@vanderbilt.family (parent), serenity@vanderbilt.family (member).
  * Re-running replaces the demo family.
  */
 import "dotenv/config";
@@ -47,7 +47,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const emails = ["sarah@vanderbilt.family", "michael@vanderbilt.family", "emma@vanderbilt.family"];
+  const emails = ["sarah@vanderbilt.family", "michael@vanderbilt.family", "serenity@vanderbilt.family"];
   const old = await db.select().from(s.users).where(inArray(s.users.email, emails));
   if (old.length) {
     const members = await db.select().from(s.familyMembers).where(inArray(s.familyMembers.userId, old.map((u) => u.id)));
@@ -56,12 +56,12 @@ async function main() {
     await db.delete(s.users).where(inArray(s.users.id, old.map((u) => u.id)));
   }
   const hash = await bcrypt.hash("vanderbilt123", 12);
-  const [sarahU, michaelU, emmaU] = await db
+  const [sarahU, michaelU, serenityU] = await db
     .insert(s.users)
     .values([
       { email: emails[0]!, name: "Sarah Vanderbilt", passwordHash: hash },
       { email: emails[1]!, name: "Michael Vanderbilt", passwordHash: hash },
-      { email: emails[2]!, name: "Emma Vanderbilt", passwordHash: hash },
+      { email: emails[2]!, name: "Serenity Vanderbilt", passwordHash: hash },
     ])
     .returning();
 
@@ -70,17 +70,17 @@ async function main() {
     .values({ name: "Vanderbilt", timezone: tz, locationName: "Asheville, NC", latitude: 35.5951, longitude: -82.5515, onboardingStep: 10, onboardingCompletedAt: new Date(), settings: { weekStartsOn: 0 } })
     .returning();
   const fid = fam!.id;
-  const [sarah, michael, emma, jack] = await db
+  const [sarah, michael, serenity, jack] = await db
     .insert(s.familyMembers)
     .values([
       { familyId: fid, userId: sarahU!.id, displayName: "Sarah", role: "parent", color: "plum" },
       { familyId: fid, userId: michaelU!.id, displayName: "Michael", role: "parent", color: "olive" },
-      { familyId: fid, userId: emmaU!.id, displayName: "Emma", role: "member", color: "lilac", birthday: "2014-04-18" },
+      { familyId: fid, userId: serenityU!.id, displayName: "Serenity", role: "member", color: "lilac", birthday: "2014-04-18" },
       { familyId: fid, displayName: "Jack", role: "member", color: "wine", birthday: "2018-09-02" },
     ])
     .returning();
   await db.update(s.families).set({ ownerMemberId: sarah!.id }).where(eq(s.families.id, fid));
-  // Emma: no budget/reports (defaults); Jack: hidden garden budget.
+  // Serenity: no budget/reports (defaults); Jack: hidden garden budget.
   await db.insert(s.memberPermissions).values(
     s.MODULES.map((m) => ({ memberId: jack!.id, module: m, level: (["budget", "reports", "journal"].includes(m) ? "none" : ["chores", "lists", "fitness", "goals"].includes(m) ? "edit" : "view") as "none" | "view" | "edit" })),
   );
@@ -95,12 +95,12 @@ async function main() {
     if (items.length) await db.insert(s.choreChecklistItems).values(items.map((it, i) => ({ choreId: row!.id, text: it.text, assigneeId: it.assigneeId ?? null, position: i })));
     return row!;
   };
-  const kitchenReset = await chore({ title: "Kitchen reset", kind: "chore", roomId: room("Kitchen"), categoryId: choreCats[0]!.id, defaultAssigneeId: emma!.id, estimatedMinutes: 20, recurrenceRuleId: await rule({ freq: "daily", interval: 1, startsOn: day(-30) }) }, [{ text: "Load the dishwasher" }, { text: "Wipe the counters", assigneeId: jack!.id }, { text: "Sweep the floor" }]);
+  const kitchenReset = await chore({ title: "Kitchen reset", kind: "chore", roomId: room("Kitchen"), categoryId: choreCats[0]!.id, defaultAssigneeId: serenity!.id, estimatedMinutes: 20, recurrenceRuleId: await rule({ freq: "daily", interval: 1, startsOn: day(-30) }) }, [{ text: "Load the dishwasher" }, { text: "Wipe the counters", assigneeId: jack!.id }, { text: "Sweep the floor" }]);
   const feedChickens = await chore({ title: "Feed & water the chickens", kind: "chore", categoryId: choreCats[2]!.id, defaultAssigneeId: jack!.id, estimatedMinutes: 10, recurrenceRuleId: await rule({ freq: "daily", interval: 1, startsOn: day(-30) }) });
   await chore({ title: "Take out trash & recycling", kind: "chore", categoryId: choreCats[4]!.id, defaultAssigneeId: michael!.id, recurrenceRuleId: await rule({ freq: "weekly", interval: 1, byWeekday: [1, 4], startsOn: day(-30) }) });
-  await chore({ title: "Fold laundry", kind: "chore", roomId: room("Laundry"), categoryId: choreCats[1]!.id, defaultAssigneeId: emma!.id, recurrenceRuleId: await rule({ freq: "weekly", interval: 1, byWeekday: [6], startsOn: day(-30) }) });
-  await chore({ title: "Bathroom clean", kind: "cleaning", cleaningCadence: "weekly", roomId: room("Bathroom"), defaultAssigneeId: sarah!.id, estimatedMinutes: 30, recurrenceRuleId: await rule({ freq: "weekly", interval: 1, byWeekday: [weekday(todayIso)], startsOn: day(-21) }) }, [{ text: "Scrub sink & toilet" }, { text: "Clean the mirror", assigneeId: emma!.id }, { text: "Mop the floor" }]);
-  await chore({ title: "Kitchen deep clean", kind: "cleaning", cleaningCadence: "seasonal", roomId: room("Kitchen"), estimatedMinutes: 120, recurrenceRuleId: await rule({ freq: "yearly", interval: 1, byMonth: [3, 6, 9, 12], startsOn: day(5) }) }, [{ text: "Clean refrigerator" }, { text: "Clean oven" }, { text: "Wipe cabinets", assigneeId: emma!.id }, { text: "Clean pantry" }, { text: "Mop floor", assigneeId: michael!.id }, { text: "Clean windows" }]);
+  await chore({ title: "Fold laundry", kind: "chore", roomId: room("Laundry"), categoryId: choreCats[1]!.id, defaultAssigneeId: serenity!.id, recurrenceRuleId: await rule({ freq: "weekly", interval: 1, byWeekday: [6], startsOn: day(-30) }) });
+  await chore({ title: "Bathroom clean", kind: "cleaning", cleaningCadence: "weekly", roomId: room("Bathroom"), defaultAssigneeId: sarah!.id, estimatedMinutes: 30, recurrenceRuleId: await rule({ freq: "weekly", interval: 1, byWeekday: [weekday(todayIso)], startsOn: day(-21) }) }, [{ text: "Scrub sink & toilet" }, { text: "Clean the mirror", assigneeId: serenity!.id }, { text: "Mop the floor" }]);
+  await chore({ title: "Kitchen deep clean", kind: "cleaning", cleaningCadence: "seasonal", roomId: room("Kitchen"), estimatedMinutes: 120, recurrenceRuleId: await rule({ freq: "yearly", interval: 1, byMonth: [3, 6, 9, 12], startsOn: day(5) }) }, [{ text: "Clean refrigerator" }, { text: "Clean oven" }, { text: "Wipe cabinets", assigneeId: serenity!.id }, { text: "Clean pantry" }, { text: "Mop floor", assigneeId: michael!.id }, { text: "Clean windows" }]);
   await chore({ title: "Vacuum living room", kind: "cleaning", cleaningCadence: "daily", roomId: room("Living room"), defaultAssigneeId: michael!.id, recurrenceRuleId: await rule({ freq: "daily", interval: 1, startsOn: day(-10) }) });
   const [hvac, plumbing, roof] = await db
     .insert(s.rooms)
@@ -118,11 +118,11 @@ async function main() {
   await chore({ title: "Check for leaks under sinks", kind: "maintenance", roomId: plumbing!.id, estimatedMinutes: 10, recurrenceRuleId: await rule({ freq: "monthly", interval: 1, startsOn: day(6) }) });
   await db.insert(s.choreOccurrences).values({ familyId: fid, choreId: filter.id, dueDate: day(-88), status: "done", completedAt: at(-88, 10), completedByMemberId: michael!.id, actualCostCents: 2299 });
   await chore({ title: "Schedule furnace inspection", kind: "task", defaultAssigneeId: michael!.id, dueDate: day(-2), priority: "high" });
-  await chore({ title: "Return library books", kind: "task", defaultAssigneeId: emma!.id, dueDate: day(1) });
+  await chore({ title: "Return library books", kind: "task", defaultAssigneeId: serenity!.id, dueDate: day(1) });
   // Completed history for the past week.
   const occ: (typeof s.choreOccurrences.$inferInsert)[] = [];
   for (let i = 7; i >= 1; i--) {
-    occ.push({ familyId: fid, choreId: kitchenReset.id, dueDate: day(-i), assigneeId: emma!.id, status: i === 3 ? "missed" : "done", completedAt: i === 3 ? null : at(-i, 19), completedByMemberId: i === 3 ? null : emma!.id });
+    occ.push({ familyId: fid, choreId: kitchenReset.id, dueDate: day(-i), assigneeId: serenity!.id, status: i === 3 ? "missed" : "done", completedAt: i === 3 ? null : at(-i, 19), completedByMemberId: i === 3 ? null : serenity!.id });
     occ.push({ familyId: fid, choreId: feedChickens.id, dueDate: day(-i), assigneeId: jack!.id, status: "done", completedAt: at(-i, 7, 30), completedByMemberId: jack!.id });
   }
   await db.insert(s.choreOccurrences).values(occ);
@@ -168,9 +168,9 @@ async function main() {
   const cal = (n: string) => calCats.find((c) => c.name === n)!.id;
   const [doctor] = await db
     .insert(s.calendarEvents)
-    .values({ familyId: fid, title: "Emma: doctor appointment", startsAt: at(1, 14, 30), endsAt: at(1, 15, 30), location: "Valley Pediatrics", categoryId: cal("Appointments"), visibility: "selected", reminderMinutes: 60, createdByMemberId: sarah!.id })
+    .values({ familyId: fid, title: "Serenity: doctor appointment", startsAt: at(1, 14, 30), endsAt: at(1, 15, 30), location: "Valley Pediatrics", categoryId: cal("Appointments"), visibility: "selected", reminderMinutes: 60, createdByMemberId: sarah!.id })
     .returning();
-  await db.insert(s.recordAccess).values([{ familyId: fid, entityType: "event", entityId: doctor!.id, memberId: michael!.id }, { familyId: fid, entityType: "event", entityId: doctor!.id, memberId: emma!.id }]);
+  await db.insert(s.recordAccess).values([{ familyId: fid, entityType: "event", entityId: doctor!.id, memberId: michael!.id }, { familyId: fid, entityType: "event", entityId: doctor!.id, memberId: serenity!.id }]);
   const soccerRule = await rule({ freq: "weekly", interval: 1, byWeekday: [2, 4], startsOn: day(-20) });
   const events = await db
     .insert(s.calendarEvents)
@@ -184,7 +184,7 @@ async function main() {
     .returning();
   await db.insert(s.recordAccess).values({ familyId: fid, entityType: "event", entityId: events[4]!.id, memberId: sarah!.id });
   await db.insert(s.eventAttendees).values([
-    { eventId: doctor!.id, memberId: emma!.id },
+    { eventId: doctor!.id, memberId: serenity!.id },
     { eventId: doctor!.id, memberId: sarah!.id },
     { eventId: events[0]!.id, memberId: jack!.id },
     { eventId: events[1]!.id, memberId: sarah!.id },
@@ -242,7 +242,7 @@ async function main() {
     [[1, "bag", "spinach", "1 bag spinach"], [2, null, "tomatoes", "2 tomatoes"], [1, null, "cucumber", "1 cucumber"], [1, null, "lemon", "1 lemon"]],
     ["Garden Recipes"],
   );
-  await db.insert(s.recipeRatings).values([{ recipeId: parm.id, memberId: emma!.id, rating: 5 }, { recipeId: parm.id, memberId: michael!.id, rating: 4 }, { recipeId: bread.id, memberId: jack!.id, rating: 5 }]);
+  await db.insert(s.recipeRatings).values([{ recipeId: parm.id, memberId: serenity!.id, rating: 5 }, { recipeId: parm.id, memberId: michael!.id, rating: 4 }, { recipeId: bread.id, memberId: jack!.id, rating: 5 }]);
   await db.insert(s.mealPlanEntries).values([
     { familyId: fid, date: day(0), slot: "dinner", recipeId: parm.id, servings: 4, createdByMemberId: sarah!.id },
     { familyId: fid, date: day(0), slot: "breakfast", title: "Oatmeal & berries", createdByMemberId: sarah!.id },
@@ -264,7 +264,7 @@ async function main() {
   await db.insert(s.listItems).values([
     { listId: todos!.id, text: "Rake the front yard", assigneeId: michael!.id, dueDate: day(2), position: 1 },
     { listId: todos!.id, text: "Order Jack's birthday cake", assigneeId: sarah!.id, dueDate: day(4), priority: "high", position: 2 },
-    { listId: todos!.id, text: "Fix bike tire", assigneeId: emma!.id, position: 3, checked: true, checkedAt: new Date() },
+    { listId: todos!.id, text: "Fix bike tire", assigneeId: serenity!.id, position: 3, checked: true, checkedAt: new Date() },
   ]);
   const [packing] = await db.insert(s.lists).values({ familyId: fid, title: "Lake trip packing", kind: "checklist", createdByMemberId: sarah!.id }).returning();
   await db.insert(s.listItems).values(["Swimsuits", "Sunscreen", "Fishing poles", "Life jackets", "Snacks for the car"].map((text, i) => ({ listId: packing!.id, text, position: i })));
@@ -316,7 +316,7 @@ async function main() {
   if (tom && lettuce) {
     await db.insert(s.gardenLogs).values([
       { familyId: fid, plantingId: tom.id, plantId: tom.plantId, kind: "harvest", date: day(-6), quantity: "3.5", unit: "lb", memberId: michael!.id },
-      { familyId: fid, plantingId: tom.id, plantId: tom.plantId, kind: "harvest", date: day(-2), quantity: "2", unit: "lb", memberId: emma!.id },
+      { familyId: fid, plantingId: tom.id, plantId: tom.plantId, kind: "harvest", date: day(-2), quantity: "2", unit: "lb", memberId: serenity!.id },
       { familyId: fid, plantingId: lettuce.id, plantId: lettuce.plantId, kind: "harvest", date: day(-1), quantity: "4", unit: "head", memberId: sarah!.id },
       { familyId: fid, plantingId: tom.id, plantId: tom.plantId, kind: "pest", date: day(-9), notes: "Hornworms on two plants. Picked off and fed to the chickens.", memberId: michael!.id },
       { familyId: fid, plantId: P("Garlic")?.id ?? null, kind: "note", date: day(-3), notes: "Garlic cloves arrived. Plant after first frost.", memberId: sarah!.id },
@@ -371,7 +371,7 @@ async function main() {
   await db.insert(s.journalEntries).values([
     { familyId: fid, authorMemberId: sarah!.id, date: day(-1), title: "First frost", body: "Woke up to frost on the garden this morning. Jack ran out in his pajamas to see the ‘sparkly lettuce’. We harvested the last of the tomatoes before it got colder.", mood: "grateful", tags: ["garden", "kids"], visibility: "family" },
     { familyId: fid, authorMemberId: sarah!.id, date: day(-3), title: null, body: "Long day. Feeling stretched thin, but dinner together helped.", mood: "tired", tags: [], visibility: "private" },
-    { familyId: fid, authorMemberId: emma!.id, date: day(-2), title: "Soccer win!", body: "We won 3–1 and I scored a goal!!", mood: "excited", tags: ["soccer"], visibility: "family" },
+    { familyId: fid, authorMemberId: serenity!.id, date: day(-2), title: "Soccer win!", body: "We won 3–1 and I scored a goal!!", mood: "excited", tags: ["soccer"], visibility: "family" },
   ]);
   const [emergency] = await db
     .insert(s.goals)
@@ -457,10 +457,10 @@ async function main() {
   // ── Medical ──
   await db.insert(s.medicalProfiles).values([
     { familyId: fid, memberId: sarah!.id, createdByMemberId: sarah!.id, fullName: "Sarah Anne Vanderbilt", primaryPhysician: "Dr. Priya Patel · Valley Family Medicine · 828-555-0101", dentist: "Blue Ridge Dental · 828-555-0144", emergencyContacts: "Michael Vanderbilt · 828-555-0199", insuranceProvider: "Mountain Health Plan", insurancePolicy: "MHP-448-221", insuranceGroup: "G-7781" },
-    { familyId: fid, memberId: emma!.id, createdByMemberId: sarah!.id, fullName: "Emma Rose Vanderbilt", primaryPhysician: "Dr. Lena Ortiz · Asheville Pediatrics · 828-555-0130", specialists: "Allergist: Dr. Kim · 828-555-0120", emergencyContacts: "Sarah · 828-555-0198\nMichael · 828-555-0199", insuranceProvider: "Mountain Health Plan", insurancePolicy: "MHP-448-223" },
+    { familyId: fid, memberId: serenity!.id, createdByMemberId: sarah!.id, fullName: "Serenity Rose Vanderbilt", primaryPhysician: "Dr. Lena Ortiz · Asheville Pediatrics · 828-555-0130", specialists: "Allergist: Dr. Kim · 828-555-0120", emergencyContacts: "Sarah · 828-555-0198\nMichael · 828-555-0199", insuranceProvider: "Mountain Health Plan", insurancePolicy: "MHP-448-223" },
   ]);
   await db.insert(s.allergies).values([
-    { familyId: fid, memberId: emma!.id, createdByMemberId: sarah!.id, name: "Peanuts", type: "food", severity: "severe", identifiedOn: "2019-05-02", triggers: ["peanut", "peanut butter", "groundnut"], symptoms: "Hives, swelling", emergencyInstructions: "Follow the allergy action plan from Dr. Kim. Epinephrine auto-injector is in the kitchen drawer and Emma's backpack. Call 911.", visibility: "family" },
+    { familyId: fid, memberId: serenity!.id, createdByMemberId: sarah!.id, name: "Peanuts", type: "food", severity: "severe", identifiedOn: "2019-05-02", triggers: ["peanut", "peanut butter", "groundnut"], symptoms: "Hives, swelling", emergencyInstructions: "Follow the allergy action plan from Dr. Kim. Epinephrine auto-injector is in the kitchen drawer and Serenity's backpack. Call 911.", visibility: "family" },
     { familyId: fid, memberId: michael!.id, createdByMemberId: michael!.id, name: "Ragweed pollen", type: "seasonal", severity: "mild", symptoms: "Sneezing, itchy eyes in late summer" },
   ]);
   await db.insert(s.foodRestrictions).values([
@@ -476,23 +476,23 @@ async function main() {
   ]);
   const [appt] = await db
     .insert(s.calendarEvents)
-    .values({ familyId: fid, title: "Allergist check-up", location: "Dr. Kim · Asheville Allergy", startsAt: at(9, 15, 30), endsAt: at(9, 16, 30), reminderMinutes: 1440, visibility: "selected", source: "medical", sourceId: emma!.id, createdByMemberId: sarah!.id, description: "Ask about the updated action plan for school." })
+    .values({ familyId: fid, title: "Allergist check-up", location: "Dr. Kim · Asheville Allergy", startsAt: at(9, 15, 30), endsAt: at(9, 16, 30), reminderMinutes: 1440, visibility: "selected", source: "medical", sourceId: serenity!.id, createdByMemberId: sarah!.id, description: "Ask about the updated action plan for school." })
     .returning();
-  await db.insert(s.eventAttendees).values({ eventId: appt!.id, memberId: emma!.id });
-  await db.insert(s.recordAccess).values([sarah!.id, emma!.id].map((memberId) => ({ familyId: fid, entityType: "event" as const, entityId: appt!.id, memberId })));
+  await db.insert(s.eventAttendees).values({ eventId: appt!.id, memberId: serenity!.id });
+  await db.insert(s.recordAccess).values([sarah!.id, serenity!.id].map((memberId) => ({ familyId: fid, entityType: "event" as const, entityId: appt!.id, memberId })));
 
   // ── Pets ──
   const [biscuit, pepper] = await db
     .insert(s.pets)
     .values([
       { familyId: fid, name: "Biscuit", species: "dog", breed: "Golden retriever", sex: "male_neutered", birthday: "2020-06-14", adoptedOn: "2020-08-20", colorMarkings: "Golden, white blaze on chest", weight: "68", weightUnit: "lb", microchipNumber: "985112004455667", microchipCompany: "HomeAgain", veterinarian: "Blue Ridge Animal Hospital", vetPhone: "828-555-0175", caretakerMemberId: michael!.id, personality: "Gentle, goofy, afraid of the vacuum.", favoriteThings: "Tennis balls, creek walks, peanut-free biscuits" },
-      { familyId: fid, name: "Pepper", species: "cat", breed: "Domestic shorthair", sex: "female_spayed", birthday: "2019-03-01", adoptedOn: "2019-05-11", colorMarkings: "Black with white socks", weight: "9.5", weightUnit: "lb", veterinarian: "Blue Ridge Animal Hospital", vetPhone: "828-555-0175", caretakerMemberId: emma!.id, personality: "Independent, loves sunny windowsills." },
+      { familyId: fid, name: "Pepper", species: "cat", breed: "Domestic shorthair", sex: "female_spayed", birthday: "2019-03-01", adoptedOn: "2019-05-11", colorMarkings: "Black with white socks", weight: "9.5", weightUnit: "lb", veterinarian: "Blue Ridge Animal Hospital", vetPhone: "828-555-0175", caretakerMemberId: serenity!.id, personality: "Independent, loves sunny windowsills." },
     ])
     .returning();
   await db.insert(s.petPreventatives).values([
     { petId: biscuit!.id, kind: "heartworm", productName: "Monthly heartworm chewable", lastGivenOn: day(-29), intervalDays: 30, nextDueOn: day(1), assigneeId: michael!.id },
     { petId: biscuit!.id, kind: "flea_tick", productName: "Flea & tick chew", lastGivenOn: day(-80), intervalDays: 90, nextDueOn: day(10), assigneeId: michael!.id },
-    { petId: pepper!.id, kind: "flea", productName: "Topical flea treatment", lastGivenOn: day(-25), intervalDays: 30, nextDueOn: day(5), assigneeId: emma!.id },
+    { petId: pepper!.id, kind: "flea", productName: "Topical flea treatment", lastGivenOn: day(-25), intervalDays: 30, nextDueOn: day(5), assigneeId: serenity!.id },
   ]);
   await db.insert(s.petMedicalRecords).values([
     { petId: biscuit!.id, kind: "vet_visit", title: "Annual wellness exam", date: day(-120), veterinarian: "Dr. Hale", costCents: 18500, nextDueOn: day(245), description: "Healthy weight; teeth look good." },
@@ -510,10 +510,10 @@ async function main() {
     { petId: pepper!.id, kind: "feeding", body: "½ can wet food morning, dry food free-fed. No milk." },
   ]);
   await db.insert(s.journalEntries).values([
-    { familyId: fid, authorMemberId: emma!.id, date: "2020-08-20", title: "Biscuit comes home", body: "He slept the whole car ride with his head on my lap.", book: "pet", linkedId: biscuit!.id, category: "Adoption day", visibility: "family" },
+    { familyId: fid, authorMemberId: serenity!.id, date: "2020-08-20", title: "Biscuit comes home", body: "He slept the whole car ride with his head on my lap.", book: "pet", linkedId: biscuit!.id, category: "Adoption day", visibility: "family" },
     { familyId: fid, authorMemberId: sarah!.id, date: day(-30), title: "First snow", body: "Pepper watched the snow from the window for an hour.", book: "pet", linkedId: pepper!.id, visibility: "family" },
   ]);
-  const [walk] = await db.insert(s.chores).values({ familyId: fid, kind: "chore", title: "Walk Biscuit", petId: biscuit!.id, defaultAssigneeId: emma!.id, createdByMemberId: sarah!.id, estimatedMinutes: 30 }).returning();
+  const [walk] = await db.insert(s.chores).values({ familyId: fid, kind: "chore", title: "Walk Biscuit", petId: biscuit!.id, defaultAssigneeId: serenity!.id, createdByMemberId: sarah!.id, estimatedMinutes: 30 }).returning();
   const [walkRule] = await db.insert(s.recurrenceRules).values({ familyId: fid, freq: "daily", interval: 1, startsOn: day(0) }).returning();
   await db.update(s.chores).set({ recurrenceRuleId: walkRule!.id }).where(eq(s.chores.id, walk!.id));
 
@@ -570,7 +570,7 @@ async function main() {
     { itemId: release!.id, inventoryItemId: craftSupplies[0]!.id },
   ]);
   await db.insert(s.craftCollection).values([
-    { familyId: fid, itemId: ref("Amethyst"), quantity: 2, location: "Emma's nightstand", status: "owned" },
+    { familyId: fid, itemId: ref("Amethyst"), quantity: 2, location: "Serenity's nightstand", status: "owned" },
     { familyId: fid, itemId: ref("Rose Quartz"), quantity: 1, location: "Living room altar", status: "owned" },
     { familyId: fid, itemId: ref("Labradorite"), quantity: 1, status: "wishlist" },
     { familyId: fid, itemId: ref("Cauldron"), quantity: 1, location: "Altar cabinet", status: "owned" },
@@ -581,7 +581,7 @@ async function main() {
   await db.insert(s.sabbatSettings).values({ familyId: fid, key: "imbolc", monthDay: "02-02", notes: "We celebrate Imbolc on Feb 2 with Grandma's oat bread." });
   await db.insert(s.journalEntries).values([
     { familyId: fid, authorMemberId: sarah!.id, date: day(-3), title: "Waning moon reflection", body: "Cleared the hall closet and let go of the old worries about work. Feeling lighter.", book: "grimoire", category: "moon_log", moonPhase: "waning_crescent", visibility: "private" },
-    { familyId: fid, authorMemberId: sarah!.id, date: day(-20), title: "Protection jar results", body: "Made the kitchen jar on the waxing moon with Emma. Will check in at Yule.", book: "grimoire", category: "spell_log", linkedId: jar!.id, visibility: "family" },
+    { familyId: fid, authorMemberId: sarah!.id, date: day(-20), title: "Protection jar results", body: "Made the kitchen jar on the waxing moon with Serenity. Will check in at Yule.", book: "grimoire", category: "spell_log", linkedId: jar!.id, visibility: "family" },
   ]);
 
   // ── Points, rewards, rotation ──
@@ -590,7 +590,7 @@ async function main() {
   await setPoints("Kitchen reset", 10);
   await setPoints("Feed & water the chickens", 5);
   await setPoints("Take out trash & recycling", 5);
-  await setPoints("Fold laundry", 8, { rotationMemberIds: [emma!.id, jack!.id] });
+  await setPoints("Fold laundry", 8, { rotationMemberIds: [serenity!.id, jack!.id] });
   await setPoints("Walk Biscuit", 5);
   await setPoints("Bathroom clean", 15);
   await setPoints("Vacuum living room", 5);
@@ -599,10 +599,10 @@ async function main() {
     { familyId: fid, title: "Pick Friday's movie", emoji: "🎬", cost: 40, createdByMemberId: sarah!.id },
     { familyId: fid, title: "30 minutes extra screen time", emoji: "📱", cost: 30, createdByMemberId: sarah!.id },
     { familyId: fid, title: "$5 allowance", emoji: "💵", cost: 100, cashCents: 500, createdByMemberId: sarah!.id },
-    { familyId: fid, title: "Stay up 30 minutes later", emoji: "🌙", cost: 60, forMemberIds: [emma!.id], createdByMemberId: sarah!.id },
+    { familyId: fid, title: "Stay up 30 minutes later", emoji: "🌙", cost: 60, forMemberIds: [serenity!.id], createdByMemberId: sarah!.id },
   ]);
   const [screen] = await db.select().from(s.rewards).where(and(eq(s.rewards.familyId, fid), eq(s.rewards.cost, 30)));
-  await db.insert(s.rewardRedemptions).values({ familyId: fid, rewardId: screen!.id, title: screen!.title, memberId: emma!.id, points: 30 });
+  await db.insert(s.rewardRedemptions).values({ familyId: fid, rewardId: screen!.id, title: screen!.title, memberId: serenity!.id, points: 30 });
   await db.insert(s.pointAdjustments).values({ familyId: fid, memberId: jack!.id, points: 10, reason: "Helped unload the groceries", createdByMemberId: michael!.id });
 
   // ── Shopping prices, vendors, home inventory ──
@@ -647,7 +647,7 @@ async function main() {
     { familyId: fid, authorMemberId: michael!.id, body: "New egg record: 11 eggs on Tuesday. Way to go, ladies 🐔" },
   ]);
   await db.insert(s.activityLog).values([
-    { familyId: fid, actorMemberId: emma!.id, verb: "chore.completed", summary: 'completed "Kitchen reset"', createdAt: at(-1, 19, 10) },
+    { familyId: fid, actorMemberId: serenity!.id, verb: "chore.completed", summary: 'completed "Kitchen reset"', createdAt: at(-1, 19, 10) },
     { familyId: fid, actorMemberId: michael!.id, verb: "farm.production", summary: "collected 11 eggs (added to the kitchen)", createdAt: at(-1, 8, 2) },
     { familyId: fid, actorMemberId: sarah!.id, verb: "meal.planned", summary: "added Chicken Parmesan to today's dinner", createdAt: at(-1, 20, 30) },
     { familyId: fid, actorMemberId: michael!.id, verb: "garden.harvest", summary: "harvested 2 lb of Tomato", createdAt: at(-2, 17) },

@@ -39,7 +39,7 @@ export const TYPE_LABEL: Record<string, string> = {
   home: "Home maintenance",
   moon: "Moon & sabbat",
 };
-export const VIS_LABEL = { family: "Family", private: "Only me", selected: "Shared with selected", parents: "Parents only" } as const;
+export const VIS_LABEL = { family: "Family", private: "Only me", selected: "Shared with selected", parents: "Parents & me" } as const;
 
 /** Hover/long-press text: the full name plus the useful details. */
 function tip(i: CalendarItem, members: Member[] = []) {

@@ -208,9 +208,9 @@ export async function logWorkout(_: ActionState, fd: FormData): Promise<ActionSt
         }
       }
     }
-    // The family activity feed only mentions a parent's workout if they share their fitness.
+    // The family activity feed only mentions a workout if that person shares their fitness.
     const who = memberId === viewer.member.id ? viewer.member : await getFamilyMember(viewer, memberId);
-    if (who && (who.role !== "parent" || who.shareFitness))
+    if (who && who.shareFitness)
       await logActivity(db, viewer.family.id, memberId, "workout.logged", `finished a workout: ${title}${newPRs.length ? ` (new PR: ${newPRs.join(", ")} 💪)` : ""}`, { module: "fitness" });
     revalidateFitness();
     return ok(newPRs.length ? `Logged. New personal record: ${newPRs.join(", ")}!` : "Workout logged.");
@@ -298,10 +298,9 @@ export async function deleteFoodEntry(fd: FormData) {
   revalidateFitness();
 }
 
-/** Parents: share (view-only) or stop sharing my fitness and food journal with the other parents. */
+/** Share (view-only) or stop sharing my fitness and food journal with parents. */
 export async function setShareFitness(fd: FormData) {
   const viewer = await requireModule("fitness");
-  if (!viewer.isParent) return;
   await db.update(familyMembers).set({ shareFitness: fd.get("share") === "true" }).where(eq(familyMembers.id, viewer.member.id));
   revalidatePath("/fitness", "layout");
   revalidatePath("/", "layout");

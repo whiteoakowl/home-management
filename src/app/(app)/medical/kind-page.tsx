@@ -6,7 +6,7 @@ import { MedicalRecordCard } from "@/components/medical/record-card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
 import { listMedical } from "@/lib/medical";
-import { DOC_CATEGORIES, KIND_LABEL, MEDICAL_FIELDS, type MedicalKind } from "@/lib/medical-config";
+import { DOC_CATEGORIES, KIND_LABEL, MEDICAL_FIELDS, type MedicalKind, MEDICAL_VISIBILITY } from "@/lib/medical-config";
 import { memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import type { FieldDef } from "@/lib/record-fields";
@@ -56,7 +56,7 @@ export async function MedicalKindPage({
       defaults={{ memberId: sp.member ?? null, active: true }}
       hidden={{ kind }}
       members={members}
-      visibility={{ defaultValue: "private", privateLabel: "Private (patient & parents)", parentsOption: false }}
+      visibility={{ defaultValue: "parents", ...MEDICAL_VISIBILITY }}
     />
   ) : undefined;
   const filterBase = "inline-flex h-9 items-center rounded-full px-3 text-sm";

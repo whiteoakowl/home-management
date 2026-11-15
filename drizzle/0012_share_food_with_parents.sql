@@ -1,0 +1,1 @@
+ALTER TABLE "family_members" ADD COLUMN "share_food_with_parents" boolean DEFAULT false NOT NULL;

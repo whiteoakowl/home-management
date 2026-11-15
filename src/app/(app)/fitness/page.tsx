@@ -56,12 +56,12 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
         description="Plans, workouts, progress and personal records."
         actions={canEdit ? <LogWorkoutModal memberId={subject.id} today={today} workouts={workoutOpts} /> : undefined}
       />
-      {viewer.isParent && subject.id === viewer.member.id && (
+      {subject.id === viewer.member.id && (
         <div className="-mt-2 mb-5 flex flex-wrap items-center gap-3 rounded-xl bg-sunken px-4 py-3 text-sm">
           {viewer.member.shareFitness ? <Users className="size-4 text-primary-600" aria-hidden /> : <Lock className="size-4 text-muted" aria-hidden />}
-          <span className="flex-1">{viewer.member.shareFitness ? "The other parents can see (not edit) your fitness and food journal." : "Your fitness and food journal are private. Kids' fitness stays visible to you."}</span>
+          <span className="flex-1">{viewer.member.shareFitness ? `${viewer.isParent ? "The other parents" : "Parents"} can see (not edit) your fitness and food journal.` : "Your fitness and food journal are private. Only you can see them."}</span>
           <ActionButton action={setShareFitness} fields={{ share: String(!viewer.member.shareFitness) }} className="h-9 rounded-full border border-line-strong bg-surface px-3 font-medium hover:bg-primary-50">
-            {viewer.member.shareFitness ? "Stop sharing" : "Share with the other parents"}
+            {viewer.member.shareFitness ? "Stop sharing" : viewer.isParent ? "Share with the other parents" : "Share with parents"}
           </ActionButton>
         </div>
       )}

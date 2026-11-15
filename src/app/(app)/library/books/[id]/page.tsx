@@ -43,7 +43,7 @@ export default async function BookPage({ params }: PageProps<"/library/books/[id
       ["From", b.purchaseLocation],
       ["Price", b.priceCents != null ? `$${(b.priceCents / 100).toFixed(2)}` : null],
       ["Reader", reader?.displayName],
-      ["Visibility", b.ownerMemberId ? "My Library (only you)" : b.visibility === "family" ? "Whole family" : b.visibility === "private" ? "Only me" : b.visibility === "parents" ? "Parents only" : "Shared with selected people"],
+      ["Visibility", b.ownerMemberId ? "My Library (only you)" : b.visibility === "family" ? "Whole family" : b.visibility === "private" ? "Only me" : b.visibility === "parents" ? "Parents & me" : "Shared with selected people"],
     ] as [string, React.ReactNode][]
   ).filter(([, v]) => v);
 

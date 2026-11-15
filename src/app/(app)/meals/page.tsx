@@ -86,7 +86,7 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
         description={owner ? "Your own meal plan, private to you." : "Plan the week. We'll check your pantry and build the shopping list."}
       />
       <FoodSpaceNav viewer={viewer} active="meals" space={space} others={others} />
-      <PrivateSpaceNote space={space} />
+      <PrivateSpaceNote space={space} viewer={viewer} />
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
           <Link href={withSpace(`/meals?week=${addDays(start, -7)}`, space)} aria-label="Previous week" className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface hover:bg-sunken">

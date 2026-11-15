@@ -126,7 +126,7 @@ export function RecordModal({
   members?: MemberOption[];
   imageUrls?: Record<string, string | null>;
   /** Show a who-can-see picker (posts visibility + visibleTo). */
-  visibility?: { defaultValue?: "family" | "private" | "selected" | "parents"; selected?: string[]; privateLabel?: string; parentsOption?: boolean };
+  visibility?: { defaultValue?: "family" | "private" | "selected" | "parents"; selected?: string[]; privateLabel?: string; parentsLabel?: string; privateHint?: string; parentsHint?: string; parentsOption?: boolean };
   triggerLabel?: string;
   /** Render as a small pencil button (edit mode). */
   edit?: boolean;
@@ -156,7 +156,7 @@ export function RecordModal({
       ))}
       <ConfigFields fields={fields} defaults={defaults} members={members} imageUrls={imageUrls} />
       {extra}
-      {visibility && members && <VisibilityField members={members} defaultValue={visibility.defaultValue} defaultSelected={visibility.selected} privateLabel={visibility.privateLabel} parentsOption={visibility.parentsOption} />}
+      {visibility && members && <VisibilityField members={members} defaultSelected={visibility.selected} {...visibility} />}
     </FormModal>
   );
 }

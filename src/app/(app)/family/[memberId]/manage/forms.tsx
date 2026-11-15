@@ -59,7 +59,7 @@ export function PrivateFoodForm({ memberId, name, enabled, parentsCanSee }: { me
       <input type="hidden" name="memberId" value={memberId} />
       <p className="text-[15px] text-muted">
         A private food space gives {name} their own <strong>My Pantry</strong>, <strong>My Recipes</strong>, <strong>My Meal Plans</strong> and <strong>My Shopping List</strong>, kept apart from the family&apos;s.{" "}
-        {parentsCanSee ? "Parents can open it read-only (Settings → Family Pantry privacy)." : "Nobody else can see it, parents included, unless the family turns that on in Settings."}
+        {parentsCanSee ? `${name} has chosen to let parents open it (read-only).` : `Nobody else can see it, parents included, unless ${name} chooses to share it with parents.`}
       </p>
       <Field label="Private food space" htmlFor="privateFood" className="max-w-xs">
         <Select id="privateFood" name="privateFood" defaultValue={enabled ? "enabled" : "disabled"}>

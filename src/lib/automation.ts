@@ -291,23 +291,31 @@ export async function runDailyAutomation(family: Family, force = false) {
   if (on("medicalReminders") && enabled("medical")) {
     const parents = await parentsOf(fid);
     const medWho = await viewersOf(fid, "medical");
-    // Only the patient (if they can open Medical) and parents: names stay private.
-    const to = (memberId: string) => [...new Set([...parents, ...(medWho.includes(memberId) ? [memberId] : [])])];
+    // Only the patient (if they can open Medical), whoever added it, and parents when the record is
+    // shared with them ("Patient & parents" or "Whole family"). Names stay private otherwise.
+    type Who = { memberId: string; visibility: string; createdBy: string | null };
+    const to = (r: Who) => [
+      ...new Set([
+        ...(r.visibility === "parents" || r.visibility === "family" ? parents : []),
+        ...(medWho.includes(r.memberId) ? [r.memberId] : []),
+        ...(r.createdBy && medWho.includes(r.createdBy) ? [r.createdBy] : []),
+      ]),
+    ];
     const refills = await db
-      .select({ name: medications.name, memberId: medications.memberId, on: medications.nextRefillOn })
+      .select({ name: medications.name, memberId: medications.memberId, on: medications.nextRefillOn, visibility: medications.visibility, createdBy: medications.createdByMemberId })
       .from(medications)
       .where(and(eq(medications.familyId, fid), eq(medications.active, true), lte(medications.nextRefillOn, addDays(today, 3)), gte(medications.nextRefillOn, addDays(today, -7))));
-    for (const r of refills) await notify(fid, to(r.memberId), { kind: "medical_reminder", title: `Refill ${r.on! < today ? "overdue" : "due"}: ${r.name}`, href: "/medical/medications" }, today);
+    for (const r of refills) await notify(fid, to(r), { kind: "medical_reminder", title: `Refill ${r.on! < today ? "overdue" : "due"}: ${r.name}`, href: "/medical/medications" }, today);
     const follow = await db
-      .select({ name: medicalConditions.name, memberId: medicalConditions.memberId })
+      .select({ name: medicalConditions.name, memberId: medicalConditions.memberId, visibility: medicalConditions.visibility, createdBy: medicalConditions.createdByMemberId })
       .from(medicalConditions)
       .where(and(eq(medicalConditions.familyId, fid), eq(medicalConditions.active, true), lte(medicalConditions.followUpOn, addDays(today, 7)), gte(medicalConditions.followUpOn, today)));
-    for (const c of follow) await notify(fid, to(c.memberId), { kind: "medical_reminder", title: `Follow-up coming up: ${c.name}`, href: "/medical/calendar" }, today);
+    for (const c of follow) await notify(fid, to(c), { kind: "medical_reminder", title: `Follow-up coming up: ${c.name}`, href: "/medical/calendar" }, today);
     const docs = await db
-      .select({ title: medicalDocuments.title, memberId: medicalDocuments.memberId })
+      .select({ title: medicalDocuments.title, memberId: medicalDocuments.memberId, visibility: medicalDocuments.visibility, createdBy: medicalDocuments.createdByMemberId })
       .from(medicalDocuments)
       .where(and(eq(medicalDocuments.familyId, fid), lte(medicalDocuments.expiresOn, addDays(today, 30)), gte(medicalDocuments.expiresOn, today)));
-    for (const d of docs) await notify(fid, to(d.memberId), { kind: "medical_reminder", title: `Expires soon: ${d.title}`, href: "/medical/documents" }, today);
+    for (const d of docs) await notify(fid, to(d), { kind: "medical_reminder", title: `Expires soon: ${d.title}`, href: "/medical/documents" }, today);
   }
 
   if (on("petReminders") && enabled("pets")) {

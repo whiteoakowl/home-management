@@ -94,3 +94,11 @@ export const KIND_LABEL: Record<MedicalKind, string> = {
 };
 
 export const SEVERITY_TONE: Record<string, "neutral" | "olive" | "wine"> = { mild: "neutral", moderate: "olive", severe: "wine", life_threatening: "wine" };
+
+/** Labels for medical records: "private" = only the patient, "parents" = patient & parents. */
+export const MEDICAL_VISIBILITY = {
+  privateLabel: "Only the patient",
+  parentsLabel: "Patient & parents",
+  privateHint: "Only the person this is about can see it (and whoever added it). Nobody else, parents included.",
+  parentsHint: "The patient and parents can see it. Other family members can't.",
+} as const;
