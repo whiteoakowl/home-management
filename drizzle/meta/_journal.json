@@ -120,6 +120,13 @@
       "when": 1794783603985,
       "tag": "0016_split_house_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794783726608,
+      "tag": "0017_member_app_theme",
+      "breakpoints": true
     }
   ]
 }

@@ -24,7 +24,7 @@ export function ColorPicker({ name = "color", defaultValue }: { name?: string; d
             title={c.label}
             onClick={() => setValue(key)}
             className={cn(
-              "size-9 rounded-full ring-offset-2 ring-offset-surface transition-shadow",
+              "size-9 rounded-full border border-black/10 ring-offset-2 ring-offset-surface transition-shadow",
               selected ? "ring-2 ring-ink" : "hover:ring-2 hover:ring-line-strong",
             )}
             style={{ backgroundColor: c.solid }}

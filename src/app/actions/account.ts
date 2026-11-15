@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import * as z from "zod";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { familyMembers, users } from "@/db/schema";
+import { MEMBER_COLORS } from "@/lib/colors";
 import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { hashPassword, revokeSessions, verifyPassword } from "@/lib/auth/session";
 import { getFamilyMember, getViewer, requireParent } from "@/lib/dal";
@@ -83,4 +84,14 @@ export async function setMemberEmail(_: ActionState, fd: FormData): Promise<Acti
   await logActivity(db, viewer.family.id, viewer.member.id, "member.email_changed", `updated ${target.displayName}'s sign-in email`);
   revalidatePath(`/family/${target.id}/manage`);
   return { ok: true, message: `${target.displayName} now signs in with ${parsed.data.email}. Their password hasn't changed.` };
+}
+
+/** My own app colour theme (only changes my app; member colours set by parents stay the same). */
+export async function saveAppTheme(_: ActionState, fd: FormData): Promise<ActionState> {
+  const viewer = await getViewer();
+  const raw = String(fd.get("theme") ?? "");
+  const theme = raw && raw in MEMBER_COLORS ? raw : null;
+  await db.update(familyMembers).set({ appTheme: theme }).where(eq(familyMembers.id, viewer.member.id));
+  revalidatePath("/", "layout");
+  return { ok: true, message: theme ? "Your app colors are updated." : "Back to the family's default colors." };
 }

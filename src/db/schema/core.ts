@@ -127,6 +127,8 @@ export const familyMembers = pgTable(
      * even if the member keeps them private. Set by parents; always shown to the member.
      */
     parentAccess: text("parent_access").array().notNull().default([]),
+    /** My own app colour theme (a palette key; null = the family default). Only changes my app. */
+    appTheme: text("app_theme"),
     birthday: date("birthday"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,

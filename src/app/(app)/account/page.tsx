@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { KeyRound, Mail } from "lucide-react";
+import { KeyRound, Mail, Palette } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
-import { ChangeEmailForm, ChangePasswordForm } from "./forms";
+import { AppThemeForm, ChangeEmailForm, ChangePasswordForm } from "./forms";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -11,7 +11,11 @@ export default async function AccountPage() {
   const viewer = await getViewer();
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <PageHeader eyebrow="Account" title="Sign-in & security" description={`Signed in as ${viewer.user.email}.`} />
+      <PageHeader eyebrow="Account" title="My settings" description={`Signed in as ${viewer.user.email}.`} />
+      <Card>
+        <CardHeader title="My app colors" icon={<Palette className="size-4" />} />
+        <AppThemeForm current={viewer.member.appTheme} />
+      </Card>
       <Card>
         <CardHeader title="Change password" icon={<KeyRound className="size-4" />} />
         <ChangePasswordForm />

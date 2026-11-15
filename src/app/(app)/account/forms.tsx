@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
-import { changeEmail, changePassword, resetMemberPassword, setMemberEmail } from "@/app/actions/account";
+import { useActionState, useState } from "react";
+import { changeEmail, changePassword, resetMemberPassword, saveAppTheme, setMemberEmail } from "@/app/actions/account";
+import { MEMBER_COLORS, MEMBER_COLOR_KEYS } from "@/lib/colors";
+import { cn } from "@/lib/utils";
 import { Field, FormMessage, Input, SubmitButton } from "@/components/ui/form";
 
 export function ChangePasswordForm() {
@@ -77,6 +79,40 @@ export function MemberEmailForm({ memberId, name, email }: { memberId: string; n
           <SubmitButton pendingLabel="Saving…">Save email</SubmitButton>
         </div>
       </Field>
+    </form>
+  );
+}
+
+/** Pick an accent colour for my own app. */
+export function AppThemeForm({ current }: { current: string | null }) {
+  const [state, action] = useActionState(saveAppTheme, undefined);
+  const [value, setValue] = useState(current ?? "");
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
+      <input type="hidden" name="theme" value={value} />
+      <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="App color theme">
+        <button type="button" role="radio" aria-checked={value === ""} onClick={() => setValue("")} className={cn("inline-flex h-11 items-center gap-2 rounded-full border px-3 text-sm", value === "" ? "border-ink ring-2 ring-ink" : "border-line-strong")}>
+          <span className="size-6 rounded-full bg-[#6a2d5e]" aria-hidden /> Family default
+        </button>
+        {MEMBER_COLOR_KEYS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={value === key}
+            aria-label={MEMBER_COLORS[key].label}
+            title={MEMBER_COLORS[key].label}
+            onClick={() => setValue(key)}
+            className={cn("size-11 rounded-full border border-black/10 ring-offset-2 ring-offset-surface", value === key ? "ring-2 ring-ink" : "hover:ring-2 hover:ring-line-strong")}
+            style={{ backgroundColor: MEMBER_COLORS[key].solid }}
+          />
+        ))}
+      </div>
+      <p className="text-sm text-muted">Changes buttons, highlights and tabs in your app only. Your member color on the calendar and avatars (set by parents) stays the same.</p>
+      <div className="flex justify-end">
+        <SubmitButton pendingLabel="Saving…">Save colors</SubmitButton>
+      </div>
     </form>
   );
 }

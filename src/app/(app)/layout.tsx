@@ -8,6 +8,7 @@ import { TopBar } from "@/components/shell/top-bar";
 import { getViewer, listFamilyMembers } from "@/lib/dal";
 import { runDailyAutomation } from "@/lib/automation";
 import { ADD_LEVEL_MODULES } from "@/lib/permissions";
+import { themeStyle } from "@/lib/theme";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer();
@@ -26,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const pick = (m: (typeof members)[number]) => ({ id: m.id, displayName: m.displayName, color: m.color });
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh" style={themeStyle(viewer.member.appTheme)}>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-4 focus:py-2">
         Skip to content
       </a>
