@@ -1,5 +1,6 @@
 /**
- * Demo data for the Vanderbilt family: `npm run db:seed`
+ * Sample data for local development and automated tests only: `npm run db:seed`.
+ * It is never loaded on deploy. Do not run it against a real database.
  * Logins (password: vanderbilt123): sarah@vanderbilt.family (parent, owner),
  * michael@vanderbilt.family (parent), emma@vanderbilt.family (member).
  * Re-running replaces the demo family.
@@ -32,13 +33,19 @@ const at = (n: number, hh: number, mm = 0) => {
 const weekday = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay();
 
 async function main() {
-  // Deploy mode: only fill an empty database, never reset a live one.
-  if (process.env.SEED_IF_EMPTY === "1") {
-    const [{ n } = { n: 0 }] = await db.select({ n: sql<number>`count(*)::int` }).from(s.families);
-    if (n > 0) {
-      console.log("Database already has a family; skipping demo data.");
-      return;
+  // Never on a real database: re-seeding replaces the sample family's accounts,
+  // and real families may use those email addresses.
+  const host = (() => {
+    try {
+      return new URL(databaseUrl() ?? "").hostname;
+    } catch {
+      return "";
     }
+  })();
+  if (!["localhost", "127.0.0.1", "::1", ""].includes(host) && process.env.ALLOW_SAMPLE_SEED !== "1") {
+    console.error(`Refusing to load sample data into ${host}. This script is for local development only.`);
+    process.exitCode = 1;
+    return;
   }
   const emails = ["sarah@vanderbilt.family", "michael@vanderbilt.family", "emma@vanderbilt.family"];
   const old = await db.select().from(s.users).where(inArray(s.users.email, emails));

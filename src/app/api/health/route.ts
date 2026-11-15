@@ -41,7 +41,7 @@ export async function GET() {
       (result.database as Record<string, unknown>).tablesCreated = tables.rows[0]!.n === 4;
       (result.database as Record<string, unknown>).accounts = users?.rows[0]?.n ?? 0;
       if (tables.rows[0]!.n !== 4) result.problem = explainDbError({ code: "42P01" }).hint;
-      else if (!users?.rows[0]?.n) result.problem = "The database is set up but has no accounts. Redeploy to load the demo family, or sign up at /signup.";
+      else if (!users?.rows[0]?.n) result.problem = "The database is set up but has no accounts. Create your family at /signup.";
       else result.ok = true;
     } finally {
       client.release();

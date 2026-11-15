@@ -19,11 +19,11 @@ Requirements: Node 20+ and PostgreSQL 14+.
 cp .env.example .env            # set DATABASE_URL
 npm install
 npm run db:migrate              # create tables
-npm run db:seed                 # optional: demo Vanderbilt family
+npm run db:seed                 # optional: sample family for local development
 npm run dev                     # http://localhost:3000
 ```
 
-Demo logins (password `vanderbilt123`): `sarah@vanderbilt.family` (parent, owner),
+Sample logins after `db:seed` (password `vanderbilt123`): `sarah@vanderbilt.family` (parent, owner),
 `michael@vanderbilt.family` (parent), `emma@vanderbilt.family` (family member with limited access).
 Or create your own account at `/signup`; the setup wizard walks you through the rest.
 
@@ -40,7 +40,8 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | `npm run lint` | ESLint |
 | `npm run db:generate` | Generate a migration after changing `src/db/schema` |
 | `npm run db:migrate` | Apply migrations |
-| `npm run db:seed` | Load the demo family |
+| `npm run db:seed` | Load a sample family (local development only; refuses non-local databases) |
+| `npm run db:remove-demo` | Remove sample records from an older deploy, keeping all accounts (`-- --dry` to preview) |
 
 ## What's inside
 
@@ -85,8 +86,10 @@ from the brand mark with `node scripts/generate-icons.mjs`.
 connection string (port 6543, password filled in; best for serverless hosting like Netlify), and add it in
 Netlify as `DATABASE_URL`. Netlify DB
 (`NETLIFY_DB_URL`) or any other Postgres also works. Every deploy runs `npm run db:setup`
-(`netlify.toml`): migrations, plus the demo family on a brand-new empty database only. It never resets
-existing data. Set `SEED_DEMO=0` to skip the demo family.
+(`netlify.toml`): migrations, then removal of the sample records that earlier versions loaded on first
+deploy. That cleanup only touches records the sample loader created (recognised by its signature and
+timestamps); accounts, family members, permissions, settings and anything you added are kept. A deploy
+never adds sample data. Set `KEEP_DEMO_DATA=1` to skip the cleanup.
 
 **File uploads (optional, recommended with Supabase).** Add in Netlify:
 
@@ -104,9 +107,9 @@ Without these, uploads use Netlify Blobs on Netlify, or `./storage` locally. `ST
 Something wrong? Open **`/api/health`** on your site: it checks the database and storage setup and explains
 the problem in plain English (it shows no passwords or family data).
 
-Then redeploy and sign in with `sarah@vanderbilt.family` / `vanderbilt123`. Change passwords under the
-avatar menu → **Account & password** (parents can reset a member's password from Family → person →
-**Manage**), and change or remove the demo accounts before adding real information.
+Then redeploy and create your family at `/signup` (or sign in with your existing account). Change passwords
+under the avatar menu → **Account & password**; parents can set a member's email and password from
+Family → person → **Manage**.
 
 ## Project layout
 

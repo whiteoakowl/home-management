@@ -1,6 +1,8 @@
 /**
- * Runs on every deploy (see netlify.toml): applies database migrations and,
- * if the database is empty, loads the demo family. Safe to run repeatedly.
+ * Runs on every deploy (see netlify.toml): applies database migrations, then
+ * removes the sample records older versions loaded on first deploy (accounts
+ * and family members are always kept; see scripts/remove-demo-data.mjs).
+ * It never adds sample data. Safe to run repeatedly.
  * Without a database URL it warns and exits cleanly so the site still deploys.
  */
 import { execSync } from "node:child_process";
@@ -12,4 +14,4 @@ if (!url) {
 }
 const run = (cmd) => execSync(cmd, { stdio: "inherit", env: { ...process.env, DATABASE_URL: url } });
 run("npx drizzle-kit migrate");
-if (process.env.SEED_DEMO !== "0") run("npx tsx src/db/seed.ts");
+if (process.env.KEEP_DEMO_DATA !== "1") run("node scripts/remove-demo-data.mjs");
