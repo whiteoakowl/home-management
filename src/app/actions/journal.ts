@@ -54,7 +54,7 @@ export async function saveJournalEntry(_: ActionState, fd: FormData): Promise<Ac
       if (uploads.length) await tx.insert(journalEntryFiles).values(uploads.map((fileId, i) => ({ entryId: entryId!, fileId, position: i })));
       await saveRecordAccess(tx, viewer.family.id, "journal_entry", entryId!, memberIds);
     });
-    if (!id && visibility !== "private") {
+    if (!id && visibility === "family") {
       await logActivity(db, viewer.family.id, viewer.member.id, "journal.added", `wrote a journal entry${values.title ? `: "${values.title}"` : ""}`, { module: "journal" });
     }
     revalidatePath("/journal", "layout");

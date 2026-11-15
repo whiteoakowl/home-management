@@ -22,11 +22,11 @@ function revalidateGoals() {
   revalidatePath("/");
 }
 
-/** Members may edit their own goals and family goals; parents edit everything. */
+/** Members may edit their own goals; family goals and other people's goals are changed by parents. */
 async function editableGoal(viewer: Viewer, id: string) {
   const [g] = await db.select().from(goals).where(and(eq(goals.id, id), eq(goals.familyId, viewer.family.id)));
   if (!g || isOthersPrivate(viewer, { visibility: g.visibility, author: g.ownerMemberId })) throw new AuthorizationError("Goal not found.");
-  if (!viewer.isParent && g.ownerMemberId && g.ownerMemberId !== viewer.member.id) throw new AuthorizationError("That's someone else's goal.");
+  if (!viewer.isParent && g.ownerMemberId !== viewer.member.id) throw new AuthorizationError(g.ownerMemberId ? "That's someone else's goal." : "Only parents can change family goals.");
   return g;
 }
 
@@ -89,7 +89,7 @@ export async function saveGoal(_: ActionState, fd: FormData): Promise<ActionStat
       }
       await saveRecordAccess(tx, viewer.family.id, "goal", goalId!, memberIds);
     });
-    if (!id) await logActivity(db, viewer.family.id, viewer.member.id, "goal.created", `set a goal: ${name}`, { module: "goals", entityId: goalId! });
+    if (!id && visibility === "family") await logActivity(db, viewer.family.id, viewer.member.id, "goal.created", `set a goal: ${name}`, { module: "goals", entityId: goalId! });
     revalidateGoals();
     if (!id) redirect(`/goals/${goalId}`);
     return ok("Saved.");
@@ -110,7 +110,7 @@ export async function setGoalStatus(fd: FormData) {
   const status = String(fd.get("status"));
   if (!["active", "achieved", "paused", "abandoned"].includes(status)) return;
   await db.update(goals).set({ status: status as "active" }).where(eq(goals.id, g.id));
-  if (status === "achieved") await logActivity(db, viewer.family.id, viewer.member.id, "goal.achieved", `achieved a goal: ${g.name} 🎉`, { module: "goals", entityId: g.id });
+  if (status === "achieved" && g.visibility === "family") await logActivity(db, viewer.family.id, viewer.member.id, "goal.achieved", `achieved a goal: ${g.name} 🎉`, { module: "goals", entityId: g.id });
   revalidateGoals();
 }
 

@@ -6,7 +6,7 @@ import { and, asc, eq, max } from "drizzle-orm";
 import { db } from "@/db";
 import { choreOccurrences, chores, homeDocuments, homeItems, homePhotos, homeProjects, homeRepairs, listItems, lists, projectMaterials, projectStages, rooms, vendors } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule } from "@/lib/dal";
+import { assertCanChange, AuthorizationError, isOthersPrivate, requireModule } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { recordExpense } from "@/lib/expenses";
 import { logActivity } from "@/lib/family";
@@ -307,7 +307,8 @@ export async function saveHomeDocument(_: ActionState, fd: FormData): Promise<Ac
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
     const [old] = id ? await db.select().from(homeDocuments).where(and(eq(homeDocuments.id, id), eq(homeDocuments.familyId, viewer.family.id))) : [];
-    if (id && !old) throw new AuthorizationError("Not found.");
+    if (id && (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId }))) throw new AuthorizationError("Not found.");
+    if (old) assertCanChange(viewer, old.createdByMemberId, "this document");
     const fileId = await saveUpload(viewer, fd.get("file"), { allowDocs: true });
     if (!old && !fileId && values.docType !== "paint") return fail("Attach the file (PDF or image).", "file");
     const { visibility, memberIds } = visibilityFromForm(fd);
@@ -337,7 +338,10 @@ export async function saveHomeDocument(_: ActionState, fd: FormData): Promise<Ac
 
 export async function deleteHomeDocument(fd: FormData) {
   const viewer = await edit();
-  const [d] = await db.delete(homeDocuments).where(and(eq(homeDocuments.id, String(fd.get("id"))), eq(homeDocuments.familyId, viewer.family.id))).returning();
+  const [old] = await db.select().from(homeDocuments).where(and(eq(homeDocuments.id, String(fd.get("id"))), eq(homeDocuments.familyId, viewer.family.id)));
+  if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
+  assertCanChange(viewer, old.createdByMemberId, "this document");
+  const [d] = await db.delete(homeDocuments).where(eq(homeDocuments.id, old.id)).returning();
   if (d?.fileId) await deleteFamilyFile(viewer.family.id, d.fileId);
   revalidateHome();
 }

@@ -34,7 +34,8 @@ export async function loadList(viewer: Viewer, id: string, edit = false) {
   }
   const mine = l.createdByMemberId === viewer.member.id;
   const mod = listModule(l.kind);
-  const allowed = edit ? viewer.can(mod, "edit") || (viewer.can(mod, "add") && mine) || (mod === "lists" && mine) : viewer.can(mod, "view") || mine;
+  // Changing a list (rename, archive, delete, edit items): parents with access, or whoever created it.
+  const allowed = edit ? (viewer.isParent && viewer.can(mod, "edit")) || mine : viewer.can(mod, "view") || mine;
   if (!allowed) throw new AuthorizationError("You don't have access to that list.");
   return l;
 }

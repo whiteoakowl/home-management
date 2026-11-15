@@ -20,7 +20,7 @@ export function PermissionLegend() {
       <div><dt className="inline font-semibold text-ink">No access:</dt> <dd className="inline">the area is hidden.</dd></div>
       <div><dt className="inline font-semibold text-ink">View only:</dt> <dd className="inline">can look, but can&apos;t add or change anything.</dd></div>
       <div><dt className="inline font-semibold text-ink">Add own</dt> <dd className="inline">(Family Pantry areas): can add new things and change only what they added.</dd></div>
-      <div><dt className="inline font-semibold text-ink">Add &amp; edit:</dt> <dd className="inline">can create new things (lists, events, goals…) and change or delete things they can see. Private items stay private.</dd></div>
+      <div><dt className="inline font-semibold text-ink">Add &amp; edit:</dt> <dd className="inline">can create new things (lists, events, goals…) and change or delete the things they added. Only parents can change what someone else added, and nobody sees someone else&apos;s &ldquo;Only me&rdquo; items.</dd></div>
     </dl>
   );
 }

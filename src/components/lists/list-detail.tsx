@@ -22,7 +22,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
   if (!list) notFound();
   const mod = listModule(list.kind);
   // Private-space lists: the owner manages them; anyone else (a parent, if allowed) only reads.
-  const canEdit = list.ownerMemberId ? list.ownerMemberId === viewer.member.id : viewer.can(mod, "edit") || list.createdByMemberId === viewer.member.id;
+  const canEdit = list.ownerMemberId ? list.ownerMemberId === viewer.member.id : (viewer.isParent && viewer.can(mod, "edit")) || list.createdByMemberId === viewer.member.id;
   const canAdd = canAddToList(viewer, list);
   const [items, members, cats, access] = await Promise.all([
     loadListItems(list.id, viewer),

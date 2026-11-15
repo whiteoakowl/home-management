@@ -10,7 +10,7 @@ import { TextAreaField, TextField, VisibilityField, type MemberOption } from "@/
 import { DeleteButton } from "@/components/forms/inline";
 import { Card } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
-import { getViewer, visibleTo } from "@/lib/dal";
+import { canChangeItem, getViewer, visibleTo } from "@/lib/dal";
 import { memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import { HouseTabs } from "../house-tabs";
@@ -68,7 +68,7 @@ export default async function InfoPage() {
                         <Lock className="size-3" /> {i.visibility === "private" ? "Only me" : i.visibility === "parents" ? "Parents & me" : "Shared"}
                       </Badge>
                     )}
-                    {canManage && (
+                    {canManage && canChangeItem(viewer, i.createdByMemberId) && (
                       <>
                         <FormModal
                           title="Edit info"

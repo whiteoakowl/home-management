@@ -189,13 +189,13 @@ export async function saveBook(_: ActionState, fd: FormData): Promise<ActionStat
           .values({ ...values, familyId: viewer.family.id, createdByMemberId: viewer.member.id, ownerMemberId: personal ? viewer.member.id : null })
           .returning({ id: books.id });
         bookId = row!.id;
-        if (!personal) await logActivity(tx, viewer.family.id, viewer.member.id, "book.added", `added "${title}" to the library`, { module: "library", entityId: bookId });
+        if (!personal && visibility === "family") await logActivity(tx, viewer.family.id, viewer.member.id, "book.added", `added "${title}" to the library`, { module: "library", entityId: bookId });
       }
       if (catIds.length) await tx.insert(bookCategories).values(catIds.map((categoryId) => ({ bookId: bookId!, categoryId })));
       await saveRecordAccess(tx, viewer.family.id, "book", bookId!, personal ? [] : memberIds);
     });
     if (existing?.coverFileId && coverFileId !== undefined && coverFileId !== existing.coverFileId) await deleteFamilyFile(viewer.family.id, existing.coverFileId);
-    if (!personal && existing && existing.status !== "completed" && status === "completed") {
+    if (!personal && visibility === "family" && existing && existing.status !== "completed" && status === "completed") {
       await logActivity(db, viewer.family.id, viewer.member.id, "book.finished", `finished reading "${title}" 📚`, { module: "library", entityId: bookId! });
     }
     revalidateLibrary();
@@ -258,7 +258,7 @@ export async function updateReading(_: ActionState, fd: FormData): Promise<Actio
     const notes = f.str(fd, "readingNotes");
     if (notes !== null) set.readingNotes = notes;
     await db.update(books).set(set).where(eq(books.id, b.id));
-    if (!b.ownerMemberId && set.status === "completed" && b.status !== "completed") {
+    if (!b.ownerMemberId && b.visibility === "family" && set.status === "completed" && b.status !== "completed") {
       await logActivity(db, viewer.family.id, viewer.member.id, "book.finished", `finished reading "${b.title}" 📚`, { module: "library", entityId: b.id });
     }
     revalidateLibrary();

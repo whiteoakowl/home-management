@@ -115,8 +115,8 @@ function Row({
   today: string;
 }) {
   const [pending, start] = useTransition();
-  // Your own personal items are yours to change, even on a list you can only view.
-  canEdit = canEdit || (!!item.personalFor && !!item.mine);
+  // Items you added (and your personal items) are yours to change, even on someone else's list.
+  canEdit = canEdit || !!item.mine;
   const assignee = members.find((m) => m.id === item.assigneeId);
   const checkable = kind !== "bullet" && kind !== "numbered";
   const overdue = kind === "todo" && item.dueDate && item.dueDate < today && !item.checked;

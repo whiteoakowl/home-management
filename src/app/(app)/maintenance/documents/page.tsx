@@ -3,6 +3,7 @@ import { FileText } from "lucide-react";
 import { MaintenanceTabs } from "@/components/maintenance/tabs";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
+import { canChangeItem } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { projectOpts, roomOpts, visibleDocs } from "@/lib/maintenance";
 import { DOC_TYPES } from "@/lib/maintenance-config";
@@ -59,7 +60,7 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/mainte
         <Card>
           <ul className="divide-y divide-line">
             {shown.map((d) => (
-              <DocRow key={d.id} d={d} rooms={rooms} projects={projects} members={members} canEdit={canEdit} today={today} />
+              <DocRow key={d.id} d={d} rooms={rooms} projects={projects} members={members} canEdit={canEdit && canChangeItem(viewer, d.createdByMemberId)} today={today} />
             ))}
           </ul>
         </Card>

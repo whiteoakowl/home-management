@@ -29,8 +29,8 @@ export async function currentLibrarySpace(): Promise<LibrarySpace> {
 export const canAddBooks = (viewer: Viewer, space: LibrarySpace) => (space === "mine" ? viewer.can("library", "view") : viewer.can("library", "edit"));
 
 /** May the viewer change this book? Personal books: only their owner. */
-export const canChangeBook = (viewer: Viewer, b: { ownerMemberId: string | null }) =>
-  b.ownerMemberId ? b.ownerMemberId === viewer.member.id : viewer.can("library", "edit");
+export const canChangeBook = (viewer: Viewer, b: { ownerMemberId: string | null; createdByMemberId: string | null }) =>
+  b.ownerMemberId ? b.ownerMemberId === viewer.member.id : viewer.can("library", "edit") && (viewer.isParent || b.createdByMemberId === viewer.member.id);
 
 export async function bookCategoryList(viewer: Viewer): Promise<BookCategory[]> {
   return db

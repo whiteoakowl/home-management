@@ -21,9 +21,9 @@ const KINDS = ["checklist", "bullet", "numbered", "todo", "shopping"] as const;
 type Kind = (typeof KINDS)[number];
 const SHOP_CATS = shoppingCategory.enumValues;
 
-/** A personal shopping item that belongs to the viewer: they may change or remove it without list edit rights. */
+/** An item the viewer added (or a personal item for them): they may change or remove it without list edit rights. */
 const ownPersonal = (viewer: Viewer, item: { personalForMemberId: string | null; addedByMemberId: string | null }) =>
-  !!item.personalForMemberId && (item.personalForMemberId === viewer.member.id || item.addedByMemberId === viewer.member.id);
+  item.addedByMemberId === viewer.member.id || (!!item.personalForMemberId && item.personalForMemberId === viewer.member.id);
 
 function revalidateLists(kind?: Kind) {
   revalidatePath(kind === "shopping" ? "/shopping" : "/lists", "layout");

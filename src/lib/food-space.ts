@@ -74,11 +74,12 @@ export function canAddIn(viewer: Viewer, module: Module, space: FoodSpace) {
 /**
  * May the viewer change or delete this record? Own private records: always.
  * Someone else's private records: never (parents' access is read-only).
- * Family records: Edit access, or Add access for records they added.
+ * Family records: parents, or the member who added it (with Add or Add & edit).
  */
 export function canChange(viewer: Viewer, module: Module, row: { ownerMemberId: string | null; createdByMemberId?: string | null }) {
   if (row.ownerMemberId) return row.ownerMemberId === viewer.member.id;
-  if (viewer.can(module, "edit")) return true;
+  // Parents change any family record; members change only what they added (Add or Add & edit).
+  if (viewer.isParent) return true;
   return viewer.can(module, "add") && !!row.createdByMemberId && row.createdByMemberId === viewer.member.id;
 }
 

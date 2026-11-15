@@ -164,3 +164,16 @@ export function visibleTo(
 export function isOthersPrivate(viewer: Viewer, r: { visibility: string; author: string | null }) {
   return r.visibility === "private" && r.author !== viewer.member.id;
 }
+
+/**
+ * Who may change or delete a shared record (list, event, note, document, book, recipe…):
+ * parents, and whoever created it. "Add & edit" lets a member add things and change
+ * their own; it never lets them change what someone else added.
+ */
+export function canChangeItem(viewer: Viewer, createdBy: string | null | undefined) {
+  return viewer.isParent || (!!createdBy && createdBy === viewer.member.id);
+}
+
+export function assertCanChange(viewer: Viewer, createdBy: string | null | undefined, what = "this") {
+  if (!canChangeItem(viewer, createdBy)) throw new AuthorizationError(`Only the person who added ${what} (or a parent) can change it.`);
+}

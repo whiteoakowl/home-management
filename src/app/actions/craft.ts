@@ -37,7 +37,7 @@ const revalidateCraft = () => revalidatePath("/spiritual", "layout");
 async function ownItem(viewer: Awaited<ReturnType<typeof requireModule>>, id: string | null) {
   const it = id ? await getCraftItem(viewer, id) : null;
   if (!it || it.familyId !== viewer.family.id) throw new AuthorizationError("Only your family's own entries can be changed. Save a copy of a reference entry first.");
-  if (!viewer.isParent && it.createdByMemberId !== viewer.member.id && it.visibility !== "family") throw new AuthorizationError("Only the author can change this entry.");
+  if (!viewer.isParent && it.createdByMemberId !== viewer.member.id) throw new AuthorizationError("Only the person who added this entry (or a parent) can change it.");
   return it;
 }
 

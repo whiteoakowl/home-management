@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { householdInfo, rooms } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { requireModule } from "@/lib/dal";
+import { assertCanChange, AuthorizationError, isOthersPrivate, requireModule } from "@/lib/dal";
 import { ownedCategoryId } from "@/lib/queries";
 import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
@@ -21,6 +21,11 @@ export async function saveInfo(_: ActionState, fd: FormData): Promise<ActionStat
     const id = f.str(fd, "id");
     const { visibility, memberIds } = visibilityFromForm(fd);
     const values = { familyId: viewer.family.id, title, body, visibility, categoryId: await ownedCategoryId(viewer, "household", f.str(fd, "categoryId")) };
+    if (id) {
+      const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, id), eq(householdInfo.familyId, viewer.family.id)));
+      if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) throw new AuthorizationError("Not found.");
+      assertCanChange(viewer, old.createdByMemberId, "this info");
+    }
     await db.transaction(async (tx) => {
       let infoId = id;
       if (id) await tx.update(householdInfo).set(values).where(and(eq(householdInfo.id, id), eq(householdInfo.familyId, viewer.family.id)));
@@ -37,7 +42,10 @@ export async function saveInfo(_: ActionState, fd: FormData): Promise<ActionStat
 
 export async function deleteInfo(fd: FormData) {
   const viewer = await requireModule("house", "edit");
-  await db.delete(householdInfo).where(and(eq(householdInfo.id, String(fd.get("id"))), eq(householdInfo.familyId, viewer.family.id)));
+  const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, String(fd.get("id"))), eq(householdInfo.familyId, viewer.family.id)));
+  if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
+  assertCanChange(viewer, old.createdByMemberId, "this info");
+  await db.delete(householdInfo).where(eq(householdInfo.id, old.id));
   revalidatePath("/house", "layout");
 }
 

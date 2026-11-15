@@ -77,7 +77,7 @@ export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionSta
       if (attachment) await tx.insert(eventAttachments).values({ eventId: eventId!, fileId: attachment });
       await saveRecordAccess(tx, viewer.family.id, "event", eventId!, memberIds);
     });
-    if (!id) await logActivity(db, viewer.family.id, viewer.member.id, "event.created", `added "${title}" to the calendar`, { module: "calendar", entityId: eventId! });
+    if (!id && visibility === "family") await logActivity(db, viewer.family.id, viewer.member.id, "event.created", `added "${title}" to the calendar`, { module: "calendar", entityId: eventId! });
     revalidatePath("/calendar", "layout");
     revalidatePath("/");
     return ok("Saved.");
