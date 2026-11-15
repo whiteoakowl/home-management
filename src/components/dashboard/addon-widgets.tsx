@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
-import { HeartPulse, Moon, PawPrint, Trophy, Wrench } from "lucide-react";
+import { HeartPulse, LibraryBig, Moon, PawPrint, Trophy, Wrench } from "lucide-react";
+import { BookCover } from "@/components/library/book-cover";
+import { listBooks } from "@/lib/library";
+import { percentRead } from "@/lib/library-config";
 import { MoonDisc } from "@/components/craft/moon-card";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, EmptyState, ProgressBar } from "@/components/ui/display";
@@ -168,6 +171,42 @@ export async function PointsWidget({ scope }: { scope: Scope }) {
         </div>
       ) : (
         <p className="mt-1 text-sm text-muted">Finish chores to earn points for rewards.</p>
+      )}
+    </Card>
+  );
+}
+
+/** Books in progress (the person's own on their portal), with progress bars. */
+export async function ReadingWidget({ scope }: { scope: Scope }) {
+  const all = await listBooks(scope.viewer);
+  const reading = all.filter((b) => b.status === "reading" && (!scope.subjectId || b.readerMemberId === scope.subjectId || (!b.readerMemberId && b.createdByMemberId === scope.subjectId)));
+  return (
+    <Card>
+      <CardHeader title="Reading" icon={<LibraryBig className={ic} />} href="/library" />
+      {reading.length ? (
+        <ul className="flex flex-col gap-3">
+          {reading.slice(0, 3).map((b) => {
+            const pct = percentRead(b);
+            return (
+              <li key={b.id}>
+                <Link href={`/library/books/${b.id}`} className="flex items-center gap-3 hover:text-primary-700">
+                  <div className="w-9 shrink-0">
+                    <BookCover title={b.title} coverFileId={b.coverFileId} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{b.title}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <ProgressBar value={pct} label={`${pct}% read`} />
+                      <span className="text-xs text-muted tabular-nums">{pct}%</span>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <EmptyState compact icon={<LibraryBig />} title={all.length ? "Nothing on the go" : "Your library is empty."} description={all.length ? "Start a book to see your progress here." : "Scan or add your first book."} />
       )}
     </Card>
   );

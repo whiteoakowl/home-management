@@ -14,3 +14,4 @@ export * from "./pets";
 export * from "./craft";
 export * from "./maintenance";
 export * from "./extras";
+export * from "./library";

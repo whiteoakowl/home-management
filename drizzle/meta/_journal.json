@@ -57,6 +57,13 @@
       "when": 1794760244487,
       "tag": "0007_section_layouts",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794760881914,
+      "tag": "0008_book_library",
+      "breakpoints": true
     }
   ]
 }

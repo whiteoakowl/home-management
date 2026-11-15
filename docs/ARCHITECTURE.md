@@ -262,6 +262,19 @@ Shopping lists are lists with `kind = 'shopping'`: one list engine.
   `pet_care_notes`, `pet_supplies` (→ `inventory_items` with `location='pets'`).
 * Care schedules are `chores.pet_id`; memories are `journal_entries` with `book='pet'`, `linked_id = pet`.
 
+### Book Library (`library.ts`, `isbn.ts`, routes under `/library`), module `library`
+* `books` (title, author, co-author, ISBN-13, publisher, published date, cover file, description,
+  genre, pages, edition, format, acquired/purchase/price, rating, notes, favorite, reading status
+  `want_to_read | not_started | reading | paused | completed | abandoned`, reader, started/finished,
+  current page, reading notes, visibility via `record_access` entity `book`).
+* Categories reuse `categories` (domain `book`); `book_categories` links books to several.
+* Scanning: `components/scan/use-barcode-camera.ts` (BarcodeDetector, ZXing fallback; shared with the
+  kitchen). `lookupIsbn` asks Open Library + Google Books (`GOOGLE_BOOKS_API_KEY` optional) and merges
+  the answers; nothing is saved until the confirm form is submitted. Covers are copied into the
+  family's storage on save.
+* Dashboard cards are customizable per member (`section_layouts`, section `library`); a "Reading"
+  widget is on the home dashboard; books appear in global search and quick add.
+
 ### Spiritual (`craft.ts`, routes under `/spiritual`; module id stays `witchcraft`), add-on
 * Old `/witchcraft/*` links redirect (next.config.ts). The section renders inside `.theme-celestial`
   (globals.css), which re-maps the design tokens to a dark celestial palette for every shared component.

@@ -152,6 +152,18 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "A private or shared place for the moments worth keeping.",
     highlights: ["Private or shared entries", "Photos, moods & tags", "Timeline & calendar browsing"],
   },
+  library: {
+    id: "library",
+    label: "Book Library",
+    href: "/library",
+    icon: "LibraryBig",
+    group: "Personal",
+    phase: 8,
+    inNav: true,
+    defaultMemberAccess: "edit",
+    tagline: "Every book in the house: scan to add, track reading, and see what everyone's enjoying.",
+    highlights: ["Scan a barcode to add a book", "Reading progress & stats", "Your own categories"],
+  },
   goals: {
     id: "goals",
     label: "Goals",

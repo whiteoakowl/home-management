@@ -36,6 +36,7 @@ export const MODULES = [
   "pets",
   "witchcraft",
   "maintenance",
+  "library",
 ] as const;
 export type Module = (typeof MODULES)[number];
 

@@ -54,6 +54,7 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Home Maintenance | Rooms & systems, maintenance schedules with costs, repair log with photos & warranties, remodeling projects, to-do lists, documents & warranties, home inventory with insurance report, service providers, printable household manual, calendar |
 | Medical | Private health profiles, allergies & food restrictions (flagged in recipes and meal plans), conditions, medications with refill reminders, documents, appointments |
 | Pets | Pet profiles & photos, vet records, flea/tick/heartworm reminders, food & supplies, care chores, memories |
+| Book Library | Scan a book's barcode (camera, incl. iPhone) or type the ISBN → details, cover and description from Open Library / Google Books → confirm & edit → save; manual add; your own categories (multi-category, reorder, rename, move, delete); grid / list / by category / author / status views with search & filters; reading status, progress, start/finish dates, ratings, notes; yearly stats; customizable dashboard |
 | Spiritual | Dark celestial theme; customizable dashboard; moon phases, Wheel of the Year, celebrations, spells, rituals, printable grimoire, crystals, herbs (with safety notes), tools, wellness, supplies |
 | Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared |
 | Kitchen | Pantry / fridge / freezer / supplies, gentle expiration alerts, barcode scanning, waste tracking, “What can I cook?” with use-it-up suggestions |
@@ -103,6 +104,9 @@ automatically; override with `SUPABASE_BUCKET`). The app serves files itself aft
 membership and medical privacy, so the bucket stays private and the key never reaches a browser.
 Without these, uploads use Netlify Blobs on Netlify, or `./storage` locally. `STORAGE_DRIVER` =
 `supabase` | `blobs` | `disk` forces a choice.
+
+**Book lookups (optional).** Scanning a book asks Open Library and Google Books. Google limits
+anonymous lookups; add a free `GOOGLE_BOOKS_API_KEY` in Netlify if lookups often come back empty.
 
 Something wrong? Open **`/api/health`** on your site: it checks the database and storage setup and explains
 the problem in plain English (it shows no passwords or family data).

@@ -31,7 +31,7 @@ import { getWeather } from "@/lib/weather";
 import { AnnouncementComposer } from "./announcement-composer";
 import { setOccurrenceDone } from "@/app/actions/chores";
 import { CheckCircle } from "@/components/forms/inline";
-import { HealthWidget, HomeUpkeepWidget, MoonWidget, PetsWidget, PointsWidget } from "./addon-widgets";
+import { HealthWidget, HomeUpkeepWidget, MoonWidget, PetsWidget, PointsWidget, ReadingWidget } from "./addon-widgets";
 
 const ic = "size-4";
 
@@ -590,6 +590,7 @@ export function renderWidget(id: string, scope: Scope, name: string) {
     case "pets": return <PetsWidget scope={scope} />;
     case "home": return <HomeUpkeepWidget scope={scope} />;
     case "moon": return <MoonWidget scope={scope} />;
+    case "reading": return <ReadingWidget scope={scope} />;
     case "points": return <PointsWidget scope={scope} />;
     default: return null;
   }

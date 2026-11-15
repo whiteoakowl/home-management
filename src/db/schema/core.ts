@@ -29,6 +29,7 @@ export const categoryDomain = pgEnum("category_domain", [
   "recipe",
   "household",
   "inventory",
+  "book",
 ]);
 export const entityType = pgEnum("entity_type", [
   "event",
@@ -41,6 +42,7 @@ export const entityType = pgEnum("entity_type", [
   "medical",
   "pet",
   "craft_item",
+  "book",
 ]);
 
 // ─── Identity ────────────────────────────────────────────────────────────────

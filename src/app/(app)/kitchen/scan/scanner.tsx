@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CheckCircle2, Keyboard, LoaderCircle, ScanBarcode } from "lucide-react";
 import { lookupBarcode, saveInventoryItem, type ProductLookup } from "@/app/actions/kitchen";
@@ -9,79 +9,29 @@ import { InventoryFields } from "@/components/kitchen/inventory-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/form";
+import { useBarcodeCamera, type BarcodeFormat } from "@/components/scan/use-barcode-camera";
 
-type Detector = { detect: (src: CanvasImageSource) => Promise<{ rawValue: string }[]> };
-declare global {
-  interface Window {
-    BarcodeDetector?: new (opts: { formats: string[] }) => Detector;
-  }
-}
+const FORMATS: BarcodeFormat[] = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"];
 
 /**
- * Phone-camera barcode scanner using the native BarcodeDetector API
- * (Chrome, Edge, Android). Falls back to typing the number on other browsers.
+ * Phone-camera barcode scanner (native BarcodeDetector, or ZXing on browsers
+ * without it, e.g. iPhone Safari). Typing the number always works too.
  */
 export function Scanner({ categories }: { categories: { id: string; name: string }[] }) {
   const router = useRouter();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [supported] = useState(() => typeof window !== "undefined" && !!window.BarcodeDetector);
-  const [camera, setCamera] = useState<"off" | "starting" | "on" | "error">("off");
   const [barcode, setBarcode] = useState<string | null>(null);
   const [manual, setManual] = useState("");
   const [lookup, setLookup] = useState<ProductLookup | null>(null);
   const [looking, setLooking] = useState(false);
   const [saved, setSaved] = useState<number>(0);
 
-  const stop = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setCamera("off");
+  const identify = useCallback(async (code: string) => {
+    setBarcode(code);
+    setLooking(true);
+    setLookup(await lookupBarcode(code));
+    setLooking(false);
   }, []);
-
-  const identify = useCallback(
-    async (code: string) => {
-      stop();
-      setBarcode(code);
-      setLooking(true);
-      setLookup(await lookupBarcode(code));
-      setLooking(false);
-    },
-    [stop],
-  );
-
-  const startCamera = async () => {
-    if (!window.BarcodeDetector) return;
-    setCamera("starting");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      streamRef.current = stream;
-      const video = videoRef.current!;
-      video.srcObject = stream;
-      await video.play();
-      setCamera("on");
-      const detector = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
-      const tick = async () => {
-        if (!streamRef.current) return;
-        try {
-          const found = await detector.detect(video);
-          if (found[0]?.rawValue) {
-            navigator.vibrate?.(60);
-            await identify(found[0].rawValue);
-            return;
-          }
-        } catch {
-          /* frame not ready */
-        }
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    } catch {
-      setCamera("error");
-    }
-  };
-
-  useEffect(() => stop, [stop]);
+  const { videoRef, camera, start: startCamera, stop, supported } = useBarcodeCamera({ formats: FORMATS, onDetect: identify });
 
   const reset = () => {
     setBarcode(null);
@@ -109,7 +59,7 @@ export function Scanner({ categories }: { categories: { id: string; name: string
             {camera !== "on" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-white/90">
                 <ScanBarcode className="size-12" aria-hidden />
-                <p className="text-[15px]">{supported ? "Point your camera at a barcode." : "Camera scanning isn't supported in this browser. Type the barcode number below."}</p>
+                <p className="text-[15px]">{supported ? "Point your camera at a barcode." : "This browser can't open the camera. Type the barcode number below."}</p>
               </div>
             )}
           </div>
@@ -123,7 +73,10 @@ export function Scanner({ categories }: { categories: { id: string; name: string
             className="flex w-full gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              if (manual.trim()) identify(manual.trim());
+              if (manual.trim()) {
+                stop();
+                identify(manual.trim());
+              }
             }}
           >
             <label htmlFor="manual-barcode" className="sr-only">

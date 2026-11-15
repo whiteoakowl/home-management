@@ -34,6 +34,7 @@ export const WIDGETS: WidgetDef[] = [
   { id: "pets", title: "Pets", module: "pets", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "home", title: "Home upkeep", module: "maintenance", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "moon", title: "Moon & Wheel", module: "witchcraft", defaultSize: "sm", defaultVisible: true },
+  { id: "reading", title: "Reading", module: "library", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "activity", title: "Family activity", module: null, defaultSize: "md", defaultVisible: true },
 ];
 

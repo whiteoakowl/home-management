@@ -8,6 +8,7 @@ import {
   HeartPulse,
   House,
   LayoutDashboard,
+  LibraryBig,
   ListChecks,
   Moon,
   NotebookPen,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
+  LibraryBig,
   PawPrint,
   Hammer,
   HeartPulse,

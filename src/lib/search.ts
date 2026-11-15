@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, ilike, inArray, isNull, or, sql, ne } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  books,
   allergies,
   celebrations,
   craftItems,
@@ -36,6 +37,8 @@ import {
 import { visibleTo, type Viewer } from "./dal";
 import { utcToZoned } from "./dates";
 import { craftVisible } from "./craft";
+import { bookVisible } from "./library";
+import { statusLabel } from "./library-config";
 import { fitnessVisibleIds } from "./fitness";
 import { medicalVisible } from "./medical";
 
@@ -352,6 +355,20 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         ...gr.map((x) => ({ id: x.id, title: x.title ?? x.body.slice(0, 60), subtitle: "Grimoire", href: "/spiritual/grimoire" })),
         ...cel.map((x) => ({ id: x.id, title: x.title, subtitle: `Celebration · ${x.date}`, href: `/spiritual/celebrations/${x.id}` })),
       ]),
+    );
+  }
+
+  if (viewer.can("library")) {
+    group(
+      "books",
+      "Books",
+      "LibraryBig",
+      db
+        .select({ id: books.id, title: books.title, author: books.author, status: books.status })
+        .from(books)
+        .where(and(eq(books.familyId, fid), bookVisible(viewer), or(ilike(books.title, like), ilike(books.author, like), ilike(books.coAuthor, like), ilike(books.isbn, like), ilike(books.genre, like))))
+        .limit(LIMIT)
+        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: [x.author, statusLabel(x.status)].filter(Boolean).join(" · "), href: `/library/books/${x.id}` }))),
     );
   }
 
