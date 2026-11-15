@@ -109,6 +109,7 @@ export default async function GrimoirePage({ searchParams }: PageProps<"/spiritu
                         {e.moonPhase && <span>· {PHASE_LABEL[e.moonPhase as PhaseName] ?? e.moonPhase}</span>}
                         {cat(e.category) && <Badge tone="primary">{cat(e.category)}</Badge>}
                         {e.visibility === "private" && <Badge>Private</Badge>}
+                        {e.visibility === "parents" && <Badge>Parents only</Badge>}
                       </p>
                       {e.title && <h2 className="mt-1 font-display text-xl font-semibold">{e.title}</h2>}
                       <p className="mt-2 text-[15px] whitespace-pre-line">{e.body}</p>

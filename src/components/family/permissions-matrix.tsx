@@ -6,12 +6,24 @@ import { ADD_LEVEL_MODULES } from "@/lib/permissions";
 
 const LEVELS: { value: AccessLevel; label: string }[] = [
   { value: "none", label: "No access" },
-  { value: "view", label: "View" },
-  { value: "add", label: "Add" },
-  { value: "edit", label: "Edit" },
+  { value: "view", label: "View only" },
+  { value: "add", label: "Add own" },
+  { value: "edit", label: "Add & edit" },
 ];
 /** "Add" (add new things, change only their own) is offered for the Family Pantry areas. */
 const levelsFor = (m: Module) => LEVELS.filter((l) => l.value !== "add" || ADD_LEVEL_MODULES.includes(m));
+
+/** Plain-language meaning of each access level, shown under the permission selects. */
+export function PermissionLegend() {
+  return (
+    <dl className="grid gap-1.5 rounded-xl bg-sunken/60 px-3.5 py-3 text-sm text-ink-soft">
+      <div><dt className="inline font-semibold text-ink">No access:</dt> <dd className="inline">the area is hidden.</dd></div>
+      <div><dt className="inline font-semibold text-ink">View only:</dt> <dd className="inline">can look, but can&apos;t add or change anything.</dd></div>
+      <div><dt className="inline font-semibold text-ink">Add own</dt> <dd className="inline">(Family Pantry areas): can add new things and change only what they added.</dd></div>
+      <div><dt className="inline font-semibold text-ink">Add &amp; edit:</dt> <dd className="inline">can create new things (lists, events, goals…) and change or delete things they can see. Private items stay private.</dd></div>
+    </dl>
+  );
+}
 
 /**
  * One member's module → access selects, named perm:<memberId>:<module> so
@@ -62,6 +74,7 @@ type MemberRow = { id: string; displayName: string; color: string; access: Parti
 export function PermissionsMatrix({ members, modules }: { members: MemberRow[]; modules: Module[] }) {
   return (
     <div className="flex flex-col gap-4">
+      <PermissionLegend />
       {members.map((m) => (
         <fieldset key={m.id} className="rounded-[var(--radius-card)] border border-line bg-surface px-4 pb-1">
           <legend className="sr-only">{m.displayName}&apos;s access</legend>

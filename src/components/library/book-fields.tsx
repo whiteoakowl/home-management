@@ -42,7 +42,7 @@ export type BookDefaults = {
   finishedOn?: string | null;
   currentPage?: number | null;
   readingNotes?: string | null;
-  visibility?: "family" | "private" | "selected";
+  visibility?: "family" | "private" | "selected" | "parents";
   categoryIds?: string[];
   sharedWith?: string[];
   /** Existing cover (file URL) or a cover found by the ISBN lookup. */
@@ -61,7 +61,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 /** Every book field, grouped. Used by Add, Edit and the scan confirmation screen. */
-export function BookFields({ d = {}, categories, members }: { d?: BookDefaults; categories: { id: string; name: string }[]; members: MemberOption[] }) {
+export function BookFields({ d = {}, categories, members, personal }: { d?: BookDefaults; categories: { id: string; name: string }[]; members: MemberOption[]; personal?: boolean }) {
   return (
     <div className="flex flex-col gap-5">
       {d.id && <input type="hidden" name="id" value={d.id} />}
@@ -128,7 +128,11 @@ export function BookFields({ d = {}, categories, members }: { d?: BookDefaults; 
           <NumberField name="price" label="Price" min={0} step="0.01" defaultValue={d.priceCents != null ? (d.priceCents / 100).toFixed(2) : ""} />
         </FormRow>
         <TextAreaField name="notes" label="Notes" rows={2} defaultValue={d.notes ?? ""} />
-        <VisibilityField members={members} defaultValue={d.visibility ?? "family"} defaultSelected={d.sharedWith ?? []} />
+        {personal ? (
+          <p className="text-sm text-muted">This book is in your personal library. Only you can see it.</p>
+        ) : (
+          <VisibilityField members={members} defaultValue={d.visibility ?? "family"} defaultSelected={d.sharedWith ?? []} />
+        )}
       </Section>
     </div>
   );

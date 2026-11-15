@@ -7,7 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { Input, Select } from "@/components/ui/form";
-import { bookCategoryList, listBooks, type BookWithCats } from "@/lib/library";
+import { bookCategoryList, canAddBooks, listBooks, type BookWithCats } from "@/lib/library";
 import {
   BOOK_FORMATS,
   LIBRARY_SORTS,
@@ -27,7 +27,8 @@ export default async function BooksPage({
   searchParams,
 }: PageProps<"/library/books">) {
   const viewer = await libraryViewer();
-  const canEdit = viewer.can("library", "edit");
+  const space = viewer.librarySpace;
+  const canEdit = canAddBooks(viewer, space);
   const sp = await searchParams;
   const view: LibraryView = LIBRARY_VIEWS.some((v) => v.key === sp.view)
     ? (sp.view as LibraryView)
@@ -43,7 +44,7 @@ export default async function BooksPage({
     : "title";
 
   const [all, cats] = await Promise.all([
-    listBooks(viewer),
+    listBooks(viewer, space),
     bookCategoryList(viewer),
   ]);
   const catName = new Map(cats.map((c) => [c.id, c.name]));
@@ -168,6 +169,7 @@ export default async function BooksPage({
       <LibraryTabs
         active={status === "reading" ? "reading" : "books"}
         canEdit={canEdit}
+        space={space}
       />
 
       <Card className="mb-5 !p-4">

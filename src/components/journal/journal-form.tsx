@@ -18,7 +18,7 @@ const MOODS = [
   { key: "sick", emoji: "🤒", label: "Under the weather" },
 ];
 
-export type JournalDefaults = { id: string; date: string; title: string | null; body: string; mood: string | null; tags: string[]; people: string[]; visibility: "family" | "private" | "selected"; sharedWith: string[] };
+export type JournalDefaults = { id: string; date: string; title: string | null; body: string; mood: string | null; tags: string[]; people: string[]; visibility: "family" | "private" | "selected" | "parents"; sharedWith: string[] };
 
 function MoodPicker({ defaultValue }: { defaultValue?: string | null }) {
   const [mood, setMood] = useState(defaultValue ?? "");

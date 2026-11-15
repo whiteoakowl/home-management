@@ -18,9 +18,9 @@ export default async function ScanBookPage() {
       <Link href="/library" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
         <ArrowLeft className="size-4" /> Library
       </Link>
-      <PageHeader title="Scan a book" description="Scan the barcode on the back cover. We'll find the title, author, cover and more, and you confirm before anything is saved." />
-      <LibraryTabs active="scan" canEdit />
-      <BookScanner categories={cats} members={members} />
+      <PageHeader title="Scan a book" description={`Scan the barcode on the back cover. We'll find the title, author, cover and more, and you confirm before anything is saved.${viewer.librarySpace === "mine" ? " It goes into My Library, which only you can see." : ""}`} />
+      <LibraryTabs active="scan" canEdit space={viewer.librarySpace} />
+      <BookScanner categories={cats} members={members} personal={viewer.librarySpace === "mine"} />
     </>
   );
 }

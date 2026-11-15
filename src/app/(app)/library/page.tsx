@@ -13,7 +13,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { todayIn } from "@/lib/dates";
-import { bookCategoryList, libraryStats, listBooks } from "@/lib/library";
+import { bookCategoryList, canAddBooks, libraryStats, listBooks } from "@/lib/library";
 import { percentRead } from "@/lib/library-config";
 import { cn } from "@/lib/utils";
 import { resolveSectionLayout, sectionTitles } from "@/lib/widgets";
@@ -29,10 +29,11 @@ function Quiet({ children }: { children: ReactNode }) {
 
 export default async function LibraryDashboard() {
   const viewer = await libraryViewer();
-  const canEdit = viewer.can("library", "edit");
+  const space = viewer.librarySpace;
+  const canEdit = canAddBooks(viewer, space);
   const year = todayIn(viewer.family.timezone).slice(0, 4);
   const [list, cats, saved] = await Promise.all([
-    listBooks(viewer),
+    listBooks(viewer, space),
     bookCategoryList(viewer),
     db.select().from(sectionLayouts).where(and(eq(sectionLayouts.memberId, viewer.member.id), eq(sectionLayouts.section, "library"))),
   ]);
@@ -44,8 +45,8 @@ export default async function LibraryDashboard() {
   const header = (
     <PageHeader
       eyebrow="Personal"
-      title="Book Library"
-      description="Every book in the house: what you own, what you're reading and what's next."
+      title={space === "mine" ? "My Library" : "Book Library"}
+      description={space === "mine" ? "Your own books, reading list and progress. Private to you." : "Every book in the house: what you own, what you're reading and what's next."}
       actions={
         <>
           {list.length > 0 && <DashboardCustomizer layout={layout} titles={sectionTitles("library")} section="library" label="library dashboard" />}
@@ -68,7 +69,7 @@ export default async function LibraryDashboard() {
     return (
       <>
         {header}
-        <LibraryTabs active="dashboard" canEdit={canEdit} />
+        <LibraryTabs active="dashboard" canEdit={canEdit} space={space} />
         <Card>
           <EmptyState
             icon={<LibraryBig />}
@@ -250,7 +251,7 @@ export default async function LibraryDashboard() {
   return (
     <>
       {header}
-      <LibraryTabs active="dashboard" canEdit={canEdit} />
+      <LibraryTabs active="dashboard" canEdit={canEdit} space={space} />
       <div className="grid grid-flow-row-dense grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 lg:gap-6 [&>*]:min-w-0">
         {layout
           .filter((w) => w.visible)

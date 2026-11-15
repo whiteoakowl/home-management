@@ -22,7 +22,7 @@ export type EventDefaults = {
   reminderMinutes: number | null;
   notes: string | null;
   attendees: string[];
-  visibility: "family" | "private" | "selected";
+  visibility: "family" | "private" | "selected" | "parents";
   sharedWith: string[];
   rule: RuleDefaults | null;
 };

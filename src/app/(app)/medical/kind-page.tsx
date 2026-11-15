@@ -56,7 +56,7 @@ export async function MedicalKindPage({
       defaults={{ memberId: sp.member ?? null, active: true }}
       hidden={{ kind }}
       members={members}
-      visibility={{ defaultValue: "private", privateLabel: "Private (patient & parents)" }}
+      visibility={{ defaultValue: "private", privateLabel: "Private (patient & parents)", parentsOption: false }}
     />
   ) : undefined;
   const filterBase = "inline-flex h-9 items-center rounded-full px-3 text-sm";

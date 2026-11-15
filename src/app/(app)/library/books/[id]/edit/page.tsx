@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { BookForm } from "@/components/library/book-form";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
-import { bookCategoryList, getBook } from "@/lib/library";
+import { bookCategoryList, canChangeBook, getBook } from "@/lib/library";
 import { memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import { libraryViewer } from "../../../shared";
@@ -13,10 +13,10 @@ import { libraryViewer } from "../../../shared";
 export const metadata: Metadata = { title: "Edit book" };
 
 export default async function EditBookPage({ params }: PageProps<"/library/books/[id]/edit">) {
-  const viewer = await libraryViewer("edit");
+  const viewer = await libraryViewer();
   const { id } = await params;
   const b = await getBook(viewer, id);
-  if (!b) notFound();
+  if (!b || !canChangeBook(viewer, b)) notFound();
   const [cats, members, access] = await Promise.all([bookCategoryList(viewer), memberOptions(viewer), getRecordAccess("book", [b.id])]);
   return (
     <>
@@ -26,6 +26,7 @@ export default async function EditBookPage({ params }: PageProps<"/library/books
       <PageHeader title="Edit book" />
       <Card className="mx-auto max-w-3xl">
         <BookForm
+          personal={!!b.ownerMemberId}
           d={{ ...b, coverPreview: b.coverFileId ? `/api/files/${b.coverFileId}` : null, sharedWith: access.get(b.id) ?? [] }}
           categories={cats}
           members={members}

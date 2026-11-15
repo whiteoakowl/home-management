@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { familyMembers, recordAccess, recurrenceRules, type Visibility } from "@/db/schema";
+import { VISIBILITIES, familyMembers, recordAccess, recurrenceRules, type Visibility } from "@/db/schema";
 import type { Rule } from "./recurrence";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -86,7 +86,7 @@ export async function loadRules(ids: (string | null)[]) {
 /** Reads visibility + selected members from a VisibilityField. */
 export function visibilityFromForm(fd: FormData): { visibility: Visibility; memberIds: string[] } {
   const v = String(fd.get("visibility") ?? "family");
-  const visibility = (["family", "private", "selected"].includes(v) ? v : "family") as Visibility;
+  const visibility = ((VISIBILITIES as readonly string[]).includes(v) ? v : "family") as Visibility;
   return { visibility, memberIds: visibility === "selected" ? f.list(fd, "visibleTo") : [] };
 }
 

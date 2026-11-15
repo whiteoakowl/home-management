@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, familyMembers, listItems, lists, recurrenceRules } from "@/db/schema";
 import { AuthorizationError, visibleTo, type Viewer } from "./dal";
@@ -44,15 +44,38 @@ export function canAddToList(viewer: Viewer, l: { kind: Kind; ownerMemberId: str
   return viewer.can(listModule(l.kind), "add") || l.createdByMemberId === viewer.member.id;
 }
 
-export async function loadListItems(listId: string) {
+/**
+ * Personal shopping items (personal_for_member_id set) are seen only by parents,
+ * the person they're for and whoever added them. Everyone else never sees them.
+ */
+export function itemVisible(viewer: Viewer) {
+  if (viewer.isParent) return sql`true`;
+  return or(isNull(listItems.personalForMemberId), eq(listItems.personalForMemberId, viewer.member.id), eq(listItems.addedByMemberId, viewer.member.id))!;
+}
+
+/** Raw-SQL version of {@link itemVisible} for a list_items row aliased `i`. */
+export function itemVisibleRaw(viewer: Viewer) {
+  if (viewer.isParent) return sql`true`;
+  return sql`(i.personal_for_member_id is null or i.personal_for_member_id = ${viewer.member.id} or i.added_by_member_id = ${viewer.member.id})`;
+}
+
+/** May the viewer see (and so change) this single item? */
+export function canSeeItem(viewer: Viewer, item: { personalForMemberId: string | null; addedByMemberId: string | null }) {
+  return !item.personalForMemberId || viewer.isParent || item.personalForMemberId === viewer.member.id || item.addedByMemberId === viewer.member.id;
+}
+
+export async function loadListItems(listId: string, viewer: Viewer) {
   const rows = await db
-    .select({ item: listItems, rule: recurrenceRules })
+    .select({ item: listItems, rule: recurrenceRules, forName: familyMembers.displayName })
     .from(listItems)
     .leftJoin(recurrenceRules, eq(recurrenceRules.id, listItems.recurrenceRuleId))
-    .where(eq(listItems.listId, listId))
+    .leftJoin(familyMembers, eq(familyMembers.id, listItems.personalForMemberId))
+    .where(and(eq(listItems.listId, listId), itemVisible(viewer)))
     .orderBy(asc(listItems.position), asc(listItems.createdAt));
-  return rows.map(({ item, rule }) => ({
+  return rows.map(({ item, rule, forName }) => ({
     id: item.id,
+    personalFor: item.personalForMemberId ? { id: item.personalForMemberId, name: forName ?? "Someone" } : null,
+    mine: item.addedByMemberId === viewer.member.id || item.personalForMemberId === viewer.member.id,
     text: item.text,
     checked: item.checked,
     dueDate: item.dueDate,
@@ -82,6 +105,7 @@ export async function frequentItems(familyId: string, listId: string, limit = 14
     from list_items i join lists l on l.id = i.list_id
     where l.family_id = ${familyId} and l.kind = 'shopping'
       and l.owner_member_id is not distinct from (select owner_member_id from lists where id = ${listId})
+      and i.personal_for_member_id is null
       and lower(i.text) not in (select lower(text) from list_items where list_id = ${listId} and not checked)
     group by lower(i.text)
     order by count(*) desc, max(i.created_at) desc
@@ -102,9 +126,9 @@ export async function listIndex(viewer: Viewer, kinds: Kind[], opts: { archived?
       categoryId: lists.categoryId,
       updatedAt: lists.updatedAt,
       ownerName: familyMembers.displayName,
-      open: sql<number>`(select count(*)::int from ${listItems} i where i.list_id = ${lists.id} and not i.checked)`,
-      total: sql<number>`(select count(*)::int from ${listItems} i where i.list_id = ${lists.id})`,
-      preview: sql<string[]>`coalesce((select array_agg(t.text) from (select i.text from ${listItems} i where i.list_id = ${lists.id} and not i.checked order by i.position limit 4) t), '{}')`,
+      open: sql<number>`(select count(*)::int from ${listItems} i where i.list_id = ${lists.id} and not i.checked and ${itemVisibleRaw(viewer)})`,
+      total: sql<number>`(select count(*)::int from ${listItems} i where i.list_id = ${lists.id} and ${itemVisibleRaw(viewer)})`,
+      preview: sql<string[]>`coalesce((select array_agg(t.text) from (select i.text from ${listItems} i where i.list_id = ${lists.id} and not i.checked and ${itemVisibleRaw(viewer)} order by i.position limit 4) t), '{}')`,
     })
     .from(lists)
     .leftJoin(categories, eq(categories.id, lists.categoryId))

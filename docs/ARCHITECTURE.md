@@ -115,15 +115,31 @@ Permissions are evaluated in this order (all enforced on the server in the DAL):
 3. **Record visibility.** Shareable records (events, lists, journal entries, documents, goals,
    household info) have a `visibility` column:
    * `family`: everyone with module `view`.
-   * `private`: only the creator (and, for non-journal records, parents).
-   * `selected`: only members listed in `record_access` (plus parents).
+   * `selected`: only members listed in `record_access` (plus parents and the creator).
+   * `parents`: parents only (plus the creator). "Parents only" in the picker.
+   * `private`: only the creator, parents included. "Only me" in the picker.
+   Medical records keep their own rule (`medicalVisible`): "private" there means patient & parents,
+   and their forms hide the "Parents only" option.
    `record_access(entity_type, entity_id, member_id, can_edit)` holds the explicit list. This is the
    "Visible to ☑ Mom ☑ Dad ☑ Emma ☐ Jack" control.
 4. **Assignment.** Members can always see and complete items assigned to them (chores, tasks,
    checklist items), even if they only have `view` on the module.
 
-Journal entries marked `private` are visible **only to their author**, parents included. A
-private journal has to be private.
+Records marked `private` ("Only me") are visible **only to their author**, parents included.
+
+**Access levels in plain words** (Family → Profile & access): *No access* hides the area; *View only*
+lets them look; *Add own* (Family Pantry areas) lets them add things and change only their own; *Add &
+edit* lets them create (lists, events, goals…) and change what they can see. Members need *Add & edit*
+on Lists / Calendar to make their own lists and events.
+
+**Personal shopping items** (`list_items.personal_for_member_id`). Anyone who can see a family shopping
+list can add personal items for themselves (parents can add them for anyone). Only parents, the person
+it's for and whoever added it see the item; it shows as "For Hunter" in a "Personal items" section, and
+is left out of Buy again, activity and everyone else's counts, previews and search.
+
+**Personal library** (`books.owner_member_id`). The Book Library has a Family Library / My Library switch
+(remembered in a cookie). Books in My Library are visible only to their owner, parents included; anyone
+with library `view` can keep one. Personal books never appear in the activity feed.
 
 **Fitness privacy.** Everyone sees their own fitness and food journal. Parents also see and manage the
 kids'. Another parent's fitness is visible only when that parent turns on *Share my fitness with the other

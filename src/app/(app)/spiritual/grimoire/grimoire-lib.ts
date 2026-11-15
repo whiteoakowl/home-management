@@ -13,7 +13,7 @@ export function grimoireEntries(viewer: Viewer) {
       and(
         eq(journalEntries.familyId, viewer.family.id),
         eq(journalEntries.book, "grimoire"),
-        visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
+        visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
       ),
     )
     .orderBy(desc(journalEntries.isFavorite), desc(journalEntries.date), desc(journalEntries.createdAt));

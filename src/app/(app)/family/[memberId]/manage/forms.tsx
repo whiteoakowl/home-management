@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import type { AccessLevel, Module } from "@/db/schema/_shared";
 import { createMemberLogin, savePermissions, savePrivateFood } from "@/app/actions/family";
 import { Field, FormMessage, Input, Select, SubmitButton } from "@/components/ui/form";
-import { PermissionRows } from "@/components/family/permissions-matrix";
+import { PermissionLegend, PermissionRows } from "@/components/family/permissions-matrix";
 
 export function PermissionsForm({
   member,
@@ -17,9 +17,10 @@ export function PermissionsForm({
   return (
     <form action={action} className="flex flex-col gap-4">
       <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
+      <PermissionLegend />
       <PermissionRows memberId={member.id} access={member.access} modules={modules} />
       <p className="text-sm text-muted">
-        Even with &ldquo;No access&rdquo;, {member.displayName} still sees chores and items assigned directly to them. For the Family Pantry areas, &ldquo;Add&rdquo; lets them add new things and change only what they added.
+        Even with &ldquo;No access&rdquo;, {member.displayName} still sees chores and items assigned directly to them. To let {member.displayName} make their own lists or calendar events, set Lists and Calendar to &ldquo;Add &amp; edit&rdquo;.
       </p>
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Saving…">Save access</SubmitButton>

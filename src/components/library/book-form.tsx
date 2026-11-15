@@ -6,11 +6,11 @@ import type { MemberOption } from "@/components/forms/fields";
 import { BookFields, type BookDefaults } from "./book-fields";
 
 /** Full-page add/edit form; on save it opens the book. */
-export function BookForm({ d, categories, members, submitLabel = "Save book" }: { d?: BookDefaults; categories: { id: string; name: string }[]; members: MemberOption[]; submitLabel?: string }) {
+export function BookForm({ d, categories, members, submitLabel = "Save book", personal }: { d?: BookDefaults; categories: { id: string; name: string }[]; members: MemberOption[]; submitLabel?: string; personal?: boolean }) {
   return (
     <ActionForm action={saveBook} submitLabel={submitLabel} resetOnSuccess={false}>
       <input type="hidden" name="then" value="view" />
-      <BookFields d={d} categories={categories} members={members} />
+      <BookFields d={d} categories={categories} members={members} personal={personal} />
     </ActionForm>
   );
 }

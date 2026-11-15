@@ -11,7 +11,7 @@ import { ShoppingExpenseModal } from "@/components/budget/budget-forms";
 import { budgetCategories } from "@/lib/budget";
 import { todayIn } from "@/lib/dates";
 import { getViewer } from "@/lib/dal";
-import { loadList } from "@/lib/lists";
+import { itemVisible, loadList } from "@/lib/lists";
 
 export const metadata: Metadata = { title: "Shopping list" };
 
@@ -22,7 +22,7 @@ export default async function ShoppingListPage({ params }: PageProps<"/shopping/
   const list = await loadList(viewer, id).catch(() => null);
   if (!list) notFound();
   const own = list.ownerMemberId === viewer.member.id;
-  const [{ n, cart } = { n: 0, cart: 0 }] = await db.select({ n: count(), cart: sql<number>`coalesce(sum(${listItems.priceCents}),0)::int` }).from(listItems).where(and(eq(listItems.listId, id), eq(listItems.checked, true)));
+  const [{ n, cart } = { n: 0, cart: 0 }] = await db.select({ n: count(), cart: sql<number>`coalesce(sum(${listItems.priceCents}),0)::int` }).from(listItems).where(and(eq(listItems.listId, id), eq(listItems.checked, true), itemVisible(viewer)));
   const cats = viewer.can("budget", "edit") ? await budgetCategories(viewer) : [];
   const btn = "inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-sunken";
   return (

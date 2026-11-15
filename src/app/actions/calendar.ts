@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { calendarEvents, eventAttachments, eventAttendees } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule } from "@/lib/dal";
+import { AuthorizationError, isOthersPrivate, requireModule } from "@/lib/dal";
 import { zonedToUtc } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { saveUpload } from "@/lib/files";
@@ -63,7 +63,7 @@ export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionSta
     await db.transaction(async (tx) => {
       if (id) {
         const [old] = await tx.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id)));
-        if (!old) throw new AuthorizationError("Event not found.");
+        if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) throw new AuthorizationError("Event not found.");
         if (!viewer.isParent && old.createdByMemberId !== viewer.member.id) throw new AuthorizationError("Only the person who created this event (or a parent) can change it.");
         const ruleId = await upsertRule(tx, viewer.family.id, rule, old.recurrenceRuleId);
         await tx.update(calendarEvents).set({ ...values, recurrenceRuleId: ruleId }).where(eq(calendarEvents.id, id));
@@ -88,7 +88,7 @@ export async function deleteEvent(fd: FormData) {
   const viewer = await requireModule("calendar", "edit");
   const id = String(fd.get("id"));
   const [old] = await db.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id)));
-  if (!old) return;
+  if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
   if (!viewer.isParent && old.createdByMemberId !== viewer.member.id) throw new AuthorizationError("Only the creator or a parent can delete this.");
   await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
   revalidatePath("/calendar", "layout");

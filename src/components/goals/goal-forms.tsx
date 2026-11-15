@@ -17,7 +17,7 @@ export type GoalDefaults = {
   unit: string | null;
   targetDate: string | null;
   notes: string | null;
-  visibility: "family" | "private" | "selected";
+  visibility: "family" | "private" | "selected" | "parents";
   sharedWith: string[];
 };
 

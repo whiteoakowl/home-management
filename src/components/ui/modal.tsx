@@ -42,7 +42,7 @@ export function Modal({
         if (e.target === ref.current) onClose();
       }}
       className={cn(
-        "m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-[var(--radius-card)] bg-surface p-0 text-ink shadow-[var(--shadow-pop)]",
+        "m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-clip rounded-t-[var(--radius-card)] bg-surface p-0 text-ink shadow-[var(--shadow-pop)]",
         "sm:m-auto sm:rounded-[var(--radius-card)]",
         { sm: "sm:max-w-md", md: "sm:max-w-xl", lg: "sm:max-w-3xl" }[size],
       )}

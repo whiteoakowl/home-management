@@ -41,6 +41,11 @@ export default async function JournalEntryPage({ params }: PageProps<"/journal/[
               <Users className="size-3" /> Shared
             </Badge>
           )}
+          {x.e.visibility === "parents" && (
+            <Badge tone="mist">
+              <Lock className="size-3" /> Parents only
+            </Badge>
+          )}
         </p>
         <h1 className="text-[36px] leading-tight font-semibold sm:text-[44px]">{x.e.title ?? formatLongDate(x.e.date)}</h1>
         {mood && (

@@ -44,5 +44,9 @@ export type Module = (typeof MODULES)[number];
 export const ACCESS_LEVELS = ["none", "view", "add", "edit"] as const;
 export type AccessLevel = (typeof ACCESS_LEVELS)[number];
 
-export const VISIBILITIES = ["family", "private", "selected"] as const;
+/**
+ * family = everyone with module access · selected = listed people (+ parents) ·
+ * parents = parents only (+ the creator) · private = only the creator.
+ */
+export const VISIBILITIES = ["family", "private", "selected", "parents"] as const;
 export type Visibility = (typeof VISIBILITIES)[number];

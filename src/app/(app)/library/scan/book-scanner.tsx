@@ -18,7 +18,7 @@ const FORMATS: BarcodeFormat[] = ["ean_13", "upc_a"];
  * Scan (or type) an ISBN → look the book up → confirm or edit every detail →
  * save. Nothing is saved until the person presses "Add to library".
  */
-export function BookScanner({ categories, members }: { categories: { id: string; name: string }[]; members: MemberOption[] }) {
+export function BookScanner({ categories, members, personal }: { categories: { id: string; name: string }[]; members: MemberOption[]; personal?: boolean }) {
   const [code, setCode] = useState<string | null>(null);
   const [manual, setManual] = useState("");
   const [result, setResult] = useState<IsbnLookupResult | null>(null);
@@ -150,6 +150,7 @@ export function BookScanner({ categories, members }: { categories: { id: string;
             }
           >
             <BookFields
+              personal={personal}
               categories={categories}
               members={members}
               d={{

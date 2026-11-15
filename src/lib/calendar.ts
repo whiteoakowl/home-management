@@ -56,7 +56,7 @@ export type CalendarItem = {
   categoryId?: string | null;
   category?: string | null;
   /** Who can see it; items from other modules follow that module's access (shown as family). */
-  visibility?: "family" | "private" | "selected";
+  visibility?: "family" | "private" | "selected" | "parents";
   /** Finer event type: "event", "medical", "celebration"… (events) or the layer name. */
   type?: string;
   description?: string | null;

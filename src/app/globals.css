@@ -78,6 +78,11 @@
   ::selection {
     @apply bg-primary-200;
   }
+  /* Visually hidden radios/checkboxes inside option cards: keep them inside their card so
+     focusing one (tapping the card) never scrolls a sheet or modal to some other spot. */
+  label:has(> input.sr-only) {
+    position: relative;
+  }
 }
 
 /* Subtle botanical backdrop used on auth & onboarding screens. */

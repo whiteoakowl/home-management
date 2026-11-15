@@ -9,7 +9,7 @@ import { fileUrl } from "@/lib/files";
 import { KIND_LABEL, MEDICAL_FIELDS, SEVERITY_TONE, type MedicalKind } from "@/lib/medical-config";
 import type { FieldValue } from "@/lib/record-fields";
 
-type Rec = { id: string; memberId: string; visibility: "family" | "private" | "selected"; fileId?: string | null; [k: string]: unknown };
+type Rec = { id: string; memberId: string; visibility: "family" | "private" | "selected" | "parents"; fileId?: string | null; [k: string]: unknown };
 
 const TITLE_FIELD: Record<MedicalKind, string> = { profile: "fullName", allergy: "name", restriction: "title", condition: "name", medication: "name", document: "title" };
 const BADGE_FIELDS: Record<MedicalKind, string[]> = { profile: ["bloodType"], allergy: ["type", "severity"], restriction: ["kind"], condition: [], medication: [], document: ["category"] };
@@ -92,7 +92,7 @@ export function MedicalRecordCard({
               defaults={medicalDefaults(kind, r)}
               hidden={{ kind, id: r.id }}
               members={members}
-              visibility={{ defaultValue: r.visibility, selected: sharedWith, privateLabel: "Private (patient & parents)" }}
+              visibility={{ defaultValue: r.visibility, selected: sharedWith, privateLabel: "Private (patient & parents)", parentsOption: false }}
             />
             <DeleteButton action={deleteMedicalRecord} fields={{ kind, id: r.id }} what={`this ${KIND_LABEL[kind].toLowerCase()}`} />
           </div>

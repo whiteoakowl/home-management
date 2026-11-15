@@ -12,7 +12,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, ProgressBar } from "@/components/ui/display";
 import { publishedYear } from "@/lib/isbn";
-import { bookCategoryList, getBook } from "@/lib/library";
+import { bookCategoryList, canChangeBook, getBook } from "@/lib/library";
 import { formatLabel, percentRead, STATUS_TONE, statusLabel } from "@/lib/library-config";
 import { memberOptions } from "@/lib/queries";
 import { libraryViewer } from "../../shared";
@@ -24,7 +24,7 @@ export default async function BookPage({ params }: PageProps<"/library/books/[id
   const { id } = await params;
   const b = await getBook(viewer, id);
   if (!b) notFound();
-  const canEdit = viewer.can("library", "edit");
+  const canEdit = canChangeBook(viewer, b);
   const [cats, members] = await Promise.all([bookCategoryList(viewer), memberOptions(viewer)]);
   const pct = percentRead(b);
   const reader = members.find((m) => m.id === b.readerMemberId);
@@ -43,7 +43,7 @@ export default async function BookPage({ params }: PageProps<"/library/books/[id
       ["From", b.purchaseLocation],
       ["Price", b.priceCents != null ? `$${(b.priceCents / 100).toFixed(2)}` : null],
       ["Reader", reader?.displayName],
-      ["Visibility", b.visibility === "family" ? "Whole family" : b.visibility === "private" ? "Private" : "Shared with selected people"],
+      ["Visibility", b.ownerMemberId ? "My Library (only you)" : b.visibility === "family" ? "Whole family" : b.visibility === "private" ? "Only me" : b.visibility === "parents" ? "Parents only" : "Shared with selected people"],
     ] as [string, React.ReactNode][]
   ).filter(([, v]) => v);
 

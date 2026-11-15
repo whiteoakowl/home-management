@@ -8,7 +8,7 @@ import { ActionButton } from "@/components/forms/inline";
 import { LibraryTabs } from "@/components/library/library-tabs";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
-import { bookCategoryList, listBooks } from "@/lib/library";
+import { bookCategoryList, canAddBooks, listBooks } from "@/lib/library";
 import { libraryViewer } from "../shared";
 
 export const metadata: Metadata = { title: "Book categories" };
@@ -18,7 +18,8 @@ const SUGGESTED = ["Fiction", "Non-fiction", "Mystery", "Fantasy", "Biography", 
 export default async function BookCategoriesPage() {
   const viewer = await libraryViewer();
   const canEdit = viewer.can("library", "edit");
-  const [cats, list] = await Promise.all([bookCategoryList(viewer), listBooks(viewer)]);
+  const space = viewer.librarySpace;
+  const [cats, list] = await Promise.all([bookCategoryList(viewer), listBooks(viewer, space)]);
   const count = (id: string) => list.filter((b) => b.categoryIds.includes(id)).length;
   const btn = "inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-sunken hover:text-ink disabled:opacity-30";
 
@@ -36,7 +37,7 @@ export default async function BookCategoriesPage() {
           )
         }
       />
-      <LibraryTabs active="categories" canEdit={canEdit} />
+      <LibraryTabs active="categories" canEdit={canAddBooks(viewer, space)} space={space} />
       {!cats.length ? (
         <Card>
           <EmptyState

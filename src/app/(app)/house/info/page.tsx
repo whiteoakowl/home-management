@@ -65,7 +65,7 @@ export default async function InfoPage() {
                   <div className="-mt-2 -mr-2 flex items-center">
                     {i.visibility !== "family" && (
                       <Badge tone="mist">
-                        <Lock className="size-3" /> {i.visibility === "private" ? "Private" : "Shared"}
+                        <Lock className="size-3" /> {i.visibility === "private" ? "Only me" : i.visibility === "parents" ? "Parents only" : "Shared"}
                       </Badge>
                     )}
                     {canManage && (

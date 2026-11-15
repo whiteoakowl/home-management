@@ -25,6 +25,8 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {members.map((m) => {
           const c = memberColor(m.color);
+          // Members can open their own home; parents can open everyone's.
+          const canOpen = viewer.isParent || m.id === viewer.member.id;
           return (
             <li key={m.id}>
               <Card className="group relative h-full overflow-hidden p-0 sm:p-0">
@@ -32,10 +34,14 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
                 <div className="-mt-8 flex flex-col gap-3 px-5 pb-5">
                   <Avatar name={m.displayName} color={m.color} size="lg" className="ring-4" />
                   <div className="flex items-center justify-between gap-2">
-                    <Link href={`/family/${m.id}`} className="font-display text-xl font-semibold after:absolute after:inset-0">
-                      {m.displayName}
-                    </Link>
-                    <ChevronRight className="size-5 text-muted transition-transform group-hover:translate-x-0.5" aria-hidden />
+                    {canOpen ? (
+                      <Link href={`/family/${m.id}`} className="font-display text-xl font-semibold after:absolute after:inset-0">
+                        {m.displayName}
+                      </Link>
+                    ) : (
+                      <span className="font-display text-xl font-semibold">{m.displayName}</span>
+                    )}
+                    {canOpen && <ChevronRight className="size-5 text-muted transition-transform group-hover:translate-x-0.5" aria-hidden />}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {m.role === "parent" ? (

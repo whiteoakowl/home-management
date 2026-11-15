@@ -43,7 +43,7 @@ export function AppointmentModal({ members, d = {}, edit, defaultOpen }: { membe
       />
       <TextAreaField name="description" label="Reason / questions to ask" rows={2} defaultValue={d.description ?? ""} />
       <TextAreaField name="notes" label="Notes after the visit" rows={2} defaultValue={d.notes ?? ""} />
-      <VisibilityField members={members} defaultValue={d.visibility === "family" ? "family" : d.selected?.length ? "selected" : "private"} defaultSelected={d.selected} privateLabel="Patient & parents" />
+      <VisibilityField members={members} defaultValue={d.visibility === "family" ? "family" : d.selected?.length ? "selected" : "private"} defaultSelected={d.selected} privateLabel="Patient & parents" parentsOption={false} />
     </FormModal>
   );
 }

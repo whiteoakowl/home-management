@@ -178,7 +178,7 @@ export async function PointsWidget({ scope }: { scope: Scope }) {
 
 /** Books in progress (the person's own on their portal), with progress bars. */
 export async function ReadingWidget({ scope }: { scope: Scope }) {
-  const all = await listBooks(scope.viewer);
+  const all = await listBooks(scope.viewer, "family");
   const reading = all.filter((b) => b.status === "reading" && (!scope.subjectId || b.readerMemberId === scope.subjectId || (!b.readerMemberId && b.createdByMemberId === scope.subjectId)));
   return (
     <Card>

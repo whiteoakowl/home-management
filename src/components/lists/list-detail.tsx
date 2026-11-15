@@ -25,7 +25,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
   const canEdit = list.ownerMemberId ? list.ownerMemberId === viewer.member.id : viewer.can(mod, "edit") || list.createdByMemberId === viewer.member.id;
   const canAdd = canAddToList(viewer, list);
   const [items, members, cats, access] = await Promise.all([
-    loadListItems(list.id),
+    loadListItems(list.id, viewer),
     memberOptions(viewer),
     categoryOptions(viewer, "list"),
     getRecordAccess("list", [list.id]),
@@ -48,9 +48,13 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
               <Badge tone="olive">
                 <Lock className="size-3" /> My private list
               </Badge>
-            ) : list.visibility === "private" && (
+            ) : list.visibility === "private" ? (
               <Badge tone="mist">
-                <Lock className="size-3" /> Private
+                <Lock className="size-3" /> Only me
+              </Badge>
+            ) : list.visibility === "parents" && (
+              <Badge tone="mist">
+                <Lock className="size-3" /> Parents only
               </Badge>
             )}
             {list.visibility === "selected" && (
@@ -114,6 +118,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
           canEdit={canEdit}
           canAdd={canAdd}
           today={todayIn(viewer.family.timezone)}
+          personal={list.kind === "shopping" && !list.ownerMemberId ? { isParent: viewer.isParent, viewerId: viewer.member.id, onlyPersonal: !canAdd } : undefined}
         />
         {items.length === 0 && <p className="px-2 pt-3 text-[15px] text-muted">This list is empty. Add your first item above.</p>}
       </Card>

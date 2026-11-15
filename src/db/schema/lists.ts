@@ -100,6 +100,12 @@ export const listItems = pgTable(
     /** recipe id / meal_plan_entry id / inventory_item id depending on source */
     sourceId: uuid("source_id"),
     notes: text("notes"),
+    /**
+     * Personal shopping item: who it's for. Set = only parents and that member see it
+     * (e.g. Hunter's deodorant on the family list); NULL = an ordinary item.
+     */
+    personalForMemberId: uuid("personal_for_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
+    addedByMemberId: uuid("added_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     ...timestamps,
   },
   (t) => [index("list_items_list_idx").on(t.listId, t.position)],

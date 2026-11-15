@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { listItems, lists, recurrenceRules, shoppingCategory } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
-import { canAddToList, listModule, loadList } from "@/lib/lists";
+import { canAddToList, canSeeItem, itemVisible, listModule, loadList } from "@/lib/lists";
 import { ownerForNew } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
@@ -19,6 +19,10 @@ import { addDays } from "@/lib/dates";
 const KINDS = ["checklist", "bullet", "numbered", "todo", "shopping"] as const;
 type Kind = (typeof KINDS)[number];
 const SHOP_CATS = shoppingCategory.enumValues;
+
+/** A personal shopping item that belongs to the viewer: they may change or remove it without list edit rights. */
+const ownPersonal = (viewer: Viewer, item: { personalForMemberId: string | null; addedByMemberId: string | null }) =>
+  !!item.personalForMemberId && (item.personalForMemberId === viewer.member.id || item.addedByMemberId === viewer.member.id);
 
 function revalidateLists(kind?: Kind) {
   revalidatePath(kind === "shopping" ? "/shopping" : "/lists", "layout");
@@ -91,7 +95,10 @@ export async function addItem(_: ActionState, fd: FormData): Promise<ActionState
   return guard(async () => {
     const viewer = await getViewer();
     const l = await loadList(viewer, String(fd.get("listId")));
-    if (!canAddToList(viewer, l)) throw new AuthorizationError("You can only check items on this list.");
+    // Personal items: anyone who can see a family shopping list may add their own; only parents see them.
+    const personal = l.kind === "shopping" && !l.ownerMemberId && fd.get("personal") === "on";
+    if (!personal && !canAddToList(viewer, l)) throw new AuthorizationError("You can only check items on this list.");
+    const personalFor = personal ? (viewer.isParent ? ((await familyMemberIdOrNull(viewer.family.id, f.str(fd, "personalFor"))) ?? viewer.member.id) : viewer.member.id) : null;
     // Allow pasting several lines at once.
     const lines = String(fd.get("text") ?? "")
       .split("\n")
@@ -125,6 +132,8 @@ export async function addItem(_: ActionState, fd: FormData): Promise<ActionState
         listId: l.id,
         position: max + 1 + i,
         recurrenceRuleId: ruleId,
+        personalForMemberId: personalFor,
+        addedByMemberId: viewer.member.id,
       })),
     );
     revalidateLists(l.kind);
@@ -136,8 +145,8 @@ export async function updateItem(_: ActionState, fd: FormData): Promise<ActionSt
   return guard(async () => {
     const viewer = await getViewer();
     const [item] = await db.select().from(listItems).where(eq(listItems.id, String(fd.get("id"))));
-    if (!item) return fail("Item not found.");
-    const l = await loadList(viewer, item.listId, true);
+    if (!item || !canSeeItem(viewer, item)) return fail("Item not found.");
+    const l = await loadList(viewer, item.listId, !ownPersonal(viewer, item));
     const values = await itemValues(viewer, fd, l.kind);
     if (!values.text) return fail("Item can't be empty.", "text");
     let ruleId = item.recurrenceRuleId;
@@ -152,7 +161,7 @@ export async function updateItem(_: ActionState, fd: FormData): Promise<ActionSt
 export async function toggleItem(fd: FormData) {
   const viewer = await getViewer();
   const [item] = await db.select().from(listItems).where(eq(listItems.id, String(fd.get("id"))));
-  if (!item) return;
+  if (!item || !canSeeItem(viewer, item)) return;
   const l = await loadList(viewer, item.listId);
   if (l.ownerMemberId && l.ownerMemberId !== viewer.member.id) throw new AuthorizationError("This list is read-only for you.");
   const done = fd.get("done") === "true";
@@ -171,7 +180,7 @@ export async function toggleItem(fd: FormData) {
     .update(listItems)
     .set(done ? { checked: true, checkedAt: new Date(), checkedByMemberId: viewer.member.id } : { checked: false, checkedAt: null, checkedByMemberId: null })
     .where(eq(listItems.id, item.id));
-  if (done && l.kind === "shopping" && !l.ownerMemberId) {
+  if (done && l.kind === "shopping" && !l.ownerMemberId && !item.personalForMemberId) {
     await logActivity(db, viewer.family.id, viewer.member.id, "shopping.purchased", `picked up ${item.text}`, { module: "shopping" });
   }
   revalidateLists(l.kind);
@@ -180,8 +189,8 @@ export async function toggleItem(fd: FormData) {
 export async function deleteItem(fd: FormData) {
   const viewer = await getViewer();
   const [item] = await db.select().from(listItems).where(eq(listItems.id, String(fd.get("id"))));
-  if (!item) return;
-  const l = await loadList(viewer, item.listId, true);
+  if (!item || !canSeeItem(viewer, item)) return;
+  const l = await loadList(viewer, item.listId, !ownPersonal(viewer, item));
   await db.delete(listItems).where(eq(listItems.id, item.id));
   revalidateLists(l.kind);
 }
@@ -189,7 +198,7 @@ export async function deleteItem(fd: FormData) {
 export async function moveItem(fd: FormData) {
   const viewer = await getViewer();
   const [item] = await db.select().from(listItems).where(eq(listItems.id, String(fd.get("id"))));
-  if (!item) return;
+  if (!item || !canSeeItem(viewer, item)) return;
   const l = await loadList(viewer, item.listId, true);
   const up = fd.get("dir") === "up";
   const [neighbor] = await db
@@ -209,7 +218,7 @@ export async function moveItem(fd: FormData) {
 export async function clearChecked(fd: FormData) {
   const viewer = await getViewer();
   const l = await loadList(viewer, String(fd.get("id")), true);
-  await db.delete(listItems).where(and(eq(listItems.listId, l.id), eq(listItems.checked, true)));
+  await db.delete(listItems).where(and(eq(listItems.listId, l.id), eq(listItems.checked, true), itemVisible(viewer)));
   revalidateLists(l.kind);
 }
 
@@ -244,6 +253,6 @@ export async function quickAddItem(fd: FormData) {
     .orderBy(desc(listItems.updatedAt))
     .limit(1);
   const [{ max } = { max: 0 }] = await db.select({ max: sql<number>`coalesce(max(${listItems.position}),0)::int` }).from(listItems).where(eq(listItems.listId, l.id));
-  await db.insert(listItems).values({ listId: l.id, text, unit: prev?.unit ?? null, shoppingCategory: prev?.cat ?? guessShoppingCategory(text), priceCents: prev?.price ?? null, store: prev?.store ?? null, position: max + 1 });
+  await db.insert(listItems).values({ listId: l.id, text, unit: prev?.unit ?? null, shoppingCategory: prev?.cat ?? guessShoppingCategory(text), priceCents: prev?.price ?? null, store: prev?.store ?? null, position: max + 1, addedByMemberId: viewer.member.id });
   revalidateLists(l.kind);
 }

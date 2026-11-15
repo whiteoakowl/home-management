@@ -6,7 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { goalContributions, goalHorizon, goalKind, goalMilestones, goals } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, isOthersPrivate, requireModule, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { recordContribution } from "@/lib/goals";
@@ -25,7 +25,7 @@ function revalidateGoals() {
 /** Members may edit their own goals and family goals; parents edit everything. */
 async function editableGoal(viewer: Viewer, id: string) {
   const [g] = await db.select().from(goals).where(and(eq(goals.id, id), eq(goals.familyId, viewer.family.id)));
-  if (!g) throw new AuthorizationError("Goal not found.");
+  if (!g || isOthersPrivate(viewer, { visibility: g.visibility, author: g.ownerMemberId })) throw new AuthorizationError("Goal not found.");
   if (!viewer.isParent && g.ownerMemberId && g.ownerMemberId !== viewer.member.id) throw new AuthorizationError("That's someone else's goal.");
   return g;
 }

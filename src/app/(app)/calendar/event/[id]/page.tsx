@@ -139,7 +139,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ca
         )}
         <p className="flex items-center gap-3 text-sm text-muted">
           <Lock className="size-5" aria-hidden />
-          {e.visibility === "family" ? "Visible to the whole family" : e.visibility === "private" ? "Private: only the creator and parents" : `Visible to: ${shared.join(", ")} (and parents)`}
+          {e.visibility === "family" ? "Visible to the whole family" : e.visibility === "private" ? "Private: only the creator" : e.visibility === "parents" ? "Parents only (and the creator)" : `Visible to: ${shared.join(", ")} (and parents)`}
         </p>
         {e.reminderMinutes && <Badge tone="mist" className="w-fit">Reminder {e.reminderMinutes >= 1440 ? "1 day" : `${e.reminderMinutes} min`} before</Badge>}
         {e.description && <p className="text-[15px] whitespace-pre-line">{e.description}</p>}

@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { bookCategories, books, categories } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
@@ -11,7 +12,7 @@ import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { mergeLookups, normalizeIsbn, parseGoogleBooks, parseOpenLibrary, type BookLookup } from "@/lib/isbn";
-import { getBook } from "@/lib/library";
+import { bookVisible, canAddBooks, canChangeBook, currentLibrarySpace, getBook, LIBRARY_SPACE_COOKIE, type LibrarySpace } from "@/lib/library";
 import { BOOK_FORMATS, STATUS_VALUES } from "@/lib/library-config";
 import { f, familyMemberIdOrNull, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 import { safeFetch } from "@/lib/safe-fetch";
@@ -44,14 +45,16 @@ async function getJson(url: string) {
  * confirms or edits the details first.
  */
 export async function lookupIsbn(raw: string): Promise<IsbnLookupResult> {
-  const viewer = await requireModule("library", "edit");
+  const viewer = await requireModule("library", "view");
+  const space = await currentLibrarySpace();
+  if (!canAddBooks(viewer, space)) throw new AuthorizationError("You can't add books.");
   const isbn = normalizeIsbn(raw);
   if (!isbn) return { ok: false, message: "That doesn't look like a book barcode or ISBN. Book barcodes start with 978 or 979." };
 
   const [dupe] = await db
     .select({ id: books.id, title: books.title })
     .from(books)
-    .where(and(eq(books.familyId, viewer.family.id), eq(books.isbn, isbn)))
+    .where(and(eq(books.familyId, viewer.family.id), eq(books.isbn, isbn), bookVisible(viewer), space === "mine" ? eq(books.ownerMemberId, viewer.member.id) : isNull(books.ownerMemberId)))
     .limit(1);
 
   const key = process.env.GOOGLE_BOOKS_API_KEY ? `&key=${encodeURIComponent(process.env.GOOGLE_BOOKS_API_KEY)}` : "";
@@ -99,10 +102,13 @@ async function saveCoverFromUrl(viewer: Viewer, url: string | null) {
 
 export async function saveBook(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("library", "edit");
+    const viewer = await requireModule("library", "view");
     const id = f.str(fd, "id");
     const existing = id ? await getBook(viewer, id) : null;
-    if (id && !existing) throw new AuthorizationError("Book not found.");
+    if (id && (!existing || !canChangeBook(viewer, existing))) throw new AuthorizationError("Book not found.");
+    // New books go into whichever library is open: the Family Library or the viewer's personal one.
+    const personal = existing ? !!existing.ownerMemberId : (await currentLibrarySpace()) === "mine";
+    if (!existing && !canAddBooks(viewer, personal ? "mine" : "family")) throw new AuthorizationError("You can't add books to the Family Library.");
 
     const title = f.str(fd, "title");
     if (!title) return fail("Enter the book's title.", "title");
@@ -168,7 +174,7 @@ export async function saveBook(_: ActionState, fd: FormData): Promise<ActionStat
       finishedOn: status === "completed" || status === "abandoned" ? finishedOn : null,
       currentPage,
       readingNotes: f.str(fd, "readingNotes"),
-      visibility,
+      visibility: personal ? ("private" as const) : visibility,
       ...(coverFileId !== undefined ? { coverFileId } : {}),
     };
 
@@ -180,21 +186,21 @@ export async function saveBook(_: ActionState, fd: FormData): Promise<ActionStat
       } else {
         const [row] = await tx
           .insert(books)
-          .values({ ...values, familyId: viewer.family.id, createdByMemberId: viewer.member.id })
+          .values({ ...values, familyId: viewer.family.id, createdByMemberId: viewer.member.id, ownerMemberId: personal ? viewer.member.id : null })
           .returning({ id: books.id });
         bookId = row!.id;
-        await logActivity(tx, viewer.family.id, viewer.member.id, "book.added", `added "${title}" to the library`, { module: "library", entityId: bookId });
+        if (!personal) await logActivity(tx, viewer.family.id, viewer.member.id, "book.added", `added "${title}" to the library`, { module: "library", entityId: bookId });
       }
       if (catIds.length) await tx.insert(bookCategories).values(catIds.map((categoryId) => ({ bookId: bookId!, categoryId })));
-      await saveRecordAccess(tx, viewer.family.id, "book", bookId!, memberIds);
+      await saveRecordAccess(tx, viewer.family.id, "book", bookId!, personal ? [] : memberIds);
     });
     if (existing?.coverFileId && coverFileId !== undefined && coverFileId !== existing.coverFileId) await deleteFamilyFile(viewer.family.id, existing.coverFileId);
-    if (existing && existing.status !== "completed" && status === "completed") {
+    if (!personal && existing && existing.status !== "completed" && status === "completed") {
       await logActivity(db, viewer.family.id, viewer.member.id, "book.finished", `finished reading "${title}" 📚`, { module: "library", entityId: bookId! });
     }
     revalidateLibrary();
     if (fd.get("then") === "view") redirect(`/library/books/${bookId}`);
-    return ok(existing ? "Book saved." : `"${title}" added to the library.`);
+    return ok(existing ? "Book saved." : `"${title}" added to ${personal ? "My Library" : "the library"}.`);
   });
 }
 
@@ -203,9 +209,9 @@ async function isFamilyMember(viewer: Viewer, memberId: string) {
 }
 
 export async function deleteBook(fd: FormData) {
-  const viewer = await requireModule("library", "edit");
+  const viewer = await requireModule("library", "view");
   const b = await getBook(viewer, String(fd.get("id")));
-  if (!b) throw new AuthorizationError("Book not found.");
+  if (!b || !canChangeBook(viewer, b)) throw new AuthorizationError("Book not found.");
   await db.delete(books).where(and(eq(books.id, b.id), eq(books.familyId, viewer.family.id)));
   if (b.coverFileId) await deleteFamilyFile(viewer.family.id, b.coverFileId);
   revalidateLibrary();
@@ -213,9 +219,9 @@ export async function deleteBook(fd: FormData) {
 }
 
 export async function toggleBookFavorite(fd: FormData) {
-  const viewer = await requireModule("library", "edit");
+  const viewer = await requireModule("library", "view");
   const b = await getBook(viewer, String(fd.get("id")));
-  if (!b) throw new AuthorizationError("Book not found.");
+  if (!b || !canChangeBook(viewer, b)) throw new AuthorizationError("Book not found.");
   await db.update(books).set({ isFavorite: !b.isFavorite }).where(eq(books.id, b.id));
   revalidateLibrary();
 }
@@ -223,9 +229,9 @@ export async function toggleBookFavorite(fd: FormData) {
 /** Reading progress: current page, start, pause, finish, or give up. */
 export async function updateReading(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("library", "edit");
+    const viewer = await requireModule("library", "view");
     const b = await getBook(viewer, String(fd.get("id")));
-    if (!b) throw new AuthorizationError("Book not found.");
+    if (!b || !canChangeBook(viewer, b)) throw new AuthorizationError("Book not found.");
     const today = todayIn(viewer.family.timezone);
     const intent = f.str(fd, "intent") ?? "progress";
     const set: Partial<typeof books.$inferInsert> = {};
@@ -252,7 +258,7 @@ export async function updateReading(_: ActionState, fd: FormData): Promise<Actio
     const notes = f.str(fd, "readingNotes");
     if (notes !== null) set.readingNotes = notes;
     await db.update(books).set(set).where(eq(books.id, b.id));
-    if (set.status === "completed" && b.status !== "completed") {
+    if (!b.ownerMemberId && set.status === "completed" && b.status !== "completed") {
       await logActivity(db, viewer.family.id, viewer.member.id, "book.finished", `finished reading "${b.title}" 📚`, { module: "library", entityId: b.id });
     }
     revalidateLibrary();
@@ -358,4 +364,13 @@ export async function removeBookCategory(_: ActionState, fd: FormData): Promise<
     await deleteBookCategory(fd);
     return ok("Category deleted.");
   });
+}
+
+/** Switch between the Family Library and My Library (remembered per browser). */
+export async function setLibrarySpace(fd: FormData) {
+  await requireModule("library", "view");
+  const space: LibrarySpace = fd.get("space") === "mine" ? "mine" : "family";
+  (await cookies()).set(LIBRARY_SPACE_COOKIE, space, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: true });
+  revalidateLibrary();
+  redirect("/library");
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryEvents, inventoryItems, listItems, products, storageLocation } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
@@ -12,7 +12,7 @@ import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { addToInventory, FOOD_LOCATIONS } from "@/lib/kitchen";
-import { loadList } from "@/lib/lists";
+import { itemVisible, loadList } from "@/lib/lists";
 import { ownedCategoryId } from "@/lib/queries";
 import { f } from "@/lib/records";
 
@@ -226,7 +226,7 @@ export async function putAwayChecked(fd: FormData) {
   const list = await loadList(viewer, String(fd.get("id")), true);
   // A private list puts away into the owner's private pantry; a family list into the family's.
   if (!list.ownerMemberId && !viewer.can("kitchen", "add")) throw new AuthorizationError("You can't add to the family pantry.");
-  const checked = await db.select().from(listItems).where(and(eq(listItems.listId, list.id), eq(listItems.checked, true)));
+  const checked = await db.select().from(listItems).where(and(eq(listItems.listId, list.id), eq(listItems.checked, true), itemVisible(viewer)));
   if (!checked.length) return;
   const today = todayIn(viewer.family.timezone);
   const locFor = (cat: string | null): Loc => (cat === "frozen" ? "freezer" : cat === "dairy" || cat === "meat" || cat === "produce" ? "fridge" : cat === "household" || cat === "personal" ? "supplies" : cat === "farm" ? "farm" : cat === "garden" ? "garden" : "pantry");
@@ -238,7 +238,7 @@ export async function putAwayChecked(fd: FormData) {
     );
   }
   const count = checked.length;
-  await db.delete(listItems).where(and(eq(listItems.listId, list.id), eq(listItems.checked, true)));
+  await db.delete(listItems).where(inArray(listItems.id, checked.map((c) => c.id)));
   await logActivity(db, viewer.family.id, viewer.member.id, "shopping.put_away", `put away ${count} item${count === 1 ? "" : "s"} from ${list.title}`, { module: "kitchen" });
   revalidateKitchen();
 }

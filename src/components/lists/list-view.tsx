@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, ChevronDown, Pencil, Plus, Repeat, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Lock, Pencil, Plus, Repeat, Trash2 } from "lucide-react";
 import { addItem, deleteItem, moveItem, toggleItem, updateItem } from "@/app/actions/lists";
 import { ActionForm, FormModal } from "@/components/forms/action-form";
 import {
@@ -36,7 +36,14 @@ export type ItemView = {
   source: string;
   recurring: string | null;
   rule: { freq: string; interval: number; byWeekday: number[] | null; byMonthDay: number[] | null; byMonth: number[] | null; until: string | null } | null;
+  /** Personal shopping item: who it's for (only parents and that person see it). */
+  personalFor?: { id: string; name: string } | null;
+  /** The viewer added it or it's for them. */
+  mine?: boolean;
 };
+
+/** Personal items on a family shopping list. */
+export type PersonalItems = { isParent: boolean; viewerId: string; onlyPersonal: boolean };
 
 export const SHOPPING_CATEGORIES = [
   { value: "produce", label: "Produce" },
@@ -108,6 +115,8 @@ function Row({
   today: string;
 }) {
   const [pending, start] = useTransition();
+  // Your own personal items are yours to change, even on a list you can only view.
+  canEdit = canEdit || (!!item.personalFor && !!item.mine);
   const assignee = members.find((m) => m.id === item.assigneeId);
   const checkable = kind !== "bullet" && kind !== "numbered";
   const overdue = kind === "todo" && item.dueDate && item.dueDate < today && !item.checked;
@@ -138,6 +147,11 @@ function Row({
           )}
           {item.text}
         </span>
+        {item.personalFor && (
+          <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-olive-50 px-2 py-0.5 text-xs font-medium text-olive-700">
+            <Lock className="size-3" aria-hidden /> For {item.personalFor.name}
+          </span>
+        )}
         {(item.notes || item.dueDate || SOURCE_LABEL[item.source] || item.store || item.recurring) && (
           <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
             {item.dueDate && <span className={cn(overdue && "font-medium text-wine-500")}>Due {new Date(`${item.dueDate}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}</span>}
@@ -184,8 +198,9 @@ function Row({
 }
 
 /** Quick-add bar: type & press enter. "More options" reveals typed fields. */
-function AddBar({ listId, kind, members }: { listId: string; kind: ListKind; members: MemberOption[] }) {
+function AddBar({ listId, kind, members, personal }: { listId: string; kind: ListKind; members: MemberOption[]; personal?: PersonalItems }) {
   const [more, setMore] = useState(false);
+  const [isPersonal, setPersonal] = useState(!!personal?.onlyPersonal);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   return (
     <ActionForm action={addItem} onSuccess={() => inputRef.current?.focus()} className="gap-3 rounded-2xl border border-line bg-surface p-3">
@@ -211,6 +226,37 @@ function AddBar({ listId, kind, members }: { listId: string; kind: ListKind; mem
           <Plus className="size-4" /> Add
         </button>
       </div>
+      {personal && (
+        <div className={cn("flex flex-col gap-2 rounded-xl border px-3 py-2.5", isPersonal ? "border-olive-400 bg-olive-50" : "border-line")}>
+          {personal.onlyPersonal ? (
+            <input type="hidden" name="personal" value="on" />
+          ) : (
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input type="checkbox" name="personal" checked={isPersonal} onChange={(e) => setPersonal(e.target.checked)} className="size-4 accent-[var(--color-primary-600)]" />
+              <Lock className="size-3.5 text-muted" aria-hidden /> Personal item
+            </label>
+          )}
+          {isPersonal && (
+            <>
+              {personal.isParent && (
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="text-ink-soft">For</span>
+                  <select name="personalFor" defaultValue={personal.viewerId} className="h-9 rounded-lg border border-line-strong bg-surface px-2 text-sm">
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <p className="text-xs text-muted">
+                {personal.onlyPersonal ? "Add things you need for yourself. " : ""}Only parents (and you) will see personal items. Other family members won&apos;t.
+              </p>
+            </>
+          )}
+        </div>
+      )}
       {kind !== "bullet" && kind !== "numbered" && (
         <button type="button" onClick={() => setMore((m) => !m)} aria-expanded={more} className="inline-flex w-fit items-center gap-1 text-sm font-medium text-muted hover:text-ink">
           More options <ChevronDown className={cn("size-4 transition-transform", more && "rotate-180")} />
@@ -254,6 +300,7 @@ export function ListView({
   canAdd,
   today,
   groupBy,
+  personal,
 }: {
   listId: string;
   kind: ListKind;
@@ -263,19 +310,25 @@ export function ListView({
   canAdd: boolean;
   today: string;
   groupBy?: "aisle" | "none";
+  personal?: PersonalItems;
 }) {
   const open = items.filter((i) => !i.checked);
+  const personalOpen = open.filter((i) => i.personalFor);
+  const sharedOpen = open.filter((i) => !i.personalFor);
   const done = items.filter((i) => i.checked);
   const groups =
     kind === "shopping" && groupBy !== "none"
-      ? SHOPPING_CATEGORIES.map((c) => ({ key: c.value, label: c.label, items: open.filter((i) => (i.shoppingCategory ?? "other") === c.value) })).filter((g) => g.items.length)
+      ? [
+          { key: "personal-items", label: personal?.isParent ? "Personal items · only parents see these" : "My personal items · only parents see these", items: personalOpen },
+          ...SHOPPING_CATEGORIES.map((c) => ({ key: c.value, label: c.label, items: sharedOpen.filter((i) => (i.shoppingCategory ?? "other") === c.value) })),
+        ].filter((g) => g.items.length)
       : [{ key: "all", label: "", items: kind === "todo" ? [...open].sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")) : open }];
 
   const sum = (xs: ItemView[]) => xs.reduce((s, i) => s + (i.priceCents ?? 0), 0);
   const priced = kind === "shopping" && items.some((i) => i.priceCents != null);
   return (
     <div className="flex flex-col gap-5">
-      {canAdd && <AddBar listId={listId} kind={kind} members={members} />}
+      {(canAdd || personal) && <AddBar listId={listId} kind={kind} members={members} personal={personal ? { ...personal, onlyPersonal: !canAdd } : undefined} />}
       {priced && (
         <p className="flex flex-wrap gap-x-4 px-2 text-sm text-muted" aria-live="polite">
           <span>

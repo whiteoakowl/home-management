@@ -43,9 +43,11 @@ export const books = pgTable(
     readingNotes: text("reading_notes"),
     visibility: visibility("visibility").notNull().default("family"),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    /** NULL = the Family Library; set = that member's personal library, visible only to them. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     ...timestamps,
   },
-  (t) => [index("books_family_idx").on(t.familyId), index("books_isbn_idx").on(t.familyId, t.isbn)],
+  (t) => [index("books_family_idx").on(t.familyId), index("books_isbn_idx").on(t.familyId, t.isbn), index("books_owner_idx").on(t.ownerMemberId)],
 );
 
 export const bookCategories = pgTable(

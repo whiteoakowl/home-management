@@ -1,5 +1,6 @@
 import "server-only";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { cookies } from "next/headers";
+import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { bookCategories, books, categories } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
@@ -7,8 +8,29 @@ import { visibleTo, type Viewer } from "./dal";
 export type Book = typeof books.$inferSelect;
 export type BookCategory = { id: string; name: string; color: string | null; sortOrder: number };
 
-/** Books the viewer may see: family books, their own private books, and books shared with them. */
-export const bookVisible = (viewer: Viewer) => visibleTo(viewer, { id: books.id, visibility: books.visibility, author: books.createdByMemberId }, "book");
+/**
+ * Books the viewer may see: Family Library books by their visibility, plus the viewer's
+ * own personal library. Someone's personal library is visible only to them, parents included.
+ */
+export const bookVisible = (viewer: Viewer) =>
+  or(
+    and(isNull(books.ownerMemberId), visibleTo(viewer, { id: books.id, visibility: books.visibility, author: books.createdByMemberId }, "book")),
+    eq(books.ownerMemberId, viewer.member.id),
+  )!;
+
+/** Which library the viewer is looking at: the Family Library or their own (My Library). */
+export type LibrarySpace = "family" | "mine";
+export const LIBRARY_SPACE_COOKIE = "library-space";
+export async function currentLibrarySpace(): Promise<LibrarySpace> {
+  return (await cookies()).get(LIBRARY_SPACE_COOKIE)?.value === "mine" ? "mine" : "family";
+}
+
+/** Anyone who can open the library may keep a personal one; the Family Library needs "Add & edit". */
+export const canAddBooks = (viewer: Viewer, space: LibrarySpace) => (space === "mine" ? viewer.can("library", "view") : viewer.can("library", "edit"));
+
+/** May the viewer change this book? Personal books: only their owner. */
+export const canChangeBook = (viewer: Viewer, b: { ownerMemberId: string | null }) =>
+  b.ownerMemberId ? b.ownerMemberId === viewer.member.id : viewer.can("library", "edit");
 
 export async function bookCategoryList(viewer: Viewer): Promise<BookCategory[]> {
   return db
@@ -18,12 +40,13 @@ export async function bookCategoryList(viewer: Viewer): Promise<BookCategory[]> 
     .orderBy(asc(categories.sortOrder), asc(categories.name));
 }
 
-/** Every visible book with its category ids. */
-export async function listBooks(viewer: Viewer) {
+/** Every visible book in the current library (Family or My Library) with its category ids. */
+export async function listBooks(viewer: Viewer, space?: LibrarySpace) {
+  const s = space ?? (await currentLibrarySpace());
   const rows = await db
     .select()
     .from(books)
-    .where(and(eq(books.familyId, viewer.family.id), bookVisible(viewer)))
+    .where(and(eq(books.familyId, viewer.family.id), bookVisible(viewer), s === "mine" ? eq(books.ownerMemberId, viewer.member.id) : isNull(books.ownerMemberId)))
     .orderBy(asc(books.title));
   const links = rows.length ? await db.select().from(bookCategories).where(inArray(bookCategories.bookId, rows.map((b) => b.id))) : [];
   const byBook = Map.groupBy(links, (l) => l.bookId);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ComponentProps, type ReactNode } from "react";
-import { ImagePlus, Lock, Users, UsersRound } from "lucide-react";
+import { ImagePlus, Lock, ShieldCheck, Users, UsersRound } from "lucide-react";
 import { Avatar } from "@/components/ui/display";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
@@ -126,30 +126,40 @@ export function MemberChips({
 }
 
 /**
- * Who can see this record: family / only me / selected members.
- * Posts `visibility` and repeated `visibleTo`.
+ * Who can see this record: whole family / selected people / parents only / only me.
+ * Posts `visibility` and repeated `visibleTo`. Pass `parentsOption={false}` where
+ * "Parents only" makes no sense (e.g. medical records, which are always visible to parents).
  */
 export function VisibilityField({
   members,
   defaultValue = "family",
   defaultSelected = [],
-  privateLabel = "Only me (and parents)",
+  privateLabel = "Only me",
+  parentsOption = true,
 }: {
   members: MemberOption[];
-  defaultValue?: "family" | "private" | "selected";
+  defaultValue?: "family" | "private" | "selected" | "parents";
   defaultSelected?: string[];
   privateLabel?: string;
+  parentsOption?: boolean;
 }) {
   const [v, setV] = useState(defaultValue);
   const opts = [
     { value: "family", label: "Whole family", icon: UsersRound },
     { value: "selected", label: "Selected people", icon: Users },
+    ...(parentsOption ? [{ value: "parents", label: "Parents only", icon: ShieldCheck } as const] : []),
     { value: "private", label: privateLabel, icon: Lock },
   ] as const;
+  const hint =
+    v === "private" && privateLabel === "Only me"
+      ? "Only you will see this. Nobody else, parents included."
+      : v === "parents"
+        ? "Only parents (and you) will see this."
+        : null;
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1.5 text-sm font-medium text-ink-soft">Who can see this</legend>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2">
         {opts.map((o) => (
           <label
             key={o.value}
@@ -164,6 +174,7 @@ export function VisibilityField({
           </label>
         ))}
       </div>
+      {hint && <p className="text-xs text-muted">{hint}</p>}
       {v === "selected" && (
         <div className="mt-1">
           <MemberChips name="visibleTo" members={members} defaultValue={defaultSelected} />

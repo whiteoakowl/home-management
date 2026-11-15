@@ -46,7 +46,7 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
   const profile = profileRows[0]?.r;
   const ids = [...(profile ? [profile.id] : []), ...lists.flatMap((l) => l.map(({ r }) => r.id))];
   const access = await getRecordAccess("medical", ids);
-  const vis = { privateLabel: "Private (patient & parents)" };
+  const vis = { privateLabel: "Private (patient & parents)", parentsOption: false };
   const canPhoto = viewer.isParent || viewer.member.id === memberId;
   const now = new Date();
   return (

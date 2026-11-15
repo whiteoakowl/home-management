@@ -51,6 +51,11 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
             </div>
           </div>
         </div>
+        {isSelf && !viewer.isParent && (
+          <ButtonLink href="/account" variant="secondary" icon={<Settings2 className="size-4" />}>
+            My account
+          </ButtonLink>
+        )}
         {viewer.isParent && (
           <ButtonLink href={`/family/${member.id}/manage`} variant="secondary" icon={<Settings2 className="size-4" />}>
             Profile & access

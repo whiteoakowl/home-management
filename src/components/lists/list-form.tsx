@@ -30,7 +30,7 @@ export function ListFormModal({
   privateSpace?: boolean;
   members: MemberOption[];
   categories: { id: string; name: string }[];
-  list?: { id: string; title: string; kind: string; categoryId: string | null; store: string | null; visibility: "family" | "private" | "selected"; sharedWith: string[] };
+  list?: { id: string; title: string; kind: string; categoryId: string | null; store: string | null; visibility: "family" | "private" | "selected" | "parents"; sharedWith: string[] };
   allowShopping?: boolean;
   onlyShopping?: boolean;
   trigger?: (open: () => void) => ReactNode;

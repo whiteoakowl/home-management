@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, ilike, inArray, isNull, or, sql, ne } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
+import { itemVisible } from "./lists";
 import { db } from "@/db";
 import {
   books,
@@ -161,7 +162,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         .selectDistinct({ id: lists.id, title: lists.title, kind: lists.kind })
         .from(lists)
         .leftJoin(listItems, eq(listItems.listId, lists.id))
-        .where(and(eq(lists.familyId, fid), isNull(lists.archivedAt), listVis, kindsOk, or(isNull(lists.ownerMemberId), eq(lists.ownerMemberId, viewer.member.id)), or(ilike(lists.title, like), ilike(listItems.text, like))))
+        .where(and(eq(lists.familyId, fid), isNull(lists.archivedAt), listVis, kindsOk, or(isNull(lists.ownerMemberId), eq(lists.ownerMemberId, viewer.member.id)), or(ilike(lists.title, like), and(ilike(listItems.text, like), itemVisible(viewer)))))
         .limit(LIMIT)
         .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: x.kind === "shopping" ? "Shopping list" : `${x.kind[0]!.toUpperCase()}${x.kind.slice(1)} list`, href: `${x.kind === "shopping" ? "/shopping" : "/lists"}/${x.id}` }))),
     );
@@ -207,7 +208,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
           and(
             eq(journalEntries.familyId, fid),
             ne(journalEntries.book, "grimoire"),
-            visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
+            visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
             or(ilike(journalEntries.title, like), ilike(journalEntries.body, like), sql`${q.toLowerCase()} = any(${journalEntries.tags})`),
           ),
         )
@@ -349,7 +350,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
             and(
               eq(journalEntries.familyId, fid),
               eq(journalEntries.book, "grimoire"),
-              visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
+              visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
               or(ilike(journalEntries.title, like), ilike(journalEntries.body, like)),
             ),
           )

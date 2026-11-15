@@ -116,8 +116,12 @@ export async function listFamilyMembers(familyId: string) {
 
 /**
  * SQL filter implementing record visibility (§3 layer 3) for any table with
- * `visibility`, an author column and an id. Parents see everything except
- * private journal entries (handled by passing parentsSeePrivate = false).
+ * `visibility`, an author column and an id:
+ *   family   → everyone (with module access)
+ *   selected → the creator, the listed people and parents
+ *   parents  → the creator and parents
+ *   private  → the creator only ("Only me" means only me, parents included)
+ * `parentsSeePrivate` lets parents also see private records (not used by default).
  */
 export function visibleTo(
   viewer: Viewer,
@@ -125,7 +129,7 @@ export function visibleTo(
   entityType: (typeof recordAccess.$inferSelect)["entityType"],
   opts: { parentsSeePrivate?: boolean } = {},
 ): SQL {
-  const parentsSeePrivate = opts.parentsSeePrivate ?? true;
+  const parentsSeePrivate = opts.parentsSeePrivate ?? false;
   const own = t.author ? eq(t.author, viewer.member.id) : sql`false`;
   if (viewer.isParent) {
     return parentsSeePrivate ? sql`true` : or(sql`${t.visibility} <> 'private'`, own)!;
@@ -142,4 +146,9 @@ export function visibleTo(
     own,
     and(sql`${t.visibility} = 'selected'`, shared),
   )!;
+}
+
+/** True when a record is someone else's "Only me" record: nobody else may open or change it, parents included. */
+export function isOthersPrivate(viewer: Viewer, r: { visibility: string; author: string | null }) {
+  return r.visibility === "private" && r.author !== viewer.member.id;
 }

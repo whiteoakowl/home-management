@@ -27,7 +27,7 @@ function EntryCard({ x }: { x: Entry }) {
         <span>{formatLongDate(x.e.date)}</span>
         {mood && <span title={mood.label}>{mood.emoji}</span>}
         <span className="ml-auto">
-          {x.e.visibility === "private" && <Lock className="size-3.5" aria-label="Private" />}
+          {(x.e.visibility === "private" || x.e.visibility === "parents") && <Lock className="size-3.5" aria-label={x.e.visibility === "parents" ? "Parents only" : "Private"} />}
           {x.e.visibility === "selected" && <Users className="size-3.5" aria-label="Shared with selected people" />}
         </span>
       </div>

@@ -77,7 +77,7 @@ export async function petMemories(viewer: Viewer, petId?: string) {
         eq(journalEntries.familyId, viewer.family.id),
         eq(journalEntries.book, "pet"),
         petId ? eq(journalEntries.linkedId, petId) : undefined,
-        visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
+        visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
       ),
     )
     .orderBy(desc(journalEntries.date), desc(journalEntries.createdAt));

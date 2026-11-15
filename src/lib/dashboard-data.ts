@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { itemVisible } from "./lists";
 import { db } from "@/db";
 import {
   activityLog,
@@ -153,7 +154,7 @@ export async function getShopping(s: Scope) {
         isNull(lists.ownerMemberId),
         isNull(lists.archivedAt),
         eq(listItems.checked, false),
-        visibleTo(s.viewer, { id: lists.id, visibility: lists.visibility, author: lists.createdByMemberId }, "list"),
+        visibleTo(s.viewer, { id: lists.id, visibility: lists.visibility, author: lists.createdByMemberId }, "list"), itemVisible(s.viewer),
       ),
     )
     .orderBy(asc(listItems.position))
@@ -162,7 +163,7 @@ export async function getShopping(s: Scope) {
     .select({ count: sql<number>`count(*)::int` })
     .from(listItems)
     .innerJoin(lists, eq(lists.id, listItems.listId))
-    .where(and(eq(lists.familyId, fid(s)), eq(lists.kind, "shopping"), isNull(lists.ownerMemberId), isNull(lists.archivedAt), eq(listItems.checked, false), visibleTo(s.viewer, { id: lists.id, visibility: lists.visibility, author: lists.createdByMemberId }, "list")));
+    .where(and(eq(lists.familyId, fid(s)), eq(lists.kind, "shopping"), isNull(lists.ownerMemberId), isNull(lists.archivedAt), eq(listItems.checked, false), visibleTo(s.viewer, { id: lists.id, visibility: lists.visibility, author: lists.createdByMemberId }, "list"), itemVisible(s.viewer)));
   return { items, count };
 }
 

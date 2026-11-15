@@ -25,7 +25,7 @@ export const moodOf = (k: string | null) => MOODS.find((m) => m.key === k);
 const visible = (viewer: Viewer) =>
   and(
     ne(journalEntries.book, "grimoire"),
-    visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry", { parentsSeePrivate: false }),
+    visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
   )!;
 
 export async function listEntries(viewer: Viewer, opts: { from?: string; to?: string; q?: string; tag?: string; limit?: number } = {}) {
