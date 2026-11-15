@@ -77,6 +77,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
               </span>
             ) : null}
             {r.cookMinutes ? <span>Cook {r.cookMinutes} min</span> : null}
+            {r.totalMinutes ? <span>Total {r.totalMinutes} min</span> : null}
             {base && (
               <span className="inline-flex items-center gap-1.5">
                 <Users className="size-4 text-muted" /> Serves

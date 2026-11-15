@@ -127,6 +127,13 @@
       "when": 1794783726608,
       "tag": "0017_member_app_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794784192472,
+      "tag": "0018_recipe_total_minutes",
+      "breakpoints": true
     }
   ]
 }

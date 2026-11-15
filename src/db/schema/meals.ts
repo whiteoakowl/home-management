@@ -30,6 +30,8 @@ export const recipes = pgTable(
     instructions: text("instructions").array().notNull().default([]),
     prepMinutes: integer("prep_minutes"),
     cookMinutes: integer("cook_minutes"),
+    /** Total time as written in the recipe (when it differs from prep + cook, or is all that's given). */
+    totalMinutes: integer("total_minutes"),
     servings: integer("servings"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     tags: text("tags").array().notNull().default([]),

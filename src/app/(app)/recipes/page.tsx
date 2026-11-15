@@ -2,7 +2,7 @@ import { cloneElement } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, Heart, Library, Search } from "lucide-react";
+import { BookOpen, FileText, Heart, Library, Search } from "lucide-react";
 import { RecipeCard } from "@/components/recipes/recipe-card";
 import { RecipeFormModal } from "@/components/recipes/recipe-form";
 import { ButtonLink } from "@/components/ui/button";
@@ -50,6 +50,11 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
         actions={
           <>
             {canEdit && <ImportRecipeModal defaultOpen={sp.import === "1"} privateSpace={isPrivate} />}
+            {canEdit && (
+              <ButtonLink href="/recipes/import-word" variant="secondary" icon={<FileText className="size-4" />}>
+                From Word
+              </ButtonLink>
+            )}
             <ButtonLink href={withSpace("/recipes/collections", space)} variant="secondary" icon={<Library className="size-4" />}>
               Collections
             </ButtonLink>
@@ -57,6 +62,11 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
           </>
         }
       />
+      {typeof sp.imported === "string" && Number(sp.imported) > 0 && (
+        <p role="status" className="mb-4 rounded-xl bg-olive-50 px-4 py-3 text-sm text-olive-700">
+          Imported {Number(sp.imported)} recipe{Number(sp.imported) === 1 ? "" : "s"}. Open one to add photos or tidy anything up.
+        </p>
+      )}
       <FoodSpaceNav viewer={viewer} active="recipes" space={space} others={others} />
       <PrivateSpaceNote space={space} viewer={viewer} />
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
