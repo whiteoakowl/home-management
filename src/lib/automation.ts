@@ -63,7 +63,7 @@ export const AUTOMATIONS = [
   { key: "budgetAlerts", label: "Budget alerts", description: "Notify parents when a category goes over its monthly limit." },
   { key: "medicalReminders", label: "Medical reminders", description: "Remind the patient and parents about refills, follow-ups and expiring medical documents." },
   { key: "petReminders", label: "Pet care reminders", description: "Preventatives and vet follow-ups that are due (to whoever gives them, plus parents)." },
-  { key: "craftReminders", label: "Moon & sabbat reminders", description: "Full and new moons, upcoming sabbats and planned celebrations (Witchcraft)." },
+  { key: "craftReminders", label: "Moon & sabbat reminders", description: "Full and new moons, upcoming sabbats and planned celebrations (Spiritual)." },
   { key: "maintenanceReminders", label: "Home maintenance reminders", description: "Warranties expiring, scheduled repairs and project milestones." },
   { key: "recurringTransactions", label: "Recurring bills & income", description: "Record repeating expenses and income automatically when they come due." },
 ] as const;
@@ -335,15 +335,15 @@ export async function runDailyAutomation(family: Family, force = false) {
     const offset = tzOffset(new Date(`${today}T12:00:00Z`), family.timezone) / 60000;
     const moon = moonForDate(today, offset);
     if (moon.exact && (moon.exact.phase === "full" || moon.exact.phase === "new")) {
-      await notify(fid, who, { kind: "craft_reminder", title: `${moon.emoji} ${moon.label} tonight · Moon in ${moon.sign}`, href: "/witchcraft/moon" }, today);
+      await notify(fid, who, { kind: "craft_reminder", title: `${moon.emoji} ${moon.label} tonight · Moon in ${moon.sign}`, href: "/spiritual/moon" }, today);
     }
     const overrides = Object.fromEntries((await db.select().from(sabbatSettings).where(eq(sabbatSettings.familyId, fid))).map((r) => [r.key, r.monthDay]));
     for (const x of upcomingSabbats(today, { tz: family.timezone, southern: (family.latitude ?? 1) < 0, overrides }, 2)) {
       const days = daysBetween(today, x.date);
-      if (days === 0 || days === 3) await notify(fid, who, { kind: "craft_reminder", title: days === 0 ? `${x.s.emoji} Blessed ${x.s.name}!` : `${x.s.emoji} ${x.s.name} is in 3 days`, href: `/witchcraft/wheel/${x.key}` }, today);
+      if (days === 0 || days === 3) await notify(fid, who, { kind: "craft_reminder", title: days === 0 ? `${x.s.emoji} Blessed ${x.s.name}!` : `${x.s.emoji} ${x.s.name} is in 3 days`, href: `/spiritual/wheel/${x.key}` }, today);
     }
     const cels = await db.select({ id: celebrations.id, name: celebrations.name, date: celebrations.date }).from(celebrations).where(and(eq(celebrations.familyId, fid), gte(celebrations.date, today), lte(celebrations.date, addDays(today, 2))));
-    for (const c of cels) await notify(fid, who, { kind: "craft_reminder", title: c.date === today ? `Today: ${c.name}` : `Coming up: ${c.name}`, href: `/witchcraft/celebrations/${c.id}` }, today);
+    for (const c of cels) await notify(fid, who, { kind: "craft_reminder", title: c.date === today ? `Today: ${c.name}` : `Coming up: ${c.name}`, href: `/spiritual/celebrations/${c.id}` }, today);
   }
 
   if (on("maintenanceReminders") && enabled("maintenance")) {

@@ -32,7 +32,7 @@ import { parseFields } from "@/lib/record-fields";
 import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 import { SABBAT_ORDER } from "@/lib/sabbats";
 
-const revalidateCraft = () => revalidatePath("/witchcraft", "layout");
+const revalidateCraft = () => revalidatePath("/spiritual", "layout");
 
 async function ownItem(viewer: Awaited<ReturnType<typeof requireModule>>, id: string | null) {
   const it = id ? await getCraftItem(viewer, id) : null;
@@ -88,7 +88,7 @@ export async function saveCraftItem(_: ActionState, fd: FormData): Promise<Actio
     });
     if (old?.imageFileId && (image || fd.get("removeImage") === "1")) await deleteFamilyFile(viewer.family.id, old.imageFileId);
     revalidateCraft();
-    if (!old) redirect(`/witchcraft/item/${itemId}`);
+    if (!old) redirect(`/spiritual/item/${itemId}`);
     return ok("Saved.");
   });
 }
@@ -105,7 +105,7 @@ export async function deleteCraftItem(fd: FormData) {
   await db.delete(craftItems).where(eq(craftItems.id, it.id));
   if (it.imageFileId) await deleteFamilyFile(viewer.family.id, it.imageFileId);
   revalidateCraft();
-  redirect(`/witchcraft/library/${it.kind}`);
+  redirect(`/spiritual/library/${it.kind}`);
 }
 
 export async function toggleCraftFavorite(fd: FormData) {
@@ -125,7 +125,7 @@ export async function copyCraftItem(fd: FormData) {
     .values({ ...it, id: undefined, familyId: viewer.family.id, createdByMemberId: viewer.member.id, visibility: "family", isFavorite: false, imageFileId: null, createdAt: undefined, updatedAt: undefined, source: it.source ?? "Reference library" })
     .returning({ id: craftItems.id });
   revalidateCraft();
-  redirect(`/witchcraft/item/${r!.id}`);
+  redirect(`/spiritual/item/${r!.id}`);
 }
 
 /** Herb → garden: create a family plant from a herb entry and link them (no duplicate if already linked). */
@@ -307,7 +307,7 @@ export async function saveCelebration(_: ActionState, fd: FormData): Promise<Act
     if (!old) await logActivity(db, viewer.family.id, viewer.member.id, "celebration.planned", `is planning ${row.name}`, { module: "witchcraft", entityId: cid! });
     revalidateCraft();
     revalidatePath("/calendar", "layout");
-    if (!old) redirect(`/witchcraft/celebrations/${cid}`);
+    if (!old) redirect(`/spiritual/celebrations/${cid}`);
     return ok("Saved.");
   });
 }
@@ -321,7 +321,7 @@ export async function deleteCelebration(fd: FormData) {
   if (c.imageFileId) await deleteFamilyFile(viewer.family.id, c.imageFileId);
   revalidateCraft();
   revalidatePath("/calendar", "layout");
-  redirect("/witchcraft/celebrations");
+  redirect("/spiritual/celebrations");
 }
 
 /** Send the celebration's supplies to its own shopping list (created once, reused after). */

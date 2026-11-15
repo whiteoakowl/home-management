@@ -24,9 +24,9 @@ export function MoonDisc({ moon, size = 120 }: { moon: Pick<MoonInfo, "illuminat
           <stop offset="100%" stopColor="#e6dcc8" />
         </radialGradient>
       </defs>
-      <circle cx={c} cy={c} r={r} fill="#3a2236" />
+      <circle cx={c} cy={c} r={r} fill="#1f2244" />
       {k > 0.01 && <path d={k > 0.99 ? `M ${c} ${c - r} A ${r} ${r} 0 1 1 ${c} ${c + r} A ${r} ${r} 0 1 1 ${c} ${c - r} Z` : d} fill="url(#moonlit)" />}
-      <circle cx={c} cy={c} r={r} fill="none" stroke="#c991c4" strokeOpacity="0.4" />
+      <circle cx={c} cy={c} r={r} fill="none" stroke="#e0c27e" strokeOpacity="0.45" />
     </svg>
   );
 }
@@ -34,12 +34,12 @@ export function MoonDisc({ moon, size = 120 }: { moon: Pick<MoonInfo, "illuminat
 export function MoonCard({ moon, upcoming, tz, className }: { moon: MoonInfo; upcoming: PhaseEvent[]; tz: string; className?: string }) {
   const fmt = (d: Date) => d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: tz });
   return (
-    <section className={cn("relative overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br from-[#2d0f26] via-[#4d1c2b] to-[#6a2d5e] p-5 text-white sm:p-6", className)} aria-label="Moon today">
+    <section className={cn("relative overflow-hidden rounded-[var(--radius-card)] border border-[#d4b26a]/25 bg-gradient-to-br from-[#0e1330] via-[#1a1a44] to-[#2a1838] p-5 text-white sm:p-6", className)} aria-label="Moon today">
       <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(1px_1px_at_20%_30%,white,transparent),radial-gradient(1px_1px_at_70%_20%,white,transparent),radial-gradient(1px_1px_at_85%_70%,white,transparent),radial-gradient(1px_1px_at_35%_80%,white,transparent),radial-gradient(1.5px_1.5px_at_55%_45%,white,transparent)]" aria-hidden />
       <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
         <MoonDisc moon={moon} />
         <div className="flex-1">
-          <p className="text-xs font-semibold tracking-[0.14em] text-[#c991c4] uppercase">Tonight&apos;s moon</p>
+          <p className="text-xs font-semibold tracking-[0.14em] text-[#e0c27e] uppercase">Tonight&apos;s moon</p>
           <p className="font-display text-3xl font-semibold">{moon.label}</p>
           <p className="mt-1 text-sm text-white/80">
             {Math.round(moon.illumination * 100)}% illuminated · {moon.waxing ? "waxing" : "waning"} · day {Math.floor(moon.age) + 1} of the cycle · Moon in {moon.sign}

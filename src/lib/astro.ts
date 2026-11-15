@@ -1,5 +1,5 @@
 /**
- * Astronomy for the Witchcraft module. Pure, dependency-free and unit-tested.
+ * Astronomy for the Spiritual module. Pure, dependency-free and unit-tested.
  * Algorithms: Jean Meeus, "Astronomical Algorithms" (2nd ed.):
  *  - ch. 49 true lunar phases (accurate to ~1 minute),
  *  - ch. 47 (main terms) lunar longitude for the moon's zodiac sign (~0.3°),

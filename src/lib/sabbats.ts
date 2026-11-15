@@ -36,7 +36,7 @@ export const SABBATS: Sabbat[] = [
     key: "samhain",
     name: "Samhain",
     also: "All Hallows' Eve, the Witches' New Year",
-    emoji: "🎃",
+    emoji: "🍂",
     kind: "fire",
     north: "10-31",
     theme: "Ancestors, endings, the thinning veil",

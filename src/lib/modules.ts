@@ -238,8 +238,8 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
   witchcraft: {
     id: "witchcraft",
-    label: "Witchcraft",
-    href: "/witchcraft",
+    label: "Spiritual",
+    href: "/spiritual",
     icon: "Moon",
     group: "Spirit",
     phase: 8,

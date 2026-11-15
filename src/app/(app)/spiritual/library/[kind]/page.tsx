@@ -13,12 +13,12 @@ import { CRAFT_FIELDS, CRAFT_KINDS, CRAFT_META, MOON_OPTIONS, type CraftKind } f
 import { memberOptions } from "@/lib/queries";
 import { craftViewer } from "../../shared";
 
-export async function generateMetadata({ params }: PageProps<"/witchcraft/library/[kind]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/spiritual/library/[kind]">): Promise<Metadata> {
   const { kind } = await params;
   return { title: CRAFT_META[kind as CraftKind]?.plural ?? "Library" };
 }
 
-export default async function LibraryPage({ params, searchParams }: PageProps<"/witchcraft/library/[kind]">) {
+export default async function LibraryPage({ params, searchParams }: PageProps<"/spiritual/library/[kind]">) {
   const { kind: k } = await params;
   if (!CRAFT_KINDS.includes(k as CraftKind)) notFound();
   const kind = k as CraftKind;
@@ -40,7 +40,7 @@ export default async function LibraryPage({ params, searchParams }: PageProps<"/
   const sel = "h-10 rounded-full border border-line-strong bg-surface px-3 text-sm";
   return (
     <>
-      <PageHeader eyebrow="Witchcraft" title={meta.plural} description={meta.blurb} actions={add} />
+      <PageHeader eyebrow="Spiritual" title={meta.plural} description={meta.blurb} actions={add} />
       <CraftTabs active={kind} />
       {kind === "herb" && (
         <p className="mb-4 rounded-xl border border-olive-100 bg-olive-50 px-4 py-3 text-sm text-ink-soft">
@@ -52,7 +52,7 @@ export default async function LibraryPage({ params, searchParams }: PageProps<"/
       {kind === "crystal" && (
         <p className="mb-4 text-sm text-muted">
           Crystal meanings are spiritual beliefs, not proven effects.{" "}
-          <a href="/witchcraft/collection" className="font-medium text-primary-700 underline">
+          <a href="/spiritual/collection" className="font-medium text-primary-700 underline">
             View your collection
           </a>
         </p>

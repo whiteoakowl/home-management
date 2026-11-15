@@ -27,7 +27,7 @@ export default async function CelebrationsPage() {
     const s = c.sabbat ? sabbatByKey(c.sabbat) : null;
     const img = fileUrl(c.imageFileId, true);
     return (
-      <Link href={`/witchcraft/celebrations/${c.id}`} className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-primary-300">
+      <Link href={`/spiritual/celebrations/${c.id}`} className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-primary-300">
         <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-50 text-3xl">
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -49,7 +49,7 @@ export default async function CelebrationsPage() {
   };
   return (
     <>
-      <PageHeader eyebrow="Witchcraft" title="Celebrations" description="Sabbat feasts, moon gatherings and personal celebrations, with guests, decorations, ritual plans, recipes and shopping." actions={canEdit && <CelebrationModal />} />
+      <PageHeader eyebrow="Spiritual" title="Celebrations" description="Sabbat feasts, moon gatherings and personal celebrations, with guests, decorations, ritual plans, recipes and shopping." actions={canEdit && <CelebrationModal />} />
       <CraftTabs active="celebrations" />
       {rows.length === 0 ? (
         <Card>

@@ -38,13 +38,13 @@ feels like 16 equal-weight tools:
 | **Kitchen** | Kitchen (pantry/fridge/freezer/supplies), Meals, Recipes |
 | **Land** | Garden, Farm |
 | **Personal** | Journal, Goals, Fitness |
-| **Spirit** | Witchcraft |
+| **Spirit** | Spiritual |
 | **Money** | Budget |
 | **Admin** | Reports, Settings |
 
 * **Desktop (≥1024px):** persistent left sidebar with grouped icon + label nav; top bar with the
   member switcher, notifications, and the universal **+ Add** button.
-* Medical, Pets, Witchcraft and Home Maintenance show their **submenu** under the active item in the
+* Medical, Pets, Spiritual and Home Maintenance show their **submenu** under the active item in the
   sidebar, and as scrollable section tabs on every one of their pages (all screen sizes).
 * **Tablet (640–1023px):** collapsible sidebar (icon rail).
 * **Mobile (<640px):** bottom tab bar with **Home · Calendar · [+] · Lists · More**. "More" opens a
@@ -257,7 +257,11 @@ Shopping lists are lists with `kind = 'shopping'`: one list engine.
   `pet_care_notes`, `pet_supplies` (→ `inventory_items` with `location='pets'`).
 * Care schedules are `chores.pet_id`; memories are `journal_entries` with `book='pet'`, `linked_id = pet`.
 
-### Witchcraft (`craft.ts`), add-on
+### Spiritual (`craft.ts`, routes under `/spiritual`; module id stays `witchcraft`), add-on
+* Old `/witchcraft/*` links redirect (next.config.ts). The section renders inside `.theme-celestial`
+  (globals.css), which re-maps the design tokens to a dark celestial palette for every shared component.
+* The dashboard's cards are customizable per member via `section_layouts` (`SECTION_WIDGETS` in
+  `src/lib/widgets.ts`, shared with the Book Library).
 * `craft_items` (kind spell | ritual | crystal | herb | tool | wellness; `family_id NULL` = built-in
   reference from `src/db/craft-data.ts`; kind-specific `fields` JSONB; `plant_id` → garden plant),
   `craft_collection`, `craft_item_supplies` (→ inventory, `location='craft'`), `sabbat_settings`
@@ -394,7 +398,7 @@ terracotta and honey accents, soft shadows, generous radius.
 | 7. Advanced | Reports (cleaning, garden, farm, kitchen waste, budget, fitness, goals), automation engine with per-family switches, notifications + preferences, global search, dashboard customization, category manager | ✅ Done |
 | 8a. Medical | Health profiles, allergies, food restrictions, conditions, medications (refills), documents, medical calendar, privacy per record, allergy & diet warnings in recipes and meal plans | ✅ Done |
 | 8b. Pets | Pet profiles & galleries, medical records, preventatives with reminders, food & supplies (inventory → shopping), care schedules (chores), special care, memories (journal) | ✅ Done |
-| 8c. Witchcraft | Accurate moon phases & signs, Wheel of the Year with detail pages and custom dates, celebration planner, spells, rituals, printable grimoire, crystals & collection, herbs (safety-first, garden-linked), tools, magical wellness, supplies | ✅ Done |
+| 8c. Spiritual (formerly Witchcraft) | Accurate moon phases & signs, Wheel of the Year with detail pages and custom dates, celebration planner, spells, rituals, printable grimoire, crystals & collection, herbs (safety-first, garden-linked), tools, magical wellness, supplies | ✅ Done |
 | 9. Everyday extras | Points & rewards with approvals and fair-share view, take-turns rotation, cleanliness meters, recipe import & cook mode, “What can I cook?”, shopping prices / totals / buy again, copy meal week, home inventory & insurance report, service providers, household manual | ✅ Done |
 | 8d. Home maintenance | Rooms & systems, preventative schedules with costs & history, repair log with photos & warranties, remodeling projects (stages, tasks, materials, budget, photos), to-do lists, documents & warranties, 12-month calendar | ✅ Done |
 
@@ -413,7 +417,7 @@ terracotta and honey accents, soft shadows, generous radius.
 * **Medical → Recipes & Meals**: food allergies and restrictions (expanded through allergen groups in
   `src/lib/allergen-groups.ts`, e.g. cheese → mozzarella) flag recipe ingredients and planned meals.
   Without a match the app only says no recorded conflicts were found.
-* **Pets / Witchcraft → Inventory → Shopping**: supplies live in the shared inventory (`location` pets,
+* **Pets / Spiritual → Inventory → Shopping**: supplies live in the shared inventory (`location` pets,
   craft); low stock is added to the shopping list automatically.
 * **Pets, Maintenance, Celebrations → Budget**: costs are recorded once as linked transactions.
 * **Calendar layers**: medical appointments and celebrations are events; pets (preventatives & vet dates),

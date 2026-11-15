@@ -21,7 +21,7 @@ const GUIDE = [
   { k: "waning_gibbous", t: "Waning", d: "Release, banishing, cleansing, breaking habits and reflection." },
 ] as const;
 
-export default async function MoonPage({ searchParams }: PageProps<"/witchcraft/moon">) {
+export default async function MoonPage({ searchParams }: PageProps<"/spiritual/moon">) {
   const viewer = await craftViewer();
   const tz = viewer.family.timezone;
   const today = todayIn(tz);
@@ -33,7 +33,7 @@ export default async function MoonPage({ searchParams }: PageProps<"/witchcraft/
   const fmt = (d: Date) => d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: tz });
   return (
     <>
-      <PageHeader eyebrow="Witchcraft" title="Moon phases" description={`Calculated astronomically for ${viewer.family.locationName ?? "your"} time zone (${tz}).`} />
+      <PageHeader eyebrow="Spiritual" title="Moon phases" description={`Calculated astronomically for ${viewer.family.locationName ?? "your"} time zone (${tz}).`} />
       <CraftTabs active="moon" />
       <MoonCard moon={moonFor(viewer, today)} upcoming={upcomingMoonPhases(viewer)} tz={tz} className="mb-6" />
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">

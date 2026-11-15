@@ -20,7 +20,7 @@ export const moodOf = (k: string | null) => MOODS.find((m) => m.key === k);
 /**
  * Journal visibility: private entries are author-only (parents too). The
  * family journal holds 'journal' and 'pet' entries; grimoire entries live in
- * the Witchcraft module.
+ * the Spiritual module.
  */
 const visible = (viewer: Viewer) =>
   and(

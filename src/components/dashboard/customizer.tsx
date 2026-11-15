@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, SlidersHorizontal } from "lucide-react";
 import type { WidgetPref } from "@/db/schema/core";
-import { resetDashboardLayout, saveDashboardLayout } from "@/app/actions/dashboard";
+import { resetDashboardLayout, resetSectionLayout, saveDashboardLayout, saveSectionLayout } from "@/app/actions/dashboard";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
@@ -14,14 +14,20 @@ const SIZES: { value: WidgetPref["size"]; label: string }[] = [
   { value: "lg", label: "L" },
 ];
 
-/** Reorder, show/hide and resize dashboard widgets. Saved per member. */
+/** Reorder, show/hide and resize dashboard widgets. Saved per member (main dashboard or a section). */
 export function DashboardCustomizer({
   layout,
   titles,
+  section,
+  label = "dashboard",
 }: {
   layout: WidgetPref[];
   titles: Record<string, string>;
+  section?: string;
+  label?: string;
 }) {
+  const save = (items: WidgetPref[]) => (section ? saveSectionLayout(section, items) : saveDashboardLayout(items));
+  const reset = () => (section ? resetSectionLayout(section) : resetDashboardLayout());
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState(layout);
   const [pending, start] = useTransition();
@@ -52,7 +58,7 @@ export function DashboardCustomizer({
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Customize your dashboard"
+        title={`Customize your ${label}`}
         description="Choose which cards you see, their order and their size. Only your view changes."
         footer={
           <>
@@ -61,7 +67,7 @@ export function DashboardCustomizer({
               disabled={pending}
               onClick={() =>
                 start(async () => {
-                  await resetDashboardLayout();
+                  await reset();
                   setOpen(false);
                 })
               }
@@ -72,7 +78,7 @@ export function DashboardCustomizer({
               disabled={pending}
               onClick={() =>
                 start(async () => {
-                  await saveDashboardLayout(items);
+                  await save(items);
                   setOpen(false);
                 })
               }

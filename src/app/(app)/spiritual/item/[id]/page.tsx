@@ -22,12 +22,12 @@ import { memberOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { craftViewer } from "../../shared";
 
-export const metadata: Metadata = { title: "Witchcraft" };
+export const metadata: Metadata = { title: "Spiritual" };
 
 const HERB_SAFETY = ["safety", "petSafety"];
 const HERB_LORE = ["magicalUses", "folklore"];
 
-export default async function CraftItemPage({ params }: PageProps<"/witchcraft/item/[id]">) {
+export default async function CraftItemPage({ params }: PageProps<"/spiritual/item/[id]">) {
   const { id } = await params;
   const viewer = await craftViewer();
   const it = await getCraftItem(viewer, id);
@@ -61,7 +61,7 @@ export default async function CraftItemPage({ params }: PageProps<"/witchcraft/i
 
   return (
     <article className="mx-auto flex max-w-5xl flex-col gap-6">
-      <Link href={`/witchcraft/library/${kind}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink print:hidden">
+      <Link href={`/spiritual/library/${kind}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink print:hidden">
         <ArrowLeft className="size-4" /> {meta.plural}
       </Link>
       <div className="print:hidden">
@@ -212,7 +212,7 @@ export default async function CraftItemPage({ params }: PageProps<"/witchcraft/i
 
       {isSpellish && entries.length > 0 && (
         <Card>
-          <CardHeader title="Grimoire notes" href="/witchcraft/grimoire" />
+          <CardHeader title="Grimoire notes" href="/spiritual/grimoire" />
           <ul className="divide-y divide-line">
             {entries.map((e) => (
               <li key={e.id} className="py-2.5 text-sm">

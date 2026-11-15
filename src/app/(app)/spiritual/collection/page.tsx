@@ -20,13 +20,13 @@ export default async function CollectionPage() {
   const canEdit = viewer.can("witchcraft", "edit");
   return (
     <>
-      <PageHeader eyebrow="Witchcraft" title="Our collection" description="The crystals and tools your family owns or wishes for. Add pieces from any crystal or tool page." />
+      <PageHeader eyebrow="Spiritual" title="Our collection" description="The crystals and tools your family owns or wishes for. Add pieces from any crystal or tool page." />
       <CraftTabs active="crystal" />
       {rows.length ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {rows.map(({ c, item }) => (
             <article key={c.id} className="flex gap-3 rounded-2xl border border-line bg-surface p-4">
-              <Link href={`/witchcraft/item/${item.id}`} className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-50 text-3xl">
+              <Link href={`/spiritual/item/${item.id}`} className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-50 text-3xl">
                 {c.photoFileId ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={fileUrl(c.photoFileId, true)!} alt={item.name} className="size-full object-cover" />
@@ -35,7 +35,7 @@ export default async function CollectionPage() {
                 )}
               </Link>
               <div className="min-w-0 flex-1">
-                <Link href={`/witchcraft/item/${item.id}`} className="font-semibold hover:text-primary-700">
+                <Link href={`/spiritual/item/${item.id}`} className="font-semibold hover:text-primary-700">
                   {item.name}
                 </Link>
                 <div className="mt-1 flex flex-wrap gap-1">

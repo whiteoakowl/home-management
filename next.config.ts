@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
   // Image uploads (recipes, plants, animals, journal…) go through server actions.
   experimental: { serverActions: { bodySizeLimit: "12mb" } },
   serverExternalPackages: ["sharp"],
+  async redirects() {
+    // The Witchcraft section is now "Spiritual"; keep old links and bookmarks working.
+    return [
+      { source: "/witchcraft", destination: "/spiritual", permanent: true },
+      { source: "/witchcraft/:path*", destination: "/spiritual/:path*", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

@@ -20,7 +20,7 @@ export async function MoonWidget({ scope }: { scope: Scope }) {
   const [next] = await familyUpcomingSabbats(scope.viewer, scope.today, 1);
   return (
     <Card>
-      <CardHeader title="Moon & Wheel" icon={<Moon className={ic} />} href="/witchcraft" />
+      <CardHeader title="Moon & Wheel" icon={<Moon className={ic} />} href="/spiritual" />
       <div className="flex items-center gap-4">
         <MoonDisc moon={moon} size={64} />
         <div>
@@ -29,7 +29,7 @@ export async function MoonWidget({ scope }: { scope: Scope }) {
             {Math.round(moon.illumination * 100)}% · Moon in {moon.sign}
           </p>
           {next && (
-            <Link href={`/witchcraft/wheel/${next.key}`} className="mt-1 block text-sm text-primary-700 hover:underline">
+            <Link href={`/spiritual/wheel/${next.key}`} className="mt-1 block text-sm text-primary-700 hover:underline">
               {next.s.emoji} {next.s.name} {daysBetween(scope.today, next.date) === 0 ? "today" : `in ${daysBetween(scope.today, next.date)} days`}
             </Link>
           )}

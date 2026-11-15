@@ -206,6 +206,20 @@ export const dashboardLayouts = pgTable("dashboard_layouts", {
   ...timestamps,
 });
 
+/** Per-member card layout for a section dashboard (Spiritual, Library, …). */
+export const sectionLayouts = pgTable(
+  "section_layouts",
+  {
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    section: text("section").notNull(),
+    widgets: jsonb("widgets").$type<WidgetPref[]>().notNull(),
+    ...timestamps,
+  },
+  (t) => [primaryKey({ columns: [t.memberId, t.section] })],
+);
+
 export const announcements = pgTable(
   "announcements",
   {

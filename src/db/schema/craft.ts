@@ -7,7 +7,7 @@ import { lists } from "./lists";
 import { recipes } from "./meals";
 
 /**
- * Witchcraft & spirituality library. One table for every reference kind
+ * Spiritual & spirituality library. One table for every reference kind
  * (spell, ritual, crystal, herb, tool, wellness) with kind-specific fields in
  * JSONB. family_id NULL = built-in reference entry (crystals, herbs, tools).
  */

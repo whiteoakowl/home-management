@@ -248,12 +248,12 @@ export async function getCalendarItems(
     const NAMES = { new: "🌑 New Moon", first_quarter: "🌓 First Quarter", full: "🌕 Full Moon", last_quarter: "🌗 Last Quarter" } as const;
     for (const e of phasesBetween(zonedToUtc(from, "00:00", tz), zonedToUtc(addDays(to, 1), "00:00", tz))) {
       const z = utcToZoned(e.at, tz);
-      out.push({ key: `mo:${e.at.toISOString()}`, id: e.at.toISOString(), layer: "moon", title: NAMES[e.phase], date: z.date, startMin: z.minutes, endMin: null, color: "lilac", href: `/witchcraft/moon?month=${z.date.slice(0, 7)}`, people: [] });
+      out.push({ key: `mo:${e.at.toISOString()}`, id: e.at.toISOString(), layer: "moon", title: NAMES[e.phase], date: z.date, startMin: z.minutes, endMin: null, color: "lilac", href: `/spiritual/moon?month=${z.date.slice(0, 7)}`, people: [] });
     }
     const overrides = Object.fromEntries((await db.select().from(sabbatSettings).where(eq(sabbatSettings.familyId, fid))).map((r) => [r.key, r.monthDay]));
     for (let y = Number(from.slice(0, 4)); y <= Number(to.slice(0, 4)); y++) {
       for (const x of wheelForYear(y, { tz, southern: (viewer.family.latitude ?? 1) < 0, overrides })) {
-        if (x.date >= from && x.date <= to) out.push({ key: `sb:${x.key}:${y}`, id: x.key, layer: "moon", title: `${x.s.emoji} ${x.s.name}`, date: x.date, startMin: null, endMin: null, color: "orchid", href: `/witchcraft/wheel/${x.key}`, people: [] });
+        if (x.date >= from && x.date <= to) out.push({ key: `sb:${x.key}:${y}`, id: x.key, layer: "moon", title: `${x.s.emoji} ${x.s.name}`, date: x.date, startMin: null, endMin: null, color: "orchid", href: `/spiritual/wheel/${x.key}`, people: [] });
       }
     }
   }

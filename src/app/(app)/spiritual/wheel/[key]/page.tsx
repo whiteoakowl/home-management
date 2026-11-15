@@ -19,7 +19,7 @@ import { sabbatByKey } from "@/lib/sabbats";
 import { CelebrationModal } from "../../celebrations/celebration-modal";
 import { craftViewer } from "../../shared";
 
-export async function generateMetadata({ params }: PageProps<"/witchcraft/wheel/[key]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/spiritual/wheel/[key]">): Promise<Metadata> {
   const { key } = await params;
   return { title: sabbatByKey(key)?.name ?? "Sabbat" };
 }
@@ -39,7 +39,7 @@ function List({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-export default async function SabbatPage({ params }: PageProps<"/witchcraft/wheel/[key]">) {
+export default async function SabbatPage({ params }: PageProps<"/spiritual/wheel/[key]">) {
   const { key } = await params;
   const s = sabbatByKey(key);
   if (!s) notFound();
@@ -58,7 +58,7 @@ export default async function SabbatPage({ params }: PageProps<"/witchcraft/whee
   const canEdit = viewer.can("witchcraft", "edit");
   return (
     <article className="mx-auto flex max-w-5xl flex-col gap-6">
-      <Link href="/witchcraft/wheel" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+      <Link href="/spiritual/wheel" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
         <ArrowLeft className="size-4" /> Wheel of the Year
       </Link>
       <CraftTabs active="wheel" />
@@ -146,7 +146,7 @@ export default async function SabbatPage({ params }: PageProps<"/witchcraft/whee
           <ul className="divide-y divide-line">
             {cels.map((c) => (
               <li key={c.id}>
-                <Link href={`/witchcraft/celebrations/${c.id}`} className="flex justify-between py-2.5 hover:text-primary-700">
+                <Link href={`/spiritual/celebrations/${c.id}`} className="flex justify-between py-2.5 hover:text-primary-700">
                   <span className="font-medium">{c.name}</span>
                   <span className="text-sm text-muted">
                     {fmtDate(c.date)} {c.date < today && <Badge>Past</Badge>}

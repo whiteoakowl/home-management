@@ -11,7 +11,7 @@ import { craftViewer } from "../shared";
 
 export const metadata: Metadata = { title: "Wheel of the Year" };
 
-export default async function WheelPage({ searchParams }: PageProps<"/witchcraft/wheel">) {
+export default async function WheelPage({ searchParams }: PageProps<"/spiritual/wheel">) {
   const viewer = await craftViewer();
   const today = todayIn(viewer.family.timezone);
   const sp = (await searchParams) as { year?: string };
@@ -20,7 +20,7 @@ export default async function WheelPage({ searchParams }: PageProps<"/witchcraft
   return (
     <>
       <PageHeader
-        eyebrow="Witchcraft"
+        eyebrow="Spiritual"
         title="Wheel of the Year"
         description={`The eight sabbats${isSouthern(viewer) ? " (southern hemisphere)" : ""}. Solstices and equinoxes are calculated for your time zone; tap a sabbat for its meaning, traditions and your family's plans.`}
       />
@@ -41,7 +41,7 @@ export default async function WheelPage({ searchParams }: PageProps<"/witchcraft
         <ul className="flex flex-col gap-3">
           {wheel.map((x) => (
             <li key={x.key}>
-              <Link href={`/witchcraft/wheel/${x.key}`} className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-primary-300">
+              <Link href={`/spiritual/wheel/${x.key}`} className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-primary-300">
                 <span className="text-3xl" aria-hidden>
                   {x.s.emoji}
                 </span>

@@ -14,7 +14,7 @@ import { grimoireEntries } from "../grimoire-lib";
 export const metadata: Metadata = { title: "Printable grimoire" };
 
 /** A print-ready Book of Shadows: the family's spells, rituals & practices, then journal entries. */
-export default async function PrintGrimoire({ searchParams }: PageProps<"/witchcraft/grimoire/print">) {
+export default async function PrintGrimoire({ searchParams }: PageProps<"/spiritual/grimoire/print">) {
   const viewer = await craftViewer();
   const sp = (await searchParams) as { entries?: string };
   const [items, entries] = await Promise.all([
@@ -24,7 +24,7 @@ export default async function PrintGrimoire({ searchParams }: PageProps<"/witchc
   return (
     <article className="mx-auto max-w-3xl font-serif print:max-w-none">
       <div className="mb-6 flex items-center justify-between print:hidden">
-        <Link href="/witchcraft/grimoire" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+        <Link href="/spiritual/grimoire" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
           <ArrowLeft className="size-4" /> Grimoire
         </Link>
         <div className="flex items-center gap-2 text-sm">

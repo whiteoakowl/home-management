@@ -106,3 +106,134 @@ dialog::backdrop {
     break-after: page;
   }
 }
+
+/*
+ * Spiritual section: dark celestial theme. Re-maps the design tokens inside
+ * `.theme-celestial`, so every shared component (cards, buttons, forms,
+ * modals) turns midnight, plum and muted violet with soft gold accents.
+ * Screen only: printing the grimoire stays on white paper.
+ */
+@media screen {
+  .theme-celestial {
+    --color-canvas: #0b0e1f;
+    --color-surface: #141a33;
+    --color-sunken: #10152b;
+    --color-line: #262c4c;
+    --color-line-strong: #363d63;
+    --color-ink: #eeeaf6;
+    --color-ink-soft: #cdc6df;
+    --color-muted: #9b95b5;
+
+    /* Light tints become deep tints; text shades become moonlit violets. */
+    --color-primary-50: #1d1c3d;
+    --color-primary-100: #28264f;
+    --color-primary-200: #3a3568;
+    --color-primary-300: #5a4f8f;
+    --color-primary-400: #8f80c4;
+    --color-primary-500: #b3a3e6;
+    --color-primary-600: #c8bbf2;
+    --color-primary-700: #dcd2fb;
+    --color-primary-800: #efe9ff;
+
+    --color-wine-50: #2e1627;
+    --color-wine-100: #42203a;
+    --color-wine-400: #d08aa1;
+    --color-wine-500: #e39db4;
+    --color-wine-700: #f3c3d2;
+    --color-olive-50: #1d2030;
+    --color-olive-100: #2b2e3f;
+    --color-olive-400: #b7ac7c;
+    --color-olive-500: #d6c58f;
+    --color-olive-700: #e6d7a3;
+    --color-mist-50: #191e38;
+    --color-mist-500: #a39dbd;
+    --color-mist-700: #d6d0e8;
+
+    --color-gold: #d4b26a;
+    --color-gold-soft: #e9d6a6;
+    --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 10px 30px -12px rgb(0 0 0 / 0.6);
+    --shadow-pop: 0 20px 50px -12px rgb(0 0 0 / 0.75);
+
+    color: var(--color-ink);
+    color-scheme: dark;
+    background-color: var(--color-canvas);
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 0.55), transparent 60%),
+      radial-gradient(1px 1px at 32% 72%, rgb(255 255 255 / 0.35), transparent 60%),
+      radial-gradient(1.5px 1.5px at 58% 12%, rgb(233 214 166 / 0.6), transparent 60%),
+      radial-gradient(1px 1px at 76% 44%, rgb(255 255 255 / 0.4), transparent 60%),
+      radial-gradient(1px 1px at 88% 82%, rgb(255 255 255 / 0.3), transparent 60%),
+      radial-gradient(1px 1px at 44% 38%, rgb(255 255 255 / 0.25), transparent 60%),
+      radial-gradient(1.5px 1.5px at 6% 88%, rgb(233 214 166 / 0.45), transparent 60%),
+      radial-gradient(ellipse at 85% -10%, rgb(143 128 196 / 0.22), transparent 55%),
+      radial-gradient(ellipse at -10% 110%, rgb(92 42 84 / 0.35), transparent 55%),
+      linear-gradient(180deg, #0b0e1f 0%, #111531 55%, #160f26 100%);
+    background-size: 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 100% 100%, 100% 100%, 100% 100%;
+  }
+  .theme-celestial h1,
+  .theme-celestial h2,
+  .theme-celestial h3 {
+    color: var(--color-ink);
+    letter-spacing: 0.005em;
+  }
+  .theme-celestial ::selection {
+    background: rgb(212 178 106 / 0.35);
+  }
+  .theme-celestial :focus-visible {
+    outline-color: var(--color-gold);
+  }
+  /* Filled buttons: deep violet with a gold edge (keeps white text readable). */
+  .theme-celestial .bg-primary-600 {
+    background-color: #4b3f85;
+    box-shadow: inset 0 0 0 1px rgb(212 178 106 / 0.45);
+  }
+  .theme-celestial .hover\:bg-primary-700:hover,
+  .theme-celestial .bg-primary-700 {
+    background-color: #5a4c9c;
+  }
+  .theme-celestial .active\:bg-primary-800:active,
+  .theme-celestial .bg-primary-800 {
+    background-color: #3a3068;
+  }
+  /* "Inverted" chips (active tabs, segmented controls): moonlit gold. */
+  .theme-celestial .bg-ink {
+    background-color: #d9bc7a;
+    color: #12162e;
+  }
+  .theme-celestial .bg-primary-500 {
+    background-color: #6655a8;
+  }
+  .theme-celestial .bg-wine-500 {
+    background-color: #8a3a57;
+  }
+  .theme-celestial .hover\:bg-wine-700:hover {
+    background-color: #a3476a;
+  }
+  .theme-celestial input,
+  .theme-celestial select,
+  .theme-celestial textarea {
+    color-scheme: dark;
+  }
+  .theme-celestial dialog {
+    color: var(--color-ink);
+  }
+}
+
+/* Small celestial helpers for the Spiritual pages. */
+.text-gold {
+  color: var(--color-gold, #b08a3e);
+}
+.border-gold {
+  border-color: rgb(212 178 106 / 0.35);
+}
+.celestial-hero {
+  background:
+    radial-gradient(circle at 82% 30%, rgb(233 214 166 / 0.16), transparent 32%),
+    radial-gradient(ellipse at 10% 120%, rgb(106 45 94 / 0.45), transparent 60%),
+    linear-gradient(135deg, #12173a 0%, #1c1740 50%, #2a1636 100%);
+}
+.font-celestial {
+  font-family: var(--font-display);
+  font-variant: small-caps;
+  letter-spacing: 0.14em;
+}

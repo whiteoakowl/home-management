@@ -57,3 +57,47 @@ export function resolveLayout(saved: WidgetPref[] | null | undefined): WidgetPre
   }));
   return [...known, ...added];
 }
+
+/** Cards on section dashboards (Spiritual, Library…), customizable per member. */
+export const SECTION_WIDGETS = {
+  spiritual: [
+    { id: "moon", title: "Moon tonight", size: "lg" },
+    { id: "nextMoons", title: "Next full & new moon", size: "sm" },
+    { id: "wheel", title: "Wheel of the Year", size: "sm" },
+    { id: "celebrations", title: "Upcoming celebrations", size: "sm" },
+    { id: "journal", title: "Recent journal entries", size: "md" },
+    { id: "forMoon", title: "For this moon", size: "sm" },
+    { id: "rituals", title: "Favorite rituals", size: "sm" },
+    { id: "spells", title: "Favorite spells", size: "sm" },
+    { id: "crystals", title: "Crystal collection", size: "sm" },
+    { id: "herbs", title: "Herbal database", size: "sm" },
+    { id: "tools", title: "Tools", size: "sm" },
+    { id: "supplies", title: "Supplies", size: "sm" },
+    { id: "recent", title: "Recently added", size: "md" },
+  ],
+  library: [
+    { id: "stats", title: "Library at a glance", size: "lg" },
+    { id: "reading", title: "Currently reading", size: "md" },
+    { id: "yearStats", title: "Reading this year", size: "sm" },
+    { id: "toRead", title: "To read", size: "sm" },
+    { id: "favorites", title: "Favorites", size: "sm" },
+    { id: "completed", title: "Recently completed", size: "sm" },
+    { id: "recent", title: "Recently added", size: "md" },
+    { id: "categories", title: "Categories", size: "sm" },
+    { id: "authors", title: "Authors", size: "sm" },
+  ],
+} as const satisfies Record<string, readonly { id: string; title: string; size: WidgetPref["size"] }[]>;
+
+export type Section = keyof typeof SECTION_WIDGETS;
+export const isSection = (s: string): s is Section => s in SECTION_WIDGETS;
+
+/** Saved section layout merged with the registry (new cards appended, unknown dropped). */
+export function resolveSectionLayout(section: Section, saved: WidgetPref[] | null | undefined): WidgetPref[] {
+  const defs: readonly { id: string; size: WidgetPref["size"] }[] = SECTION_WIDGETS[section];
+  const ids = defs.map((d) => d.id);
+  const known = (saved ?? []).filter((w) => ids.includes(w.id));
+  const seen = new Set(known.map((w) => w.id));
+  return [...known, ...defs.filter((d) => !seen.has(d.id)).map((d) => ({ id: d.id, visible: true, size: d.size }))];
+}
+
+export const sectionTitles = (section: Section) => Object.fromEntries(SECTION_WIDGETS[section].map((w) => [w.id, w.title]));

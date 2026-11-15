@@ -24,7 +24,7 @@ import { CelebrationModal } from "../celebration-modal";
 
 export const metadata: Metadata = { title: "Celebration" };
 
-export default async function CelebrationPage({ params }: PageProps<"/witchcraft/celebrations/[id]">) {
+export default async function CelebrationPage({ params }: PageProps<"/spiritual/celebrations/[id]">) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await craftViewer();
@@ -47,7 +47,7 @@ export default async function CelebrationPage({ params }: PageProps<"/witchcraft
   const defaults = Object.fromEntries(CELEBRATION_FIELDS.map((f) => [f.name, (c as Record<string, unknown>)[f.name] as string | number | null]));
   return (
     <article className="mx-auto flex max-w-5xl flex-col gap-6">
-      <Link href="/witchcraft/celebrations" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+      <Link href="/spiritual/celebrations" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
         <ArrowLeft className="size-4" /> Celebrations
       </Link>
       <CraftTabs active="celebrations" />
@@ -55,7 +55,7 @@ export default async function CelebrationPage({ params }: PageProps<"/witchcraft
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-1.5">
             {s && (
-              <Link href={`/witchcraft/wheel/${s.key}`}>
+              <Link href={`/spiritual/wheel/${s.key}`}>
                 <Badge tone="olive">
                   {s.emoji} {s.name}
                 </Badge>

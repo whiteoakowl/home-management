@@ -517,7 +517,7 @@ async function main() {
   const [walkRule] = await db.insert(s.recurrenceRules).values({ familyId: fid, freq: "daily", interval: 1, startsOn: day(0) }).returning();
   await db.update(s.chores).set({ recurrenceRuleId: walkRule!.id }).where(eq(s.chores.id, walk!.id));
 
-  // ── Witchcraft ──
+  // ── Spiritual ──
   if (!(await db.select({ id: s.craftItems.id }).from(s.craftItems).where(isNull(s.craftItems.familyId)).limit(1)).length) {
     const refPlants = await db.select({ id: s.plants.id, name: s.plants.name }).from(s.plants).where(isNull(s.plants.familyId));
     await db.insert(s.craftItems).values(

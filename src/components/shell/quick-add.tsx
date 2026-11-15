@@ -60,7 +60,7 @@ const OPTIONS: Option[] = [
   { label: "Medical appointment", icon: HeartPulse, href: "/medical/calendar?new=1", module: "medical", phase: 8 },
   { label: "Home repair", icon: Hammer, href: "/maintenance/repairs?new=1", module: "maintenance", phase: 8 },
   { label: "Home project", icon: Hammer, href: "/maintenance/projects?new=1", module: "maintenance", phase: 8 },
-  { label: "Spell or ritual", icon: Sparkles, href: "/witchcraft/library/spell?new=1", module: "witchcraft", phase: 8 },
+  { label: "Spell or ritual", icon: Sparkles, href: "/spiritual/library/spell?new=1", module: "witchcraft", phase: 8 },
   { label: "Family member", icon: UserPlus, href: "/family?new=1", module: null, parentOnly: true, phase: 1 },
   { label: "Announcement", icon: Megaphone, href: "/?announce=1", module: null, parentOnly: true, phase: 1 },
 ];

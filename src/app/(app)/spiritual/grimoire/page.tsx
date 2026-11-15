@@ -25,12 +25,13 @@ export const metadata: Metadata = { title: "Grimoire" };
 
 type Entry = Awaited<ReturnType<typeof grimoireEntries>>[number];
 
-function EntryModal({ e, members, spells, today, moon }: { e?: Entry; members: { id: string; displayName: string; color: string }[]; spells: { id: string; name: string }[]; today: string; moon: string }) {
+function EntryModal({ e, members, spells, today, moon, defaultOpen }: { defaultOpen?: boolean; e?: Entry; members: { id: string; displayName: string; color: string }[]; spells: { id: string; name: string }[]; today: string; moon: string }) {
   return (
     <FormModal
       title={e ? "Edit entry" : "New grimoire entry"}
       action={saveGrimoireEntry}
       triggerLabel="New entry"
+      defaultOpen={defaultOpen}
       triggerContent={e ? <span className="text-sm font-medium">Edit</span> : undefined}
       triggerClassName={e ? "h-9 rounded-full px-3 text-ink-soft hover:bg-sunken" : undefined}
       size="lg"
@@ -50,9 +51,9 @@ function EntryModal({ e, members, spells, today, moon }: { e?: Entry; members: {
   );
 }
 
-export default async function GrimoirePage({ searchParams }: PageProps<"/witchcraft/grimoire">) {
+export default async function GrimoirePage({ searchParams }: PageProps<"/spiritual/grimoire">) {
   const viewer = await craftViewer();
-  const sp = (await searchParams) as { q?: string; category?: string };
+  const sp = (await searchParams) as { q?: string; category?: string; new?: string };
   const today = todayIn(viewer.family.timezone);
   const [members, entries, spells] = await Promise.all([
     memberOptions(viewer),
@@ -67,15 +68,15 @@ export default async function GrimoirePage({ searchParams }: PageProps<"/witchcr
   return (
     <>
       <PageHeader
-        eyebrow="Witchcraft"
+        eyebrow="Spiritual"
         title="Grimoire"
         description="Your Book of Shadows: reflections, moon logs, dreams, readings and spell results. Entries are private unless you share them."
         actions={
           <>
-            <ButtonLink href="/witchcraft/grimoire/print" variant="secondary" icon={<Printer className="size-4" />}>
+            <ButtonLink href="/spiritual/grimoire/print" variant="secondary" icon={<Printer className="size-4" />}>
               Printable grimoire
             </ButtonLink>
-            {canEdit && <EntryModal members={members} spells={spells} today={today} moon={moon} />}
+            {canEdit && <EntryModal members={members} spells={spells} today={today} moon={moon} defaultOpen={sp.new === "1"} />}
           </>
         }
       />

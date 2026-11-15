@@ -13,7 +13,7 @@ import { inventoryItems } from "@/db/schema";
 import type { FieldDef } from "@/lib/record-fields";
 import { craftViewer } from "../shared";
 
-export const metadata: Metadata = { title: "Witchcraft supplies" };
+export const metadata: Metadata = { title: "Spiritual supplies" };
 
 const FIELDS: FieldDef[] = [
   { name: "name", label: "Supply", type: "text", required: true, placeholder: "White chime candles" },
@@ -35,7 +35,7 @@ export default async function SuppliesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Witchcraft"
+        eyebrow="Spiritual"
         title="Supplies"
         description="Candles, herbs, oils, incense, salts, jars and more. Part of the household inventory, so low stock flows to the shopping list."
         actions={

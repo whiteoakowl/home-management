@@ -54,7 +54,7 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Home Maintenance | Rooms & systems, maintenance schedules with costs, repair log with photos & warranties, remodeling projects, to-do lists, documents & warranties, home inventory with insurance report, service providers, printable household manual, calendar |
 | Medical | Private health profiles, allergies & food restrictions (flagged in recipes and meal plans), conditions, medications with refill reminders, documents, appointments |
 | Pets | Pet profiles & photos, vet records, flea/tick/heartworm reminders, food & supplies, care chores, memories |
-| Witchcraft | Moon phases, Wheel of the Year, celebrations, spells, rituals, printable grimoire, crystals, herbs (with safety notes), tools, wellness, supplies |
+| Spiritual | Dark celestial theme; customizable dashboard; moon phases, Wheel of the Year, celebrations, spells, rituals, printable grimoire, crystals, herbs (with safety notes), tools, wellness, supplies |
 | Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared |
 | Kitchen | Pantry / fridge / freezer / supplies, gentle expiration alerts, barcode scanning, waste tracking, “What can I cook?” with use-it-up suggestions |
 | Meals & recipes | Recipe book with pantry check and printable books, import from a link or pasted text, cook mode with step-by-step view and timers, weekly planner (copy last week), auto-built shopping lists with prices, totals and “buy again” |

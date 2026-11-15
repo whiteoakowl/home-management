@@ -11,7 +11,7 @@ export const CRAFT_META: Record<CraftKind, { label: string; plural: string; emoj
   crystal: { label: "Crystal", plural: "Crystals", emoji: "🔮", blurb: "Crystal reference and your personal collection." },
   herb: { label: "Herb", plural: "Herbs", emoji: "🌿", blurb: "Magical herbs with folklore, traditional use and safety kept clearly separate." },
   tool: { label: "Tool", plural: "Tools", emoji: "🪄", blurb: "Ritual tools, their purposes and care." },
-  wellness: { label: "Practice", plural: "Magical wellness", emoji: "🌙", blurb: "Meditations, journaling prompts and self-care rituals. Spiritual practice, not medical advice." },
+  wellness: { label: "Practice", plural: "Spiritual wellness", emoji: "🌙", blurb: "Meditations, journaling prompts and self-care rituals. Spiritual practice, not medical advice." },
 };
 
 /** Columns on craft_items; every other field lives in the `fields` JSONB. */

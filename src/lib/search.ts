@@ -326,7 +326,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
   if (viewer.can("witchcraft")) {
     group(
       "craft",
-      "Witchcraft",
+      "Spiritual",
       "Moon",
       Promise.all([
         db
@@ -348,9 +348,9 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
           .limit(3),
         db.select({ id: celebrations.id, title: celebrations.name, date: celebrations.date }).from(celebrations).where(and(eq(celebrations.familyId, fid), ilike(celebrations.name, like))).limit(3),
       ]).then(([items, gr, cel]) => [
-        ...items.map((x) => ({ id: x.id, title: x.title, subtitle: x.kind[0]!.toUpperCase() + x.kind.slice(1), href: `/witchcraft/item/${x.id}` })),
-        ...gr.map((x) => ({ id: x.id, title: x.title ?? x.body.slice(0, 60), subtitle: "Grimoire", href: "/witchcraft/grimoire" })),
-        ...cel.map((x) => ({ id: x.id, title: x.title, subtitle: `Celebration · ${x.date}`, href: `/witchcraft/celebrations/${x.id}` })),
+        ...items.map((x) => ({ id: x.id, title: x.title, subtitle: x.kind[0]!.toUpperCase() + x.kind.slice(1), href: `/spiritual/item/${x.id}` })),
+        ...gr.map((x) => ({ id: x.id, title: x.title ?? x.body.slice(0, 60), subtitle: "Grimoire", href: "/spiritual/grimoire" })),
+        ...cel.map((x) => ({ id: x.id, title: x.title, subtitle: `Celebration · ${x.date}`, href: `/spiritual/celebrations/${x.id}` })),
       ]),
     );
   }

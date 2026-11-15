@@ -93,7 +93,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       { module: "reports", label: "Reports", description: "History and trends" },
       { module: "medical", label: "Medical & health", description: "Private health records, allergies, medications and appointments" },
       { module: "pets", label: "Pets", description: "Pet profiles, vet records, preventatives and care schedules" },
-      { module: "witchcraft", label: "Witchcraft & spirituality", description: "Moon phases, Wheel of the Year, spells, crystals and herbs" },
+      { module: "witchcraft", label: "Spiritual", description: "Moon phases, Wheel of the Year, spells, crystals and herbs" },
     ],
   },
 ];

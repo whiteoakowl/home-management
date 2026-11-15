@@ -77,7 +77,7 @@ export function CraftCard({ it, owned }: { it: Item; owned?: number }) {
   const moon = it.moonPhase ? MOON_OPTIONS.find((m) => m.value === it.moonPhase)?.label : null;
   const sabbat = it.sabbat ? SABBAT_OPTIONS.find((s) => s.value === it.sabbat)?.label : null;
   return (
-    <Link href={`/witchcraft/item/${it.id}`} className="group flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-primary-300">
+    <Link href={`/spiritual/item/${it.id}`} className="group flex gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-primary-300">
       <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-50 to-mist-50 text-3xl">
         {img ? (
           // eslint-disable-next-line @next/next/no-img-element
