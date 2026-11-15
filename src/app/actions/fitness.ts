@@ -5,14 +5,9 @@ import { redirect } from "next/navigation";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
-  familyMembers,
   bodyMetrics,
   fitnessPlans,
-  foodJournalEntries,
-  mealPlanEntries,
-  mealSlot,
   personalRecords,
-  recipes,
   workoutExercises,
   workoutLogSets,
   workoutLogs,
@@ -22,8 +17,6 @@ import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getFamilyMember, requireModule, type Viewer } from "@/lib/dal";
 import { canEditFitness } from "@/lib/fitness";
 import { todayIn } from "@/lib/dates";
-import { logActivity } from "@/lib/family";
-import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { f, familyMemberIdOrNull, upsertRule } from "@/lib/records";
 
 function revalidateFitness() {
@@ -208,10 +201,7 @@ export async function logWorkout(_: ActionState, fd: FormData): Promise<ActionSt
         }
       }
     }
-    // The family activity feed only mentions a workout if that person shares their fitness.
-    const who = memberId === viewer.member.id ? viewer.member : await getFamilyMember(viewer, memberId);
-    if (who && who.shareFitness)
-      await logActivity(db, viewer.family.id, memberId, "workout.logged", `finished a workout: ${title}${newPRs.length ? ` (new PR: ${newPRs.join(", ")} 💪)` : ""}`, { module: "fitness" });
+    // Workouts are personal: they're not announced in the family activity feed.
     revalidateFitness();
     return ok(newPRs.length ? `Logged. New personal record: ${newPRs.join(", ")}!` : "Workout logged.");
   });
@@ -248,60 +238,5 @@ export async function deleteMetric(fd: FormData) {
   revalidateFitness();
 }
 
-// ─── Food journal ────────────────────────────────────────────────────────────
 
-const SLOTS = mealSlot.enumValues;
 
-export async function saveFoodEntry(_: ActionState, fd: FormData): Promise<ActionState> {
-  return guard(async () => {
-    const viewer = await requireModule("fitness", "edit");
-    const memberId = await subject(viewer, f.str(fd, "memberId"));
-    const food = f.str(fd, "food");
-    if (!food) return fail("What did you eat?", "food");
-    const slot = f.str(fd, "slot") as (typeof SLOTS)[number];
-    const image = await saveUpload(viewer, fd.get("image"));
-    await db.insert(foodJournalEntries).values({
-      familyId: viewer.family.id,
-      memberId,
-      date: f.date(fd, "date") ?? todayIn(viewer.family.timezone),
-      slot: SLOTS.includes(slot) ? slot : "snack",
-      food,
-      notes: f.str(fd, "notes"),
-      imageFileId: image,
-    });
-    revalidateFitness();
-    return ok();
-  });
-}
-
-/** Meal plan → food journal in one tap. */
-export async function logPlannedMeal(fd: FormData) {
-  const viewer = await requireModule("fitness", "edit");
-  const memberId = await subject(viewer, String(fd.get("memberId") || "") || null);
-  const [e] = await db
-    .select({ e: mealPlanEntries, name: recipes.name })
-    .from(mealPlanEntries)
-    .leftJoin(recipes, eq(recipes.id, mealPlanEntries.recipeId))
-    .where(and(eq(mealPlanEntries.id, String(fd.get("id"))), eq(mealPlanEntries.familyId, viewer.family.id)));
-  if (!e || (e.e.ownerMemberId && e.e.ownerMemberId !== viewer.member.id)) return;
-  await db.insert(foodJournalEntries).values({ familyId: viewer.family.id, memberId, date: e.e.date, slot: e.e.slot, food: e.name ?? e.e.title ?? "Meal", mealPlanEntryId: e.e.id });
-  revalidateFitness();
-}
-
-export async function deleteFoodEntry(fd: FormData) {
-  const viewer = await requireModule("fitness", "edit");
-  const [e] = await db.select().from(foodJournalEntries).where(and(eq(foodJournalEntries.id, String(fd.get("id"))), eq(foodJournalEntries.familyId, viewer.family.id)));
-  if (!e) return;
-  await subject(viewer, e.memberId);
-  await db.delete(foodJournalEntries).where(eq(foodJournalEntries.id, e.id));
-  await deleteFamilyFile(viewer.family.id, e.imageFileId);
-  revalidateFitness();
-}
-
-/** Share (view-only) or stop sharing my fitness and food journal with parents. */
-export async function setShareFitness(fd: FormData) {
-  const viewer = await requireModule("fitness");
-  await db.update(familyMembers).set({ shareFitness: fd.get("share") === "true" }).where(eq(familyMembers.id, viewer.member.id));
-  revalidatePath("/fitness", "layout");
-  revalidatePath("/", "layout");
-}

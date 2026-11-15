@@ -3,6 +3,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -17,6 +18,16 @@ import { families, familyMembers, files, visibility } from "./core";
 import { recurrenceRules } from "./household";
 
 // ─── Journal ─────────────────────────────────────────────────────────────────
+
+export type JournalDetails = {
+  feelings?: string[];
+  intensity?: string | null;
+  gratitude?: string[];
+  accomplishments?: string | null;
+  challenges?: string | null;
+  selfCare?: string[];
+  prompt?: string | null;
+};
 
 export const journalEntries = pgTable(
   "journal_entries",
@@ -42,6 +53,8 @@ export const journalEntries = pgTable(
     linkedId: uuid("linked_id"),
     /** 'private' = author only (parents included). */
     visibility: visibility("visibility").notNull().default("private"),
+    /** Wellness journal extras: feelings, gratitude, accomplishments, challenges, self-care, prompt. */
+    details: jsonb("details").$type<JournalDetails>(),
     ...timestamps,
   },
   (t) => [index("journal_family_date_idx").on(t.familyId, t.date)],

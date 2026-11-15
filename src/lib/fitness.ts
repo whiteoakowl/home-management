@@ -1,43 +1,35 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { bodyMetrics, familyMembers, fitnessPlans, personalRecords, recurrenceRules, workoutExercises, workoutLogs, workouts } from "@/db/schema";
+import { bodyMetrics, fitnessPlans, personalRecords, recurrenceRules, workoutExercises, workoutLogs, workouts } from "@/db/schema";
 import { getFamilyMember, type Viewer } from "./dal";
+import { personalSubjects } from "./privacy";
 
 /**
- * Fitness privacy. Everyone sees their own, and nobody else's unless that person
- * turns on "Share my fitness with parents" (family_members.share_fitness): then
- * parents can see it, read-only. Family members without a login (young kids) can't
- * choose, so parents see and manage theirs.
+ * Fitness privacy follows the person's Privacy Center setting for "Fitness"
+ * (src/lib/privacy.ts): private by default; parents or selected people only when the
+ * person shares it (view-only). Members without a login are managed by parents.
  */
-type MemberLike = { id: string; role: string; shareFitness: boolean; userId: string | null };
-
-const managedByParents = (m: MemberLike) => m.role !== "parent" && m.userId === null;
-
-export function canViewFitness(viewer: Viewer, m: MemberLike) {
-  if (m.id === viewer.member.id) return true;
-  if (!viewer.isParent) return false;
-  return m.shareFitness || managedByParents(m);
-}
+type MemberLike = { id: string; role: string; userId: string | null };
 
 export function canEditFitness(viewer: Viewer, m: MemberLike) {
-  return m.id === viewer.member.id || (viewer.isParent && managedByParents(m));
+  return m.id === viewer.member.id || (viewer.isParent && m.role !== "parent" && m.userId === null);
 }
 
 /** Members whose fitness the viewer may see (ids). */
 export async function fitnessVisibleIds(viewer: Viewer) {
-  const all = await db
-    .select({ id: familyMembers.id, role: familyMembers.role, shareFitness: familyMembers.shareFitness, userId: familyMembers.userId })
-    .from(familyMembers)
-    .where(eq(familyMembers.familyId, viewer.family.id));
-  return all.filter((m) => canViewFitness(viewer, m)).map((m) => m.id);
+  return (await personalSubjects(viewer, "fitness")).map((s) => s.id);
+}
+
+export async function canViewFitness(viewer: Viewer, memberId: string) {
+  return memberId === viewer.member.id || (await fitnessVisibleIds(viewer)).includes(memberId);
 }
 
 /** Whose fitness are we looking at? The requested member if allowed, else yourself. */
 export async function fitnessSubject(viewer: Viewer, requested: unknown) {
-  if (typeof requested === "string" && requested !== viewer.member.id) {
+  if (typeof requested === "string" && requested !== viewer.member.id && (await canViewFitness(viewer, requested))) {
     const m = await getFamilyMember(viewer, requested);
-    if (m && canViewFitness(viewer, m)) return m;
+    if (m) return m;
   }
   return viewer.member;
 }

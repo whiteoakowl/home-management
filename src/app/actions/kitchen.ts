@@ -13,6 +13,7 @@ import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { addToInventory, FOOD_LOCATIONS } from "@/lib/kitchen";
 import { itemVisible, loadList } from "@/lib/lists";
+import { locationForCategory } from "@/lib/shopping-category";
 import { ownedCategoryId } from "@/lib/queries";
 import { f } from "@/lib/records";
 
@@ -229,7 +230,7 @@ export async function putAwayChecked(fd: FormData) {
   const checked = await db.select().from(listItems).where(and(eq(listItems.listId, list.id), eq(listItems.checked, true), itemVisible(viewer)));
   if (!checked.length) return;
   const today = todayIn(viewer.family.timezone);
-  const locFor = (cat: string | null): Loc => (cat === "frozen" ? "freezer" : cat === "dairy" || cat === "meat" || cat === "produce" ? "fridge" : cat === "household" || cat === "personal" ? "supplies" : cat === "farm" ? "farm" : cat === "garden" ? "garden" : "pantry");
+  const locFor = (cat: string | null): Loc => locationForCategory(cat);
   for (const item of checked) {
     await addToInventory(
       viewer.family.id,

@@ -143,6 +143,15 @@ export const foodJournalEntries = pgTable(
     slot: mealSlot("slot").notNull(),
     food: text("food").notNull(),
     notes: text("notes"),
+    /** breakfast | lunch | dinner | snack | dessert | beverage | other (slot keeps the 4 planner slots). */
+    meal: text("meal"),
+    /** "14:30" */
+    time: text("time"),
+    portion: text("portion"),
+    /** 1 (very hungry / not full) … 5 (not hungry / very full); optional. */
+    hunger: smallint("hunger"),
+    fullness: smallint("fullness"),
+    feelings: text("feelings").array().notNull().default([]),
     imageFileId: uuid("image_file_id").references(() => files.id, { onDelete: "set null" }),
     mealPlanEntryId: uuid("meal_plan_entry_id").references(() => mealPlanEntries.id, {
       onDelete: "set null",

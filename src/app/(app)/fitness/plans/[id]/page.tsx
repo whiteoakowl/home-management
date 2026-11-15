@@ -25,7 +25,7 @@ export default async function PlanPage({ params }: PageProps<"/fitness/plans/[id
   if (!viewer.can("fitness")) notFound();
   const [row] = await db.select().from(fitnessPlans).where(and(eq(fitnessPlans.id, id), eq(fitnessPlans.familyId, viewer.family.id)));
   const owner = row ? await getFamilyMember(viewer, row.memberId) : null;
-  if (!row || !owner || !canViewFitness(viewer, owner)) notFound();
+  if (!row || !owner || !(await canViewFitness(viewer, owner.id))) notFound();
   const plan = (await plansFor(row.memberId)).find((p) => p.id === id)!;
   const canEdit = viewer.can("fitness", "edit") && canEditFitness(viewer, owner);
   const today = todayIn(viewer.family.timezone);

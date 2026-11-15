@@ -1,3 +1,4 @@
+import { newEntryVisibility } from "@/lib/privacy";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -20,11 +21,11 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
   const sp = await searchParams;
   const kind = typeof sp.kind === "string" ? sp.kind : "all";
   const today = todayIn(viewer.family.timezone);
-  const [members, rows] = await Promise.all([memberOptions(viewer), listGoals(viewer, { kind: kind === "all" ? undefined : kind })]);
+  const [members, rows, initialVisibility] = await Promise.all([memberOptions(viewer), listGoals(viewer, { kind: kind === "all" ? undefined : kind }), newEntryVisibility(viewer.member.id, "goals")]);
   const active = rows.filter((r) => r.g.status === "active" || r.g.status === "paused");
   const done = rows.filter((r) => r.g.status === "achieved");
   const saved = rows.filter((r) => r.g.kind === "savings").reduce((s, r) => s + r.g.currentCents, 0);
-  const add = <GoalFormModal members={members} me={viewer.member.id} isParent={viewer.isParent} defaultOpen={sp.new === "1"} />;
+  const add = <GoalFormModal initialVisibility={initialVisibility} members={members} me={viewer.member.id} isParent={viewer.isParent} defaultOpen={sp.new === "1"} />;
   const canEdit = viewer.can("goals", "edit");
 
   return (
@@ -64,7 +65,7 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
       </div>
       {rows.length === 0 ? (
         <Card>
-          <EmptyState icon={<Target />} title="No goals yet" description="Set savings and family goals with milestones and watch the progress bars fill up." example="Emergency fund · Vacation · Vehicle · Education · Farm equipment · Retirement" action={canEdit ? <GoalFormModal members={members} me={viewer.member.id} isParent={viewer.isParent} /> : undefined} />
+          <EmptyState icon={<Target />} title="No goals yet" description="Set savings and family goals with milestones and watch the progress bars fill up." example="Emergency fund · Vacation · Vehicle · Education · Farm equipment · Retirement" action={canEdit ? <GoalFormModal initialVisibility={initialVisibility} members={members} me={viewer.member.id} isParent={viewer.isParent} /> : undefined} />
         </Card>
       ) : (
         <div className="flex flex-col gap-8">

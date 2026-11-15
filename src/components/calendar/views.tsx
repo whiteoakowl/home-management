@@ -38,6 +38,7 @@ export const TYPE_LABEL: Record<string, string> = {
   pets: "Pet care",
   home: "Home maintenance",
   moon: "Moon & sabbat",
+  cycle: "Cycle (private)",
 };
 export const VIS_LABEL = { family: "Family", private: "Only me", selected: "Shared with selected", parents: "Parents & me" } as const;
 

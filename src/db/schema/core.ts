@@ -122,6 +122,11 @@ export const familyMembers = pgTable(
     privateFood: boolean("private_food").notNull().default(false),
     /** Let parents open (read-only) my private food space. The member's own choice; off by default. */
     shareFoodWithParents: boolean("share_food_with_parents").notNull().default(false),
+    /**
+     * Parent oversight for a minor: personal areas (privacy categories) parents may view
+     * even if the member keeps them private. Set by parents; always shown to the member.
+     */
+    parentAccess: text("parent_access").array().notNull().default([]),
     birthday: date("birthday"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,

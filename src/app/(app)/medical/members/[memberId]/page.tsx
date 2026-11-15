@@ -1,3 +1,4 @@
+import { newEntryVisibility } from "@/lib/privacy";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Camera, CalendarClock, FileText, Pill, Salad, Stethoscope, TriangleAlert, UserRound } from "lucide-react";
@@ -47,6 +48,7 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
   const ids = [...(profile ? [profile.id] : []), ...lists.flatMap((l) => l.map(({ r }) => r.id))];
   const access = await getRecordAccess("medical", ids);
   const vis = MEDICAL_VISIBILITY;
+  const medDefault = await newEntryVisibility(viewer.member.id, "medical", "parents");
   const canPhoto = viewer.isParent || viewer.member.id === memberId;
   const now = new Date();
   return (
@@ -90,7 +92,7 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
                   defaults={profile ? medicalDefaults("profile", profile as never) : { fullName: member.displayName }}
                   hidden={{ kind: "profile", memberId: member.id, ...(profile ? { id: profile.id } : {}) }}
                   members={members}
-                  visibility={{ ...vis, defaultValue: profile?.visibility ?? "parents", selected: profile ? access.get(profile.id) : [] }}
+                  visibility={{ ...vis, defaultValue: profile?.visibility ?? medDefault.visibility, selected: profile ? access.get(profile.id) : medDefault.sharedWith }}
                 />
               </span>
             )
@@ -125,7 +127,7 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
                 defaults={{ active: true }}
                 hidden={{ kind: s.kind, memberId: member.id }}
                 members={members}
-                visibility={{ ...vis, defaultValue: "parents" }}
+                visibility={{ ...vis, defaultValue: medDefault.visibility, selected: medDefault.sharedWith }}
               />
             )}
           </div>

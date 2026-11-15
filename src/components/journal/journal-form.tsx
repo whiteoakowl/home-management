@@ -43,7 +43,7 @@ function MoodPicker({ defaultValue }: { defaultValue?: string | null }) {
   );
 }
 
-export function JournalFormModal({ members, today, defaults, defaultOpen, triggerContent, triggerLabel = "New entry" }: { members: MemberOption[]; today: string; defaults?: JournalDefaults; defaultOpen?: boolean; triggerContent?: ReactNode; triggerLabel?: string }) {
+export function JournalFormModal({ members, today, defaults, defaultOpen, triggerContent, triggerLabel = "New entry", initialVisibility }: { members: MemberOption[]; today: string; defaults?: JournalDefaults; defaultOpen?: boolean; triggerContent?: ReactNode; triggerLabel?: string; initialVisibility?: { visibility: "private" | "parents" | "selected"; sharedWith: string[] } }) {
   return (
     <FormModal
       title={defaults ? "Edit entry" : "New journal entry"}
@@ -71,7 +71,7 @@ export function JournalFormModal({ members, today, defaults, defaultOpen, trigge
       <Field label="Who's in this memory">
         <MemberChips name="people" members={members} defaultValue={defaults?.people} />
       </Field>
-      <VisibilityField members={members} defaultValue={defaults?.visibility ?? "private"} defaultSelected={defaults?.sharedWith} privateLabel="Only me" />
+      <VisibilityField members={members} defaultValue={defaults?.visibility ?? initialVisibility?.visibility ?? "private"} defaultSelected={defaults?.sharedWith ?? initialVisibility?.sharedWith} privateLabel="Only me" />
     </FormModal>
   );
 }

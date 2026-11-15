@@ -5,6 +5,7 @@ import type { AccessLevel, Module } from "@/db/schema/_shared";
 import { createMemberLogin, savePermissions, savePrivateFood } from "@/app/actions/family";
 import { Field, FormMessage, Input, Select, SubmitButton } from "@/components/ui/form";
 import { PermissionLegend, PermissionRows } from "@/components/family/permissions-matrix";
+import { saveParentAccess } from "@/app/actions/privacy";
 
 export function PermissionsForm({
   member,
@@ -70,6 +71,37 @@ export function PrivateFoodForm({ memberId, name, enabled, parentsCanSee }: { me
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
       </div>
+    </form>
+  );
+}
+
+/** Parent oversight for a minor: personal areas parents may view. The member sees this in their Privacy Center. */
+export function ParentAccessForm({ memberId, name, areas, selected, hasLogin }: { memberId: string; name: string; areas: { key: string; label: string }[]; selected: string[]; hasLogin: boolean }) {
+  const [state, action] = useActionState(saveParentAccess, undefined);
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
+      <input type="hidden" name="memberId" value={memberId} />
+      <p className="text-[15px] text-muted">
+        {hasLogin
+          ? `${name}'s personal areas are private to them unless they share them. For a minor, you can turn on parent oversight for specific areas. ${name} will see exactly what's on in their Privacy Center.`
+          : `${name} doesn't have a login, so parents manage their personal areas.`}
+      </p>
+      {hasLogin && (
+        <>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {areas.map((a) => (
+              <label key={a.key} className="flex min-h-11 items-center gap-2 rounded-xl border border-line-strong px-3 text-sm">
+                <input type="checkbox" name="areas" value={a.key} defaultChecked={selected.includes(a.key)} className="size-4 accent-[var(--color-primary-600)]" />
+                {a.label}
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
+          </div>
+        </>
+      )}
     </form>
   );
 }

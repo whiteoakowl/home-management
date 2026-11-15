@@ -10,7 +10,10 @@ import { PageHeader } from "@/components/ui/display";
 import { MODULES } from "@/db/schema/_shared";
 import { getFamilyMember, requireParent } from "@/lib/dal";
 import { getStoredPermissions } from "@/lib/family";
-import { LoginForm, PermissionsForm, PrivateFoodForm } from "./forms";
+import { LoginForm, ParentAccessForm, PermissionsForm, PrivateFoodForm } from "./forms";
+import { todayIn } from "@/lib/dates";
+import { isMinor, PRIVACY_META } from "@/lib/privacy";
+import { PRIVACY_CATEGORIES } from "@/db/schema";
 import { MemberEmailForm, ResetPasswordForm } from "../../../account/forms";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -55,6 +58,19 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
           />
         )}
       </Card>
+
+      {member.role !== "parent" && isMinor(member, todayIn(viewer.family.timezone)) && (
+        <Card>
+          <CardHeader title="Personal areas: parent oversight" />
+          <ParentAccessForm
+            memberId={member.id}
+            name={member.displayName}
+            hasLogin={!!member.userId}
+            selected={member.parentAccess}
+            areas={PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry).map((c) => ({ key: c, label: PRIVACY_META[c].label }))}
+          />
+        </Card>
+      )}
 
       <Card>
         <CardHeader title="Family Pantry: private food space" />

@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Check, Dumbbell, Flame, Lock, Medal, Target, Timer, Users } from "lucide-react";
-import { deleteWorkoutLog, setShareFitness } from "@/app/actions/fitness";
+import { deleteWorkoutLog } from "@/app/actions/fitness";
+import { AUDIENCE_LABEL, privacyFor } from "@/lib/privacy";
 import { LineChart } from "@/components/charts";
-import { ActionButton, DeleteButton } from "@/components/forms/inline";
+import { DeleteButton } from "@/components/forms/inline";
 import { LogWorkoutModal, MetricModal, PlanModal } from "@/components/fitness/fitness-forms";
 import { GoalFormModal } from "@/components/goals/goal-forms";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -23,7 +24,7 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
   const viewer = await getViewer();
   if (!viewer.can("fitness")) notFound();
   const sp = await searchParams;
-  const [subject, fitnessIds] = await Promise.all([fitnessSubject(viewer, sp.member), fitnessVisibleIds(viewer)]);
+  const [subject, fitnessIds, fitnessPrivacy] = await Promise.all([fitnessSubject(viewer, sp.member), fitnessVisibleIds(viewer), privacyFor(viewer.member.id, "fitness")]);
   const today = todayIn(viewer.family.timezone);
   const monday = startOfWeek(today, 1);
   const week = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
@@ -58,11 +59,11 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
       />
       {subject.id === viewer.member.id && (
         <div className="-mt-2 mb-5 flex flex-wrap items-center gap-3 rounded-xl bg-sunken px-4 py-3 text-sm">
-          {viewer.member.shareFitness ? <Users className="size-4 text-primary-600" aria-hidden /> : <Lock className="size-4 text-muted" aria-hidden />}
-          <span className="flex-1">{viewer.member.shareFitness ? `${viewer.isParent ? "The other parents" : "Parents"} can see (not edit) your fitness and food journal.` : "Your fitness and food journal are private. Only you can see them."}</span>
-          <ActionButton action={setShareFitness} fields={{ share: String(!viewer.member.shareFitness) }} className="h-9 rounded-full border border-line-strong bg-surface px-3 font-medium hover:bg-primary-50">
-            {viewer.member.shareFitness ? "Stop sharing" : viewer.isParent ? "Share with the other parents" : "Share with parents"}
-          </ActionButton>
+          {fitnessPrivacy.audience !== "private" ? <Users className="size-4 text-primary-600" aria-hidden /> : <Lock className="size-4 text-muted" aria-hidden />}
+          <span className="flex-1">{fitnessPrivacy.audience === "private" ? "Your fitness is private. Only you can see it." : `${AUDIENCE_LABEL[fitnessPrivacy.audience]} (view only).`}</span>
+          <Link href="/privacy" className="inline-flex h-9 items-center rounded-full border border-line-strong bg-surface px-3 font-medium hover:bg-primary-50">
+            Privacy settings
+          </Link>
         </div>
       )}
       <FitnessNav active="overview" subjectId={subject.id} members={members.filter((m) => fitnessIds.includes(m.id))} isParent={viewer.isParent} />

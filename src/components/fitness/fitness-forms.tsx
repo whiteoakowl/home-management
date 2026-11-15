@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { logMetric, logWorkout, saveExercise, saveFoodEntry, savePlan, saveWorkout } from "@/app/actions/fitness";
+import { logMetric, logWorkout, saveExercise, savePlan, saveWorkout } from "@/app/actions/fitness";
 import { FormModal } from "@/components/forms/action-form";
-import { DateField, FormRow, ImageField, NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { DateField, FormRow, NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { Field } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 
@@ -131,17 +131,3 @@ export function MetricModal({ memberId, today }: { memberId: string; today: stri
   );
 }
 
-export function FoodModal({ memberId, date }: { memberId: string; date: string }) {
-  return (
-    <FormModal title="Add to food journal" triggerLabel="Add food" action={saveFoodEntry} size="sm">
-      <input type="hidden" name="memberId" value={memberId} />
-      <FormRow>
-        <SelectField name="slot" label="Meal" defaultValue="lunch" options={[{ value: "breakfast", label: "Breakfast" }, { value: "lunch", label: "Lunch" }, { value: "dinner", label: "Dinner" }, { value: "snack", label: "Snack" }]} />
-        <DateField name="date" label="Date" defaultValue={date} />
-      </FormRow>
-      <TextField name="food" label="Food" required placeholder="Turkey sandwich & apple" />
-      <TextAreaField name="notes" label="Notes" rows={2} placeholder="How did you feel?" />
-      <ImageField label="Photo (optional)" />
-    </FormModal>
-  );
-}

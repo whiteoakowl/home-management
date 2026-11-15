@@ -1,3 +1,4 @@
+import { newEntryVisibility } from "@/lib/privacy";
 import { redirect } from "next/navigation";
 import { Search } from "lucide-react";
 import { saveMedicalRecord } from "@/app/actions/medical";
@@ -36,7 +37,7 @@ export async function MedicalKindPage({
 }) {
   const viewer = await medicalViewer();
   const canEdit = viewer.can("medical", "edit");
-  const [members, rowsAll] = await Promise.all([memberOptions(viewer), listMedical(viewer, kind)]);
+  const [members, rowsAll, medDefault] = await Promise.all([memberOptions(viewer), listMedical(viewer, kind), newEntryVisibility(viewer.member.id, "medical", "parents")]);
   const q = (sp.q ?? "").trim().toLowerCase();
   const rows = rowsAll.filter(({ r }) => {
     const rec = r as Record<string, unknown>;
@@ -56,7 +57,7 @@ export async function MedicalKindPage({
       defaults={{ memberId: sp.member ?? null, active: true }}
       hidden={{ kind }}
       members={members}
-      visibility={{ defaultValue: "parents", ...MEDICAL_VISIBILITY }}
+      visibility={{ ...MEDICAL_VISIBILITY, defaultValue: medDefault.visibility, selected: medDefault.sharedWith }}
     />
   ) : undefined;
   const filterBase = "inline-flex h-9 items-center rounded-full px-3 text-sm";

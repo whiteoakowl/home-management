@@ -10,6 +10,7 @@ import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
 import { canAddToList, canSeeItem, itemVisible, listModule, loadList } from "@/lib/lists";
 import { ownerForNew } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
+import { guessShoppingCategory } from "@/lib/shopping-category";
 import { logActivity } from "@/lib/family";
 import { ownedCategoryId } from "@/lib/queries";
 import { f, familyMemberIdOrNull, saveRecordAccess, upsertRule, visibilityFromForm } from "@/lib/records";
@@ -220,22 +221,6 @@ export async function clearChecked(fd: FormData) {
   const l = await loadList(viewer, String(fd.get("id")), true);
   await db.delete(listItems).where(and(eq(listItems.listId, l.id), eq(listItems.checked, true), itemVisible(viewer)));
   revalidateLists(l.kind);
-}
-
-/** Very small keyword classifier for shopping aisles. */
-function guessShoppingCategory(text: string): (typeof SHOP_CATS)[number] {
-  const t = text.toLowerCase();
-  const has = (words: string[]) => words.some((w) => t.includes(w));
-  if (has(["apple", "banana", "lettuce", "tomato", "onion", "potato", "carrot", "berr", "fruit", "pepper", "garlic", "lemon", "lime", "spinach", "avocado", "herb", "cucumber", "celery"])) return "produce";
-  if (has(["chicken", "beef", "pork", "turkey", "bacon", "sausage", "fish", "salmon", "steak", "ham", "ground"])) return "meat";
-  if (has(["milk", "cheese", "yogurt", "butter", "cream", "egg"])) return "dairy";
-  if (has(["frozen", "ice cream", "peas"])) return "frozen";
-  if (has(["soap", "detergent", "paper towel", "toilet", "trash bag", "sponge", "bleach", "foil", "wrap"])) return "household";
-  if (has(["shampoo", "toothpaste", "deodorant", "razor", "lotion", "vitamin"])) return "personal";
-  if (has(["seed", "soil", "mulch", "fertilizer", "compost"])) return "garden";
-  if (has(["feed", "hay", "straw", "bedding", "layer pellet", "scratch"])) return "farm";
-  if (has(["flour", "sugar", "rice", "pasta", "bean", "oil", "salt", "cereal", "bread", "sauce", "spice", "oat", "can", "coffee", "tea"])) return "pantry";
-  return "other";
 }
 
 /** One-tap re-add of a frequently bought item. */

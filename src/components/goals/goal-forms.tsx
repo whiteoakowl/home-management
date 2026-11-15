@@ -45,6 +45,7 @@ export function GoalFormModal({
   defaultOpen,
   triggerContent,
   triggerLabel = "New goal",
+  initialVisibility,
 }: {
   members: MemberOption[];
   me: string;
@@ -54,6 +55,7 @@ export function GoalFormModal({
   defaultOpen?: boolean;
   triggerContent?: ReactNode;
   triggerLabel?: string;
+  initialVisibility?: { visibility: "private" | "parents" | "selected"; sharedWith: string[] };
 }) {
   const [kind, setKind] = useState(defaults?.kind ?? defaultKind);
   const money = kind === "savings";
@@ -89,7 +91,7 @@ export function GoalFormModal({
       )}
       <TextAreaField name="description" label="Why it matters" rows={2} defaultValue={defaults?.description ?? ""} />
       <TextAreaField name="notes" label="Notes" rows={2} defaultValue={defaults?.notes ?? ""} />
-      <VisibilityField members={members} defaultValue={defaults?.visibility} defaultSelected={defaults?.sharedWith} />
+      <VisibilityField members={members} defaultValue={defaults?.visibility ?? initialVisibility?.visibility} defaultSelected={defaults?.sharedWith ?? initialVisibility?.sharedWith} />
     </FormModal>
   );
 }

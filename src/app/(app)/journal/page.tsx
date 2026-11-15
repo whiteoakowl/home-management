@@ -1,3 +1,4 @@
+import { newEntryVisibility } from "@/lib/privacy";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -61,7 +62,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 100) : "";
   const tag = typeof sp.tag === "string" ? sp.tag : "";
   const month = typeof sp.month === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.month) ? sp.month : startOfMonth(today);
-  const [members, tags] = await Promise.all([memberOptions(viewer), journalTags(viewer)]);
+  const [members, tags, initialVisibility] = await Promise.all([memberOptions(viewer), journalTags(viewer), newEntryVisibility(viewer.member.id, "journal")]);
 
   const entries =
     view === "today"
@@ -74,7 +75,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
             : []
           : await listEntries(viewer);
   const canEdit = viewer.can("journal", "edit");
-  const add = <JournalFormModal members={members} today={today} defaultOpen={sp.new === "1"} />;
+  const add = <JournalFormModal initialVisibility={initialVisibility} members={members} today={today} defaultOpen={sp.new === "1"} />;
   const mine = entries.filter((x) => x.e.date === today && x.e.authorMemberId === viewer.member.id);
 
   return (
@@ -96,7 +97,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
             <p className="text-sm font-medium text-primary-600">{formatLongDate(today)}</p>
             <h2 className="mt-1 text-2xl font-semibold">{mine.length ? "You've written today ✨" : "What's worth remembering today?"}</h2>
             <p className="mt-1 text-[15px] text-muted">Your entries are private unless you choose to share them.</p>
-            {canEdit && <div className="mt-4">{<JournalFormModal members={members} today={today} triggerLabel={mine.length ? "Add another entry" : "Write today's entry"} />}</div>}
+            {canEdit && <div className="mt-4">{<JournalFormModal initialVisibility={initialVisibility} members={members} today={today} triggerLabel={mine.length ? "Add another entry" : "Write today's entry"} />}</div>}
           </Card>
           {entries.length === 0 ? (
             <Card>
@@ -117,7 +118,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
         <div className="mx-auto max-w-3xl">
           {entries.length === 0 ? (
             <Card>
-              <EmptyState icon={<NotebookPen />} title="Your journal is empty" description="Start writing and your entries will appear here as a timeline." action={canEdit ? <JournalFormModal members={members} today={today} /> : undefined} />
+              <EmptyState icon={<NotebookPen />} title="Your journal is empty" description="Start writing and your entries will appear here as a timeline." action={canEdit ? <JournalFormModal initialVisibility={initialVisibility} members={members} today={today} /> : undefined} />
             </Card>
           ) : (
             [...Map.groupBy(entries, (x) => x.e.date.slice(0, 7)).entries()].map(([m, list]) => (

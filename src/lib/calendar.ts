@@ -12,6 +12,7 @@ import {
   pets,
   projectStages,
   sabbatSettings,
+  periodDays,
   animals,
   calendarEvents,
   categories,
@@ -29,13 +30,14 @@ import {
 } from "@/db/schema";
 import { automationOn } from "./automation";
 import { fitnessVisibleIds } from "./fitness";
+import { personalSubjects } from "./privacy";
 import { visibleTo, type Viewer } from "./dal";
 import { addDays, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 
-export const LAYERS = ["events", "chores", "workouts", "meals", "garden", "farm", "pets", "home", "moon"] as const;
+export const LAYERS = ["events", "chores", "workouts", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -267,6 +269,22 @@ export async function getCalendarItems(
     for (let y = Number(from.slice(0, 4)); y <= Number(to.slice(0, 4)); y++) {
       for (const x of wheelForYear(y, { tz, southern: (viewer.family.latitude ?? 1) < 0, overrides })) {
         if (x.date >= from && x.date <= to) out.push({ key: `sb:${x.key}:${y}`, id: x.key, layer: "moon", title: `${x.s.emoji} ${x.s.name}`, date: x.date, startMin: null, endMin: null, color: "orchid", href: `/spiritual/wheel/${x.key}`, people: [] });
+      }
+    }
+  }
+
+  // Period days: only for people who chose "Show on the calendar", and only to them and the people they share with.
+  if (want("cycle")) {
+    const owners = (await personalSubjects(viewer, "period")).filter((s) => s.setting.options.showOnCalendar && (!subject || s.id === subject));
+    if (owners.length) {
+      const rows = await db
+        .select({ memberId: periodDays.memberId, date: periodDays.date, flow: periodDays.flow })
+        .from(periodDays)
+        .where(and(inArray(periodDays.memberId, owners.map((o) => o.id)), gte(periodDays.date, from), lte(periodDays.date, to), inArray(periodDays.flow, ["spotting", "light", "medium", "heavy"])));
+      for (const r of rows) {
+        const o = owners.find((x) => x.id === r.memberId)!;
+        const mine = o.id === viewer.member.id;
+        out.push({ key: `cy:${r.memberId}:${r.date}`, id: `${r.memberId}:${r.date}`, layer: "cycle", title: `${mine ? "" : `${o.displayName.split(" ")[0]}: `}${r.flow === "spotting" ? "Spotting" : "Period"}`, date: r.date, startMin: null, endMin: null, color: "wine", href: mine ? `/health/period?month=${r.date.slice(0, 7)}` : `/health/period?member=${o.id}&month=${r.date.slice(0, 7)}`, people: [o.id], visibility: mine ? "private" : "selected", type: "cycle" });
       }
     }
   }
