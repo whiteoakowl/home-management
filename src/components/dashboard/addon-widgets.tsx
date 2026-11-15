@@ -55,7 +55,7 @@ export async function PetsWidget({ scope }: { scope: Scope }) {
     <Card>
       <CardHeader title="Pets" icon={<PawPrint className={ic} />} href="/pets" />
       {count === 0 ? (
-        <EmptyState compact icon={<PawPrint />} title="No pets yet" description="Add your companions to track their care." />
+        <EmptyState compact icon={<PawPrint />} title="No pets have been added." description="Add your companions to track their care." />
       ) : rows.length ? (
         <ul className="flex flex-col gap-1.5 text-sm">
           {rows.map((r) => (

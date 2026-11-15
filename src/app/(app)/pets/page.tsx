@@ -36,7 +36,7 @@ export default async function PetsDashboard({ searchParams }: PageProps<"/pets">
       <PetsTabs active="dashboard" />
       {list.length === 0 ? (
         <Card>
-          <EmptyState icon={<PawPrint />} title="No pets yet" description="Add your dogs, cats, birds and other companions to track their care." action={canEdit && <PetModal members={members} />} />
+          <EmptyState icon={<PawPrint />} title="No pets have been added." description="Add your dogs, cats, birds and other companions to track their care." action={canEdit && <PetModal members={members} />} />
         </Card>
       ) : (
         <>

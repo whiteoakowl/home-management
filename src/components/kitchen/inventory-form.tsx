@@ -89,9 +89,9 @@ export function InventoryFormModal({
   return (
     <FormModal
       title={defaults?.id ? "Edit item" : privateSpace ? "Add to My Pantry" : "Add to the Family Pantry"}
-      triggerLabel="Add item"
+      triggerLabel="Add Food"
       action={saveInventoryItem}
-      submitLabel={defaults?.id ? "Save" : "Add item"}
+      submitLabel={defaults?.id ? "Save" : "Add food"}
       defaultOpen={defaultOpen}
       triggerContent={triggerContent}
       triggerClassName={triggerClassName}
