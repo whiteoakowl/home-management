@@ -36,7 +36,7 @@ export function BookScanner({ categories, members, personal }: { categories: { i
     }
     setLooking(false);
   }, []);
-  const { videoRef, camera, start, stop, supported, error } = useBarcodeCamera({ formats: FORMATS, onDetect: identify });
+  const { videoRef, camera, start, stop, supported, error, waiting } = useBarcodeCamera({ formats: FORMATS, onDetect: identify });
   useAutoStart(start, supported);
 
   const reset = () => {
@@ -62,7 +62,7 @@ export function BookScanner({ categories, members, personal }: { categories: { i
       {(!code || badIsbn) && (
         <Card className="flex flex-col items-center gap-4 p-4 sm:p-5">
           <div className="relative aspect-[4/3] w-full max-w-xl overflow-hidden rounded-2xl bg-[#141a33]">
-            <video ref={videoRef} playsInline muted autoPlay className="size-full object-cover" />
+            <video ref={videoRef} playsInline muted className="size-full object-cover" />
             {camera === "on" && <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-[#e0c27e] shadow-[0_0_12px_#e0c27e]" />}
             {camera !== "on" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-white/90">
@@ -74,6 +74,7 @@ export function BookScanner({ categories, members, personal }: { categories: { i
           <Button onClick={camera === "on" ? stop : start} disabled={camera === "starting"} variant={camera === "on" ? "secondary" : "primary"} icon={camera === "on" ? <CameraOff className="size-4" /> : <Camera className="size-4" />}>
             {camera === "on" ? "Stop camera" : camera === "starting" ? "Starting…" : "Start scanning"}
           </Button>
+          {camera === "starting" && waiting && <p role="status" className="max-w-xl text-sm text-ink-soft">Waiting for camera permission. If your phone asks, tap <strong>Allow</strong>.</p>}
           {camera === "error" && <p role="alert" className="max-w-xl text-sm text-wine-700">{error}</p>}
           {badIsbn && (
             <p role="alert" className="text-sm text-wine-700">
