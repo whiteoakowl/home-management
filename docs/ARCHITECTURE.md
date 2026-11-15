@@ -163,8 +163,77 @@ low-stock, put-away, craft/celebration links) filters to the family space.
 | Module | Default for `member` |
 |---|---|
 | calendar, chores, lists, recipes, meals, journal, goals, fitness | `edit` (scoped by visibility/assignment) |
-| house, kitchen, garden, farm, shopping | `view` |
+| house, cleaning, projects (House Projects), info (Important Info), kitchen, garden, farm, shopping | `view` |
 | budget, reports, settings | `none` |
+
+House is split into separate permission areas: **Cleaning** (`/house/cleaning`), **Chores**
+(`/house/chores`), **House Projects** (`/maintenance/projects`) and **Important Info** (`/house/info`),
+alongside **Maintenance**. Migration 0016 gave everyone the access they already had (House → Cleaning and
+Important Info, Maintenance → House Projects).
+
+**Changing things.** Parents can change anything they can see. Members, with *Add own* or *Add & edit*,
+can add things and change only what they added (`canChangeItem` / `assertCanChange` in `src/lib/dal.ts`;
+`canChange` for food records; list items by `added_by_member_id`). The family activity feed only names
+items shared with the whole family.
+
+### 3.2 Personal privacy (Privacy Center)
+
+Personal areas belong to one person and are **private by default**: Period Tracker, Food Journal, Mental
+Wellness and Fitness. `privacy_settings(member_id, category, audience, member_ids, options)` holds each
+person's choice per area: `private` · `parents` · `selected` (`src/lib/privacy.ts`, page `/privacy`).
+Journal, Goals and Medical keep per-entry visibility; the Privacy Center sets the default for new entries.
+`personalAccess()` decides access:
+
+1. yourself, always;
+2. **managed**: parents, for a family member without a login;
+3. **oversight**: parents, for a minor (under 18 or no birthday) in the areas parents turned on
+   (`family_members.parent_access`, Family → Manage). The member sees this in their Privacy Center;
+4. **shared**: the parents / selected people the person chose.
+
+Only the owner (or parents for a member without a login) can change personal records
+(`canManagePersonal`). Nothing personal appears on the family dashboard. Period days appear on the
+calendar only if the person turns on "Show on the calendar" (layer `cycle`, owner + their audience).
+
+### 3.3 Personal areas
+
+* **Period Tracker** (`/health/period`, `period_days`, `src/lib/cycle.ts`): one row per recorded day (flow,
+  symptoms, feelings, intensity, note). Periods/cycles are derived from light/medium/heavy flow days.
+  Statistics and estimates come from the person's records (or typical lengths until two periods are
+  recorded) and are always labelled as estimates. **Simple tracking is the default**; ovulation
+  estimates ("ovulation window") show only when `personal_health_profiles.show_ovulation` is on. For a
+  minor only parents can turn it on (Family → Manage); adults choose for themselves.
+* **Food Journal** (`/health/food`, `food_journal_entries`): date, time, meal (breakfast … beverage,
+  other), food, portion, hunger, fullness, feelings, notes, photo; day / week / month / timeline views and
+  search. Neutral wording only: no calories, targets or good/bad foods. `/fitness/food` redirects here.
+* **Mental Wellness** (`/wellness`): daily check-ins (`wellness_check_ins`: mood, feelings, intensity,
+  self-care, note, `shared`), wellness journal (`journal_entries` with `book = 'wellness'` and `details`
+  JSON: gratitude, accomplishments, challenges, self-care, prompt; kept out of the family Journal), gentle
+  goals (`wellness_goals`, progress counted from activity), daily quotes (`src/lib/quotes.ts`, original or
+  public-domain; favourites + notes in `quote_favorites`), mood history (week/month/year), reminders
+  (`personal_health_profiles.reminders`, daily automation, kind `wellness_reminder`). Sharing is per item
+  (today's mood, an entry, a goal) to the person's Mental Wellness audience. If text suggests someone may
+  be in danger (`needsSupport`), a support panel shows 911 / 988 / Crisis Text Line and a "Let my parents
+  know I'd like to talk" button that notifies parents without sharing what was written. It never
+  diagnoses.
+
+### 3.4 Imports
+
+* **Grocery receipts** (`/kitchen/receipt`, `/kitchen/receipts`): the photo is read **on the device**
+  with tesseract.js (assets self-hosted in `public/ocr`, copied by `scripts/copy-ocr-assets.mjs`), parsed
+  by `src/lib/receipt.ts`, then reviewed item by item. Only reviewed, selected items are added to the
+  Family Pantry or My Pantry; items already in the pantry are offered "Add to existing inventory".
+  Receipts can be saved (`grocery_receipts`, `grocery_receipt_items`) and recorded as a household expense.
+* **Word recipes** (`/recipes/import-word`): `src/lib/recipe-doc.ts` reads the .docx (ZIP) on the server,
+  splits pages at page/section breaks (Word's rendered breaks if there are none) and reads each page as
+  one recipe; fields not in the document are left blank. Review, rename, categorise, tag and add photos,
+  then save to Family Recipes or My Private Recipes.
+
+### 3.5 Colours
+
+Members have 26 colours (`src/lib/colors.ts`), used on avatars, the calendar and charts and chosen by
+parents. Each person can also pick their own **app colour theme** (`family_members.app_theme`, Account →
+My settings): it regenerates the `--color-primary-*` tokens for their app only (`src/lib/theme.ts`, with
+contrast checks) and never changes member colours.
 
 ---
 

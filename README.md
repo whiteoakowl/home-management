@@ -66,6 +66,9 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Fitness | Plans with weekly schedules, workout logs, personal records, measurements, food journal |
 | Budget | Income, bills, expenses, savings rate, category limits, recurring transactions |
 | Reports | Cleaning, garden, farm, kitchen, budget, fitness and goal history |
+| Personal Health | Privacy Center (private by default; share with parents or selected people; parent oversight for minors), Period Tracker (simple tracking or ovulation estimates), Food Journal (day/week/month/timeline) |
+| Mental Wellness | Daily check-ins, wellness journal with prompts, gratitude, self-care, gentle goals, daily quotes, mood history, per-item sharing, safety support, gentle reminders |
+| Imports | Grocery receipts (on-device OCR → review → pantry, history, optional expense) and recipes from Word documents (one per page) |
 | Everywhere | Global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
 
 ## Supported devices

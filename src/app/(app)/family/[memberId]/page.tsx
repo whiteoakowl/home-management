@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Settings2, ShieldCheck } from "lucide-react";
+import { personalSubjects } from "@/lib/privacy";
+import { Lock, Settings2, ShieldCheck, Users } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Avatar, Badge } from "@/components/ui/display";
 import { WidgetGrid } from "@/components/dashboard/widget-grid";
@@ -29,6 +31,27 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
     .filter((w) => w.id !== "announcements" || isSelf)
     .map((w) => ({ id: w.id, visible: true, size: w.id === "today" ? ("lg" as const) : w.defaultSize }));
 
+  // Personal areas: everything for yourself; for someone else, only what they share with you.
+  const q = isSelf ? "" : `?member=${member.id}`;
+  const sharedWithMe = isSelf ? null : await Promise.all((["period", "food", "wellness", "fitness"] as const).map(async (c) => [c, (await personalSubjects(viewer, c)).some((x) => x.id === member.id)] as const));
+  const can = (c: "period" | "food" | "wellness" | "fitness") => isSelf || !!sharedWithMe?.find(([k, v]) => k === c && v);
+  const personalLinks = [
+    can("period") && { href: `/health/period${q}`, label: "Period Tracker" },
+    can("food") && { href: `/health/food${q}`, label: "Food Journal" },
+    can("wellness") && { href: `/wellness${q}`, label: "Mental Wellness" },
+    can("fitness") && viewer.can("fitness") && { href: `/fitness${q}`, label: "Fitness" },
+    isSelf && viewer.can("goals") && { href: "/goals", label: "Goals" },
+    isSelf && viewer.can("journal") && { href: "/journal", label: "Personal Journal" },
+    isSelf && { href: "/privacy", label: "Privacy Center" },
+  ].filter(Boolean) as { href: string; label: string }[];
+  const familyLinks = [
+    viewer.can("calendar") && { href: "/calendar", label: "Family Calendar" },
+    viewer.can("chores") && { href: "/house/chores", label: "Family Chores" },
+    viewer.can("kitchen") && { href: "/kitchen", label: "Family Pantry" },
+    viewer.can("recipes") && { href: "/recipes", label: "Family Recipes" },
+    viewer.can("meals") && { href: "/meals", label: "Family Meal Plans" },
+  ].filter(Boolean) as { href: string; label: string }[];
+
   return (
     <div className="flex flex-col gap-6">
       <header
@@ -53,7 +76,7 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
         </div>
         {isSelf && !viewer.isParent && (
           <ButtonLink href="/account" variant="secondary" icon={<Settings2 className="size-4" />}>
-            My account
+            My settings
           </ButtonLink>
         )}
         {viewer.isParent && (
@@ -62,6 +85,40 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
           </ButtonLink>
         )}
       </header>
+      <nav aria-label={`${first}'s areas`} className="grid gap-4 md:grid-cols-2">
+        <section className="rounded-[var(--radius-card)] border border-dashed border-olive-400 bg-olive-50/60 p-4">
+          <h2 className="mb-3 flex items-center gap-1.5 font-sans text-xs font-semibold tracking-[0.12em] text-olive-700 uppercase">
+            <Lock className="size-3.5" aria-hidden /> {isSelf ? "My private" : `${first}'s private (shared with you)`}
+          </h2>
+          {personalLinks.length ? (
+            <ul className="flex flex-wrap gap-2">
+              {personalLinks.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className="inline-flex h-10 items-center rounded-full border border-olive-400 bg-surface px-3.5 text-sm font-medium hover:bg-olive-100">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">{first} hasn&apos;t shared any personal areas with you.</p>
+          )}
+        </section>
+        <section className="rounded-[var(--radius-card)] border border-primary-200 bg-primary-50/60 p-4">
+          <h2 className="mb-3 flex items-center gap-1.5 font-sans text-xs font-semibold tracking-[0.12em] text-primary-700 uppercase">
+            <Users className="size-3.5" aria-hidden /> Family
+          </h2>
+          <ul className="flex flex-wrap gap-2">
+            {familyLinks.map((l) => (
+              <li key={l.href}>
+                <Link href={l.href} className="inline-flex h-10 items-center rounded-full border border-primary-200 bg-surface px-3.5 text-sm font-medium hover:bg-primary-100">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </nav>
       <WidgetGrid widgets={widgets} scope={makeScope(viewer, member.id)} name={first} />
     </div>
   );
