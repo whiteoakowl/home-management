@@ -46,7 +46,7 @@ export default async function GardenPage({ searchParams }: PageProps<"/garden">)
         eyebrow="Land"
         title="Garden"
         description="Plan beds, track every planting, and log what you harvest."
-        actions={canEdit ? <><LogGardenModal plantings={plantingOpts} plants={plants} canKitchen={viewer.can("kitchen", "edit")} /><NewGardenPlanModal year={year} defaultOpen={sp.new === "1"} /></> : undefined}
+        actions={canEdit ? <><LogGardenModal plantings={plantingOpts} plants={plants} canKitchen={viewer.can("kitchen", "add")} /><NewGardenPlanModal year={year} defaultOpen={sp.new === "1"} /></> : undefined}
       />
       <GardenTabs active="overview" />
 

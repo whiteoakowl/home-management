@@ -56,6 +56,8 @@ export const lists = pgTable(
     projectId: uuid("project_id"),
     visibility: visibility("visibility").notNull().default("family"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** Set = in this member's private food space (My Pantry etc.); null = the family's. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
     }),

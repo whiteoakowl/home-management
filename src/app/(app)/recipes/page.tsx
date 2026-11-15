@@ -11,46 +11,57 @@ import { EmptyState, PageHeader } from "@/components/ui/display";
 import { ImportRecipeModal } from "@/components/recipes/import-modal";
 import { SegmentLinks } from "@/components/ui/tabs";
 import { getViewer } from "@/lib/dal";
+import { redirect } from "next/navigation";
+import { FoodSpaceNav, PrivateSpaceNote } from "@/components/food/food-space-nav";
+import { canAddIn, canOpenFood, privateSpaceMembers, resolveSpace, withSpace } from "@/lib/food-space";
 import { categoryOptions } from "@/lib/queries";
 import { collectionOptions, ensureRecipeDefaults, listRecipes } from "@/lib/recipes";
 
-export const metadata: Metadata = { title: "Recipes" };
+export const metadata: Metadata = { title: "Family Recipes" };
 
 export default async function RecipesPage({ searchParams }: PageProps<"/recipes">) {
   const viewer = await getViewer();
-  if (!viewer.can("recipes")) notFound();
-  await ensureRecipeDefaults(viewer);
+  if (!canOpenFood(viewer, "recipes")) notFound();
   const sp = await searchParams;
+  const space = await resolveSpace(viewer, sp.space);
+  if (space.kind === "family" && !viewer.can("recipes")) redirect("/recipes?space=mine");
+  const isPrivate = space.kind === "private";
+  const owner = isPrivate ? space.memberId : null;
+  if (!isPrivate) await ensureRecipeDefaults(viewer);
   const q = typeof sp.q === "string" ? sp.q.trim().slice(0, 80) : "";
   const cat = typeof sp.category === "string" ? sp.category : "";
   const favorites = sp.favorites === "1";
   const [cats, cols, items] = await Promise.all([
     categoryOptions(viewer, "recipe"),
-    collectionOptions(viewer),
-    listRecipes(viewer, { q: q || undefined, categoryId: cat || undefined, favorites }),
+    collectionOptions(viewer, owner),
+    listRecipes(viewer, { q: q || undefined, categoryId: cat || undefined, favorites, owner }),
   ]);
-  const canEdit = viewer.can("recipes", "edit");
-  const add = <RecipeFormModal categories={cats} collections={cols} defaultOpen={sp.new === "1"} />;
-  const href = (p: Record<string, string>) => `/recipes?${new URLSearchParams({ ...(q ? { q } : {}), ...(cat ? { category: cat } : {}), ...(favorites ? { favorites: "1" } : {}), ...p })}`;
+  const canEdit = canAddIn(viewer, "recipes", space);
+  const add = <RecipeFormModal categories={cats} collections={cols} defaultOpen={sp.new === "1"} privateSpace={isPrivate} />;
+  const href = (p: Record<string, string>) => withSpace(`/recipes?${new URLSearchParams({ ...(q ? { q } : {}), ...(cat ? { category: cat } : {}), ...(favorites ? { favorites: "1" } : {}), ...p })}`, space);
+  const others = await privateSpaceMembers(viewer);
 
   return (
     <>
       <PageHeader
-        eyebrow="Kitchen"
-        title="Recipes"
-        description="Your family's recipe book."
+        eyebrow={isPrivate ? "My private food" : "Family Pantry"}
+        title={isPrivate ? (space.own ? "My Recipes" : `${space.memberName}'s Recipes`) : "Family Recipes"}
+        description={isPrivate ? "Recipes only you can see." : "Your family's recipe book."}
         actions={
           <>
-            {viewer.can("recipes", "edit") && <ImportRecipeModal defaultOpen={sp.import === "1"} />}
-            <ButtonLink href="/recipes/collections" variant="secondary" icon={<Library className="size-4" />}>
+            {canEdit && <ImportRecipeModal defaultOpen={sp.import === "1"} privateSpace={isPrivate} />}
+            <ButtonLink href={withSpace("/recipes/collections", space)} variant="secondary" icon={<Library className="size-4" />}>
               Collections
             </ButtonLink>
             {canEdit && add}
           </>
         }
       />
+      <FoodSpaceNav viewer={viewer} active="recipes" space={space} others={others} />
+      <PrivateSpaceNote space={space} />
       <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
         <form className="relative flex-1" action="/recipes">
+          {isPrivate && <input type="hidden" name="space" value={space.own ? "mine" : space.memberId} />}
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" aria-hidden />
           <label htmlFor="recipe-q" className="sr-only">
             Search recipes

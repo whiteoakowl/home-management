@@ -339,7 +339,7 @@ export async function PantryWidget({ scope }: { scope: Scope }) {
   const { expiring, low } = await data.getPantryAlerts(scope);
   return (
     <Card>
-      <CardHeader title="Pantry alerts" icon={<Refrigerator className={ic} />} href="/kitchen" hrefLabel="Kitchen" />
+      <CardHeader title="Pantry alerts" icon={<Refrigerator className={ic} />} href="/kitchen" hrefLabel="Family Pantry" />
       {expiring.length === 0 && low === 0 ? (
         <EmptyState compact icon={<Refrigerator />} title="All fresh" description="Nothing expiring this week and nothing running low." />
       ) : (

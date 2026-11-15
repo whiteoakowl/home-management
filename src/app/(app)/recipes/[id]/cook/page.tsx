@@ -11,7 +11,6 @@ export default async function CookPage({ params, searchParams }: PageProps<"/rec
   const { id } = await params;
   const sp = await searchParams;
   const viewer = await getViewer();
-  if (!viewer.can("recipes")) notFound();
   const data = await getRecipe(viewer, id);
   if (!data) notFound();
   const { r, ingredients } = data;

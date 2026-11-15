@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import type { AccessLevel, Module } from "@/db/schema/_shared";
-import { createMemberLogin, savePermissions } from "@/app/actions/family";
-import { Field, FormMessage, Input, SubmitButton } from "@/components/ui/form";
+import { createMemberLogin, savePermissions, savePrivateFood } from "@/app/actions/family";
+import { Field, FormMessage, Input, Select, SubmitButton } from "@/components/ui/form";
 import { PermissionRows } from "@/components/family/permissions-matrix";
 
 export function PermissionsForm({
@@ -19,7 +19,7 @@ export function PermissionsForm({
       <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
       <PermissionRows memberId={member.id} access={member.access} modules={modules} />
       <p className="text-sm text-muted">
-        Even with &ldquo;Hidden&rdquo;, {member.displayName} still sees chores and items assigned directly to them.
+        Even with &ldquo;No access&rdquo;, {member.displayName} still sees chores and items assigned directly to them. For the Family Pantry areas, &ldquo;Add&rdquo; lets them add new things and change only what they added.
       </p>
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Saving…">Save access</SubmitButton>
@@ -45,6 +45,29 @@ export function LoginForm({ memberId, name }: { memberId: string; name: string }
       </div>
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Creating…">Create login</SubmitButton>
+      </div>
+    </form>
+  );
+}
+
+export function PrivateFoodForm({ memberId, name, enabled, parentsCanSee }: { memberId: string; name: string; enabled: boolean; parentsCanSee: boolean }) {
+  const [state, action] = useActionState(savePrivateFood, undefined);
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
+      <input type="hidden" name="memberId" value={memberId} />
+      <p className="text-[15px] text-muted">
+        A private food space gives {name} their own <strong>My Pantry</strong>, <strong>My Recipes</strong>, <strong>My Meal Plans</strong> and <strong>My Shopping List</strong>, kept apart from the family&apos;s.{" "}
+        {parentsCanSee ? "Parents can open it read-only (Settings → Family Pantry privacy)." : "Nobody else can see it, parents included, unless the family turns that on in Settings."}
+      </p>
+      <Field label="Private food space" htmlFor="privateFood" className="max-w-xs">
+        <Select id="privateFood" name="privateFood" defaultValue={enabled ? "enabled" : "disabled"}>
+          <option value="enabled">Enabled</option>
+          <option value="disabled">Disabled</option>
+        </Select>
+      </Field>
+      <div className="flex justify-end">
+        <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
       </div>
     </form>
   );

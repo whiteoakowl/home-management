@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { ArrowLeft, Receipt, ShoppingBasket } from "lucide-react";
 import { celebrationShoppingList, deleteCelebration, recordCelebrationExpense } from "@/app/actions/craft";
 import { FormModal } from "@/components/forms/action-form";
@@ -33,7 +33,7 @@ export default async function CelebrationPage({ params }: PageProps<"/spiritual/
   const canEdit = viewer.can("witchcraft", "edit");
   const [links, recipeOpts, ritualOpts, spent] = await Promise.all([
     db.select().from(celebrationLinks).where(eq(celebrationLinks.celebrationId, c.id)),
-    viewer.can("recipes") ? db.select({ id: recipes.id, name: recipes.name, imageFileId: recipes.imageFileId }).from(recipes).where(eq(recipes.familyId, viewer.family.id)).orderBy(asc(recipes.name)) : [],
+    viewer.can("recipes") ? db.select({ id: recipes.id, name: recipes.name, imageFileId: recipes.imageFileId }).from(recipes).where(and(eq(recipes.familyId, viewer.family.id), isNull(recipes.ownerMemberId))).orderBy(asc(recipes.name)) : [],
     db.select().from(craftItems).where(and(craftVisible(viewer), or(eq(craftItems.kind, "ritual"), eq(craftItems.kind, "spell")), isNotNull(craftItems.familyId))).orderBy(asc(craftItems.name)),
     viewer.can("budget") ? db.select({ n: sql<number>`coalesce(sum(${transactions.amountCents}),0)::int` }).from(transactions).where(eq(transactions.celebrationId, c.id)) : [],
   ]);
@@ -69,7 +69,7 @@ export default async function CelebrationPage({ params }: PageProps<"/spiritual/
         {canEdit && (
           <div className="flex flex-wrap gap-2">
             <CelebrationModal id={c.id} defaults={defaults} imageUrl={img} recipes={recipeOpts} rituals={ritualOpts} linked={links.map((l) => l.recipeId ?? l.craftItemId!).filter(Boolean)} />
-            {viewer.can("shopping", "edit") && c.supplies && (
+            {viewer.can("shopping", "add") && c.supplies && (
               <ActionButton action={celebrationShoppingList} fields={{ id: c.id }} className="h-11 rounded-[var(--radius-control)] bg-primary-50 px-4 text-sm font-semibold text-primary-700 hover:bg-primary-100">
                 <ShoppingBasket className="size-4" /> {c.shoppingListId ? "Update shopping list" : "Make shopping list"}
               </ActionButton>

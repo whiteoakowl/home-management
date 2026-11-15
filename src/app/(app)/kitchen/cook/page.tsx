@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { ChefHat, Clock, ShoppingBasket, Timer } from "lucide-react";
 import { addRecipeToShopping } from "@/app/actions/recipes";
 import { ActionButton } from "@/components/forms/inline";
@@ -10,6 +10,7 @@ import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 import { getViewer } from "@/lib/dal";
+import { resolveSpace } from "@/lib/food-space";
 import { addDays, daysBetween, todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { checkIngredients, namesMatch } from "@/lib/ingredients";
@@ -18,12 +19,22 @@ import { activeInventory, ingredientsFor } from "@/lib/kitchen";
 export const metadata: Metadata = { title: "What can I cook?" };
 
 /** Pantry-first cooking: recipes ranked by what's already in the kitchen, favouring food that expires soon. */
-export default async function CookFromPantryPage() {
+export default async function CookFromPantryPage({ searchParams }: PageProps<"/kitchen/cook">) {
   const viewer = await getViewer();
-  if (!viewer.can("kitchen") || !viewer.can("recipes")) notFound();
+  const space = await resolveSpace(viewer, (await searchParams).space);
+  const own = space.kind === "private" && space.own ? viewer.member.id : null;
+  if (!own && (!viewer.can("kitchen") || !viewer.can("recipes"))) notFound();
   const today = todayIn(viewer.family.timezone);
   const soon = addDays(today, 5);
-  const [all, inv] = await Promise.all([db.select().from(recipes).where(eq(recipes.familyId, viewer.family.id)).orderBy(asc(recipes.name)), activeInventory(viewer.family.id)]);
+  // Family: family recipes vs the family pantry. Private: family + my recipes vs My Pantry.
+  const [all, inv] = await Promise.all([
+    db
+      .select()
+      .from(recipes)
+      .where(and(eq(recipes.familyId, viewer.family.id), own ? (viewer.can("recipes") ? or(isNull(recipes.ownerMemberId), eq(recipes.ownerMemberId, own)) : eq(recipes.ownerMemberId, own)) : isNull(recipes.ownerMemberId)))
+      .orderBy(asc(recipes.name)),
+    activeInventory(viewer.family.id, own),
+  ]);
   const ings = await ingredientsFor(all.map((r) => r.id));
   const byRecipe = Map.groupBy(ings, (i) => i.recipeId);
   const expiring = inv.filter((i) => i.expiresOn && i.expiresOn <= soon && Number(i.quantity) > 0).sort((a, b) => a.expiresOn!.localeCompare(b.expiresOn!));
@@ -40,7 +51,7 @@ export default async function CookFromPantryPage() {
     .sort((a, b) => a.missing.length - b.missing.length || b.usesExpiring.length - a.usesExpiring.length || b.have / b.total - a.have / a.total);
   const ready = ranked.filter((x) => x.missing.length === 0);
   const almost = ranked.filter((x) => x.missing.length > 0 && x.missing.length <= 3);
-  const canShop = viewer.can("shopping", "edit");
+  const canShop = own ? true : viewer.can("shopping", "add");
 
   const RecipeRow = ({ x }: { x: (typeof ranked)[number] }) => (
     <li className="flex flex-wrap items-center gap-3 py-3">
@@ -84,7 +95,7 @@ export default async function CookFromPantryPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Kitchen" title="What can I cook?" description="Recipes ranked by what you already have, with food that's about to expire used first." />
+      <PageHeader eyebrow={own ? "My Pantry" : "Family Pantry"} title="What can I cook?" description="Recipes ranked by what you already have, with food that's about to expire used first." />
       {expiring.length > 0 && (
         <section className="mb-6 rounded-2xl border border-olive-100 bg-olive-50 p-4" aria-labelledby="useup">
           <h2 id="useup" className="flex items-center gap-2 font-semibold text-olive-700">

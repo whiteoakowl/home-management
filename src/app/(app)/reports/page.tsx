@@ -19,7 +19,7 @@ const TABS: { key: string; label: string; module: Module }[] = [
   { key: "cleaning", label: "Cleaning & chores", module: "chores" },
   { key: "garden", label: "Garden", module: "garden" },
   { key: "farm", label: "Farm", module: "farm" },
-  { key: "kitchen", label: "Kitchen", module: "kitchen" },
+  { key: "kitchen", label: "Family Pantry", module: "kitchen" },
   { key: "budget", label: "Budget", module: "budget" },
   { key: "fitness", label: "Fitness", module: "fitness" },
   { key: "goals", label: "Goals", module: "goals" },

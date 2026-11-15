@@ -262,7 +262,7 @@ export async function deletePetSupply(fd: FormData) {
 
 export async function shopForPetSupply(fd: FormData) {
   const viewer = await requireModule("pets", "edit");
-  if (!viewer.can("shopping", "edit")) throw new AuthorizationError("You can't edit the shopping list.");
+  if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit the shopping list.");
   const r = await petSupplyOwned(viewer, String(fd.get("id")));
   if (!r) return;
   const listId = await mainShoppingListId(viewer.family.id);

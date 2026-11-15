@@ -8,27 +8,32 @@ import { TextAreaField, TextField } from "@/components/forms/fields";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
+import { canAddIn, canOpenFood, resolveSpace, withSpace } from "@/lib/food-space";
 import { collectionOptions, ensureRecipeDefaults } from "@/lib/recipes";
 
 export const metadata: Metadata = { title: "Recipe collections" };
 
-export default async function CollectionsPage() {
+export default async function CollectionsPage({ searchParams }: PageProps<"/recipes/collections">) {
   const viewer = await getViewer();
-  if (!viewer.can("recipes")) notFound();
-  await ensureRecipeDefaults(viewer);
-  const cols = await collectionOptions(viewer);
+  if (!canOpenFood(viewer, "recipes")) notFound();
+  const space = await resolveSpace(viewer, (await searchParams).space);
+  if (space.kind === "family" && !viewer.can("recipes")) notFound();
+  const owner = space.kind === "private" ? space.memberId : null;
+  if (!owner) await ensureRecipeDefaults(viewer);
+  const cols = await collectionOptions(viewer, owner);
   const add = (
-    <FormModal title="New collection" action={saveCollection} submitLabel="Create" size="sm">
+    <FormModal title={owner ? "New private collection" : "New collection"} action={saveCollection} submitLabel="Create" size="sm">
+      {owner && <input type="hidden" name="space" value="mine" />}
       <TextField name="name" label="Name" required placeholder="Sunday Suppers" />
       <TextAreaField name="description" label="Description" rows={2} />
     </FormModal>
   );
   return (
     <>
-      <Link href="/recipes" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
-        <ArrowLeft className="size-4" /> Recipes
+      <Link href={withSpace("/recipes", space)} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+        <ArrowLeft className="size-4" /> {owner ? "My Recipes" : "Family Recipes"}
       </Link>
-      <PageHeader title="Collections" description="Group recipes into themed books, then print them." actions={viewer.can("recipes", "edit") ? add : undefined} />
+      <PageHeader title="Collections" description="Group recipes into themed books, then print them." actions={canAddIn(viewer, "recipes", space) ? add : undefined} />
       {cols.length === 0 ? (
         <Card>
           <EmptyState icon={<Library />} title="No collections yet" description="Collections are like cookbooks: Holiday, Slow Cooker, Garden Recipes…" />

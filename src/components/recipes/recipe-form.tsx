@@ -30,16 +30,19 @@ export function RecipeFormModal({
   defaults,
   defaultOpen,
   triggerContent,
+  privateSpace,
 }: {
   categories: { id: string; name: string }[];
   collections: { id: string; name: string }[];
   defaults?: RecipeDefaults;
   defaultOpen?: boolean;
   triggerContent?: ReactNode;
+  /** New recipe goes into My Recipes. */
+  privateSpace?: boolean;
 }) {
   return (
     <FormModal
-      title={defaults ? "Edit recipe" : "New recipe"}
+      title={defaults ? "Edit recipe" : privateSpace ? "New private recipe" : "New family recipe"}
       triggerLabel="Add recipe"
       action={saveRecipe}
       submitLabel={defaults ? "Save recipe" : "Add recipe"}
@@ -49,6 +52,7 @@ export function RecipeFormModal({
       triggerClassName="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-sunken"
     >
       {defaults && <input type="hidden" name="id" value={defaults.id} />}
+      {!defaults && privateSpace && <input type="hidden" name="space" value="mine" />}
       <TextField name="name" label="Recipe name" required defaultValue={defaults?.name} placeholder="Grandma's chicken parmesan" />
       <ImageField currentUrl={defaults?.imageUrl} />
       <TextAreaField name="description" label="Description" rows={2} defaultValue={defaults?.description ?? ""} />

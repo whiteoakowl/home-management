@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getViewer, listFamilyMembers } from "@/lib/dal";
 import { runDailyAutomation } from "@/lib/automation";
+import { ADD_LEVEL_MODULES } from "@/lib/permissions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer();
@@ -20,7 +21,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .where(and(eq(notifications.memberId, viewer.member.id), isNull(notifications.readAt))),
   ]);
   const sections = buildNav(viewer);
-  const editable = MODULES.filter((m) => viewer.can(m, "edit"));
+  // Quick Add: modules the member can add to (Family Pantry areas accept the "Add" level).
+  const editable = MODULES.filter((m) => viewer.can(m, ADD_LEVEL_MODULES.includes(m) ? "add" : "edit"));
   const pick = (m: (typeof members)[number]) => ({ id: m.id, displayName: m.displayName, color: m.color });
 
   return (

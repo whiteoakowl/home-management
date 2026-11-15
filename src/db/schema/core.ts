@@ -78,6 +78,8 @@ export type FamilySettings = {
   weekStartsOn?: 0 | 1;
   /** ISO date the daily automation last ran for this family. */
   lastAutomationOn?: string;
+  /** Parents may open members' private food spaces. Off unless a parent turns it on. */
+  parentsSeePrivateFood?: boolean;
 };
 
 export const families = pgTable("families", {
@@ -115,6 +117,8 @@ export const familyMembers = pgTable(
     avatarFileId: uuid("avatar_file_id"),
     /** Parents only: let the other parents see (not edit) my fitness & food journal. */
     shareFitness: boolean("share_fitness").notNull().default(false),
+    /** Has a private food space (My Pantry / Recipes / Meal Plans / Shopping List). Set by parents. */
+    privateFood: boolean("private_food").notNull().default(false),
     birthday: date("birthday"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,

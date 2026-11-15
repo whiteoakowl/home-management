@@ -9,17 +9,18 @@ import { Scanner } from "./scanner";
 
 export const metadata: Metadata = { title: "Scan barcode" };
 
-export default async function ScanPage() {
+export default async function ScanPage({ searchParams }: PageProps<"/kitchen/scan">) {
   const viewer = await getViewer();
-  if (!viewer.can("kitchen", "edit")) notFound();
+  const mine = (await searchParams).space === "mine" && viewer.member.privateFood;
+  if (!mine && !viewer.can("kitchen", "add")) notFound();
   const cats = await categoryOptions(viewer, "inventory");
   return (
     <>
-      <Link href="/kitchen" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
-        <ArrowLeft className="size-4" /> Kitchen
+      <Link href={mine ? "/kitchen?space=mine" : "/kitchen"} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+        <ArrowLeft className="size-4" /> {mine ? "My Pantry" : "Family Pantry"}
       </Link>
       <PageHeader title="Scan to add" description="Scan a product's barcode with your phone camera. We'll identify it when we can, and remember it for next time." />
-      <Scanner categories={cats} />
+      <Scanner categories={cats} privateSpace={mine} />
     </>
   );
 }

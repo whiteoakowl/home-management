@@ -2,12 +2,16 @@ import type { AccessLevel, Module } from "@/db/schema/_shared";
 import { Avatar } from "@/components/ui/display";
 import { Icon } from "@/components/icons";
 import { MODULE_META } from "@/lib/modules";
+import { ADD_LEVEL_MODULES } from "@/lib/permissions";
 
 const LEVELS: { value: AccessLevel; label: string }[] = [
-  { value: "none", label: "Hidden" },
-  { value: "view", label: "Can view" },
-  { value: "edit", label: "Can edit" },
+  { value: "none", label: "No access" },
+  { value: "view", label: "View" },
+  { value: "add", label: "Add" },
+  { value: "edit", label: "Edit" },
 ];
+/** "Add" (add new things, change only their own) is offered for the Family Pantry areas. */
+const levelsFor = (m: Module) => LEVELS.filter((l) => l.value !== "add" || ADD_LEVEL_MODULES.includes(m));
 
 /**
  * One member's module → access selects, named perm:<memberId>:<module> so
@@ -39,7 +43,7 @@ export function PermissionRows({
               defaultValue={access[mod] ?? meta.defaultMemberAccess}
               className="h-9 rounded-lg border border-line-strong bg-surface px-2 text-sm focus:border-primary-500 focus:outline-none"
             >
-              {LEVELS.map((l) => (
+              {levelsFor(mod).map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>

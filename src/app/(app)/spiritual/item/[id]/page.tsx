@@ -156,7 +156,7 @@ export default async function CraftItemPage({ params }: PageProps<"/spiritual/it
             icon={<ShoppingBasket className="size-4" />}
             action={
               low.length > 0 &&
-              viewer.can("shopping", "edit") && (
+              viewer.can("shopping", "add") && (
                 <ActionButton action={shopForSupplies} fields={{ ids: low.map((s) => s.id).join(",") }} className="h-9 rounded-full bg-primary-50 px-3 text-sm font-semibold text-primary-700 hover:bg-primary-100 print:hidden">
                   Add {low.length} to shopping
                 </ActionButton>

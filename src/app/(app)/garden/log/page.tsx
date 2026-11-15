@@ -31,7 +31,7 @@ export default async function GardenLogPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Garden" title="Plantings & log" description="Everything planted, germinated, watered, fed, fought and harvested." actions={canEdit ? <LogGardenModal plantings={opts} plants={plants} canKitchen={viewer.can("kitchen", "edit")} /> : undefined} />
+      <PageHeader eyebrow="Garden" title="Plantings & log" description="Everything planted, germinated, watered, fed, fought and harvested." actions={canEdit ? <LogGardenModal plantings={opts} plants={plants} canKitchen={viewer.can("kitchen", "add")} /> : undefined} />
       <GardenTabs active="log" />
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <section>

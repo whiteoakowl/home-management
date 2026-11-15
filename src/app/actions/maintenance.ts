@@ -191,7 +191,7 @@ export async function deleteMaterial(fd: FormData) {
 /** Unpurchased materials → the project's own shopping list (created once). */
 export async function materialsToShopping(fd: FormData) {
   const viewer = await edit();
-  if (!viewer.can("shopping", "edit")) throw new AuthorizationError("You can't edit shopping lists.");
+  if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit shopping lists.");
   const p = await ownProject(viewer, f.str(fd, "projectId"));
   let listId = p.shoppingListId;
   if (!listId) {

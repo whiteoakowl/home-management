@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, familyMembers, recipeCollectionItems, recipeCollections, recipeIngredients, recipeRatings, recipes } from "@/db/schema";
 import type { Viewer } from "./dal";
@@ -8,7 +8,7 @@ import type { RecipeCardData } from "@/components/recipes/recipe-card";
 
 export async function listRecipes(
   viewer: Viewer,
-  opts: { q?: string; categoryId?: string; favorites?: boolean; collectionId?: string; ids?: string[] } = {},
+  opts: { q?: string; categoryId?: string; favorites?: boolean; collectionId?: string; ids?: string[]; owner?: string | null } = {},
 ): Promise<(RecipeCardData & { description: string | null })[]> {
   const rows = await db
     .select({
@@ -21,6 +21,7 @@ export async function listRecipes(
     .where(
       and(
         eq(recipes.familyId, viewer.family.id),
+        opts.owner ? eq(recipes.ownerMemberId, opts.owner) : isNull(recipes.ownerMemberId),
         opts.q
           ? or(
               ilike(recipes.name, `%${opts.q}%`),
@@ -59,6 +60,9 @@ export async function getRecipe(viewer: Viewer, id: string) {
     .leftJoin(familyMembers, eq(familyMembers.id, recipes.createdByMemberId))
     .where(and(eq(recipes.id, id), eq(recipes.familyId, viewer.family.id)));
   if (!row) return null;
+  // Private recipes: their owner, or a parent (read-only) when the family allows it.
+  if (row.r.ownerMemberId && row.r.ownerMemberId !== viewer.member.id && !(viewer.isParent && viewer.family.settings?.parentsSeePrivateFood)) return null;
+  if (!row.r.ownerMemberId && !viewer.can("recipes")) return null;
   const [ings, ratings, cols] = await Promise.all([
     db.select().from(recipeIngredients).where(eq(recipeIngredients.recipeId, id)).orderBy(asc(recipeIngredients.position)),
     db
@@ -75,7 +79,7 @@ export async function getRecipe(viewer: Viewer, id: string) {
   return { ...row, ingredients: ings, ratings, collections: cols };
 }
 
-export async function collectionOptions(viewer: Viewer) {
+export async function collectionOptions(viewer: Viewer, owner: string | null = null) {
   return db
     .select({
       id: recipeCollections.id,
@@ -84,7 +88,7 @@ export async function collectionOptions(viewer: Viewer) {
       count: sql<number>`(select count(*)::int from ${recipeCollectionItems} i where i.collection_id = ${recipeCollections.id})`,
     })
     .from(recipeCollections)
-    .where(eq(recipeCollections.familyId, viewer.family.id))
+    .where(and(eq(recipeCollections.familyId, viewer.family.id), owner ? eq(recipeCollections.ownerMemberId, owner) : isNull(recipeCollections.ownerMemberId)))
     .orderBy(asc(recipeCollections.name));
 }
 
@@ -94,7 +98,7 @@ const DEFAULT_RECIPE_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Sides", "Des
 /** Seed suggested collections & categories on first visit (parents only). */
 export async function ensureRecipeDefaults(viewer: Viewer) {
   if (!viewer.isParent) return;
-  const [{ n } = { n: 0 }] = await db.select({ n: sql<number>`count(*)::int` }).from(recipeCollections).where(eq(recipeCollections.familyId, viewer.family.id));
+  const [{ n } = { n: 0 }] = await db.select({ n: sql<number>`count(*)::int` }).from(recipeCollections).where(and(eq(recipeCollections.familyId, viewer.family.id), isNull(recipeCollections.ownerMemberId)));
   if (n === 0) await db.insert(recipeCollections).values(DEFAULT_COLLECTIONS.map((name) => ({ familyId: viewer.family.id, name })));
   const [{ c } = { c: 0 }] = await db
     .select({ c: sql<number>`count(*)::int` })

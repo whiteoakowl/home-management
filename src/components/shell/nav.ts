@@ -63,12 +63,16 @@ export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
 export type NavSection = { group: string; items: NavItem[] };
 
 /** Builds the nav a viewer is allowed to see (permissions + enabled areas). */
+const FOOD_MODULES: string[] = ["kitchen", "recipes", "meals", "shopping"];
+const FOOD_LABELS = { kitchen: { mine: "My Pantry" }, recipes: { mine: "My Recipes" }, meals: { mine: "My Meal Plans" }, shopping: { mine: "My Shopping List" } } as const;
+
 export function buildNav(viewer: Viewer): NavSection[] {
   const sections: NavSection[] = NAV_GROUPS.map((group) => ({
     group,
     items: Object.values(MODULE_META)
-      .filter((m) => m.group === group && m.inNav && viewer.can(m.id))
-      .map((m) => ({ href: m.href, label: m.label, icon: m.icon, children: SUBMENUS[m.href] })),
+      // Members with a private food space reach the food pages even without family access.
+      .filter((m) => m.group === group && m.inNav && (viewer.can(m.id) || (FOOD_MODULES.includes(m.id) && viewer.member.privateFood)))
+      .map((m) => ({ href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`, label: viewer.can(m.id) ? m.label : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ?? m.label), icon: m.icon, children: SUBMENUS[m.href] })),
   }));
   sections[0]!.items.unshift({ href: "/", label: "Home", icon: "LayoutDashboard" });
   sections[1]!.items.unshift({ href: "/family", label: "Family", icon: "Users" });

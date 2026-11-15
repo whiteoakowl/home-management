@@ -7,7 +7,10 @@ import { MODULE_META } from "./modules";
 
 export type Role = "parent" | "member";
 
-const RANK: Record<AccessLevel, number> = { none: 0, view: 1, edit: 2 };
+const RANK: Record<AccessLevel, number> = { none: 0, view: 1, add: 2, edit: 3 };
+
+/** Modules that offer the "Add" level (create, and change only what you added): the Family Pantry. */
+export const ADD_LEVEL_MODULES: readonly Module[] = ["kitchen", "recipes", "meals", "shopping"];
 
 export function atLeast(actual: AccessLevel, required: AccessLevel) {
   return RANK[actual] >= RANK[required];
@@ -31,5 +34,6 @@ export function effectiveAccess(opts: {
 }): AccessLevel {
   if (!opts.enabledModules.includes(opts.module)) return "none";
   if (opts.role === "parent") return "edit";
-  return opts.stored[opts.module] ?? MODULE_META[opts.module].defaultMemberAccess;
+  const level = opts.stored[opts.module] ?? MODULE_META[opts.module].defaultMemberAccess;
+  return level === "add" && !ADD_LEVEL_MODULES.includes(opts.module) ? "view" : level;
 }

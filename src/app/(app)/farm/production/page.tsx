@@ -46,11 +46,11 @@ export default async function ProductionPage({ searchParams }: PageProps<"/farm/
 
   return (
     <>
-      <PageHeader eyebrow="Farm" title="Production" description="Eggs, milk, honey, meat and more, with history and trends." actions={canEdit ? <ProductionModal animals={opts} canKitchen={viewer.can("kitchen", "edit")} defaultKind={kind} /> : undefined} />
+      <PageHeader eyebrow="Farm" title="Production" description="Eggs, milk, honey, meat and more, with history and trends." actions={canEdit ? <ProductionModal animals={opts} canKitchen={viewer.can("kitchen", "add")} defaultKind={kind} /> : undefined} />
       <FarmTabs active="production" />
       {kinds.length === 0 ? (
         <Card>
-          <EmptyState icon={<Wheat />} title="No production recorded" description="Record daily egg counts, milk, honey harvests and more." example="Date | Number of eggs | Notes" action={canEdit ? <ProductionModal animals={opts} canKitchen={viewer.can("kitchen", "edit")} /> : undefined} />
+          <EmptyState icon={<Wheat />} title="No production recorded" description="Record daily egg counts, milk, honey harvests and more." example="Date | Number of eggs | Notes" action={canEdit ? <ProductionModal animals={opts} canKitchen={viewer.can("kitchen", "add")} /> : undefined} />
         </Card>
       ) : (
         <>

@@ -14,6 +14,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
+import { canChange, canReadOwned } from "@/lib/food-space";
 import { listRecipes } from "@/lib/recipes";
 
 export const metadata: Metadata = { title: "Collection" };
@@ -22,14 +23,13 @@ export default async function CollectionPage({ params }: PageProps<"/recipes/col
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await getViewer();
-  if (!viewer.can("recipes")) notFound();
   const [c] = await db.select().from(recipeCollections).where(and(eq(recipeCollections.id, id), eq(recipeCollections.familyId, viewer.family.id)));
-  if (!c) notFound();
-  const items = await listRecipes(viewer, { collectionId: id });
-  const canEdit = viewer.can("recipes", "edit");
+  if (!c || !canReadOwned(viewer, "recipes", c.ownerMemberId)) notFound();
+  const items = await listRecipes(viewer, { collectionId: id, owner: c.ownerMemberId });
+  const canEdit = canChange(viewer, "recipes", { ownerMemberId: c.ownerMemberId });
   return (
     <>
-      <Link href="/recipes/collections" className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+      <Link href={c.ownerMemberId ? `/recipes/collections?space=${c.ownerMemberId === viewer.member.id ? "mine" : c.ownerMemberId}` : "/recipes/collections"} className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
         <ArrowLeft className="size-4" /> Collections
       </Link>
       <PageHeader

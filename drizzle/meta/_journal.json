@@ -64,6 +64,13 @@
       "when": 1794760881914,
       "tag": "0008_book_library",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794761883821,
+      "tag": "0009_family_pantry",
+      "breakpoints": true
     }
   ]
 }

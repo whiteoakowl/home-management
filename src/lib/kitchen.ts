@@ -8,12 +8,15 @@ import { checkIngredients, formatQty, normalizeName } from "./ingredients";
 /** Locations that hold food or kitchen supplies (pet food, craft and home supplies never count for recipes). */
 export const FOOD_LOCATIONS = ["pantry", "fridge", "freezer", "supplies", "farm", "garden", "other"] as const;
 
-export async function activeInventory(familyId: string) {
+/** Food on hand in one space: the family's (owner null) or a member's private pantry. */
+export async function activeInventory(familyId: string, owner: string | null = null) {
   return db
     .select({ id: inventoryItems.id, name: inventoryItems.name, quantity: inventoryItems.quantity, unit: inventoryItems.unit, expiresOn: inventoryItems.expiresOn })
     .from(inventoryItems)
-    .where(and(eq(inventoryItems.familyId, familyId), isNull(inventoryItems.archivedAt), inArray(inventoryItems.location, [...FOOD_LOCATIONS])));
+    .where(and(eq(inventoryItems.familyId, familyId), ownerIs(owner), isNull(inventoryItems.archivedAt), inArray(inventoryItems.location, [...FOOD_LOCATIONS])));
 }
+
+const ownerIs = (owner: string | null) => (owner ? eq(inventoryItems.ownerMemberId, owner) : isNull(inventoryItems.ownerMemberId));
 
 export async function ingredientsFor(recipeIds: string[]) {
   if (!recipeIds.length) return [];
@@ -21,8 +24,8 @@ export async function ingredientsFor(recipeIds: string[]) {
 }
 
 /** Ingredient-by-ingredient availability for one recipe. */
-export async function recipeAvailability(familyId: string, recipeId: string, scale = 1) {
-  const [ings, inv] = await Promise.all([ingredientsFor([recipeId]), activeInventory(familyId)]);
+export async function recipeAvailability(familyId: string, recipeId: string, scale = 1, owner: string | null = null) {
+  const [ings, inv] = await Promise.all([ingredientsFor([recipeId]), activeInventory(familyId, owner)]);
   return checkIngredients(ings, inv, scale);
 }
 
@@ -44,9 +47,9 @@ export function aggregateNeeds(needs: Need[]): Need[] {
  * Add missing ingredients to the family's main shopping list, skipping items
  * already on it (unchecked). Returns how many were added.
  */
-export async function addNeedsToShopping(familyId: string, needs: Need[], source: "recipe" | "meal_plan", sourceId: string | null) {
+export async function addNeedsToShopping(familyId: string, needs: Need[], source: "recipe" | "meal_plan", sourceId: string | null, owner: string | null = null) {
   if (!needs.length) return 0;
-  const listId = await mainShoppingListId(familyId);
+  const listId = await mainShoppingListId(familyId, owner);
   const existing = await db
     .select({ text: listItems.text })
     .from(listItems)
@@ -70,9 +73,9 @@ export async function addNeedsToShopping(familyId: string, needs: Need[], source
 }
 
 /** Missing ingredients for a set of recipes (with servings scaling). */
-export async function missingFor(familyId: string, entries: { recipeId: string; scale: number }[]) {
+export async function missingFor(familyId: string, entries: { recipeId: string; scale: number }[], owner: string | null = null) {
   const ids = [...new Set(entries.map((e) => e.recipeId))];
-  const [ings, inv] = await Promise.all([ingredientsFor(ids), activeInventory(familyId)]);
+  const [ings, inv] = await Promise.all([ingredientsFor(ids), activeInventory(familyId, owner)]);
   const byRecipe = Map.groupBy(ings, (i) => i.recipeId);
   const needs: Need[] = [];
   for (const e of entries) {
@@ -100,12 +103,13 @@ export { formatQty };
 export async function addToInventory(
   familyId: string,
   item: { name: string; quantity: number; unit: string | null; location: (typeof inventoryItems.$inferInsert)["location"]; today: string },
-  meta: { source: "garden_harvest" | "farm_production" | "shopping" | "manual"; sourceId: string | null; memberId: string | null },
+  meta: { source: "garden_harvest" | "farm_production" | "shopping" | "manual"; sourceId: string | null; memberId: string | null; owner?: string | null },
 ) {
+  const owner = meta.owner ?? null;
   const current = await db
     .select()
     .from(inventoryItems)
-    .where(and(eq(inventoryItems.familyId, familyId), isNull(inventoryItems.archivedAt)));
+    .where(and(eq(inventoryItems.familyId, familyId), ownerIs(owner), isNull(inventoryItems.archivedAt)));
   const match = current.find((c) => normalizeName(c.name) === normalizeName(item.name) && (c.unit ?? "") === (item.unit ?? ""));
   let itemId: string;
   if (match) {
@@ -114,7 +118,7 @@ export async function addToInventory(
   } else {
     const [row] = await db
       .insert(inventoryItems)
-      .values({ familyId, name: item.name, quantity: String(item.quantity), unit: item.unit, location: item.location ?? "pantry", purchasedOn: item.today })
+      .values({ familyId, name: item.name, quantity: String(item.quantity), unit: item.unit, location: item.location ?? "pantry", purchasedOn: item.today, ownerMemberId: owner, createdByMemberId: meta.memberId })
       .returning({ id: inventoryItems.id });
     itemId = row!.id;
   }

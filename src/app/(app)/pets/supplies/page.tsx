@@ -18,14 +18,14 @@ export default async function PetSuppliesPage() {
       <PageHeader
         eyebrow="Pets"
         title="Food & supplies"
-        description="Part of the household inventory (Kitchen → Pets). Items at or below their restock level are added to the shopping list automatically."
+        description="Part of the household inventory (Family Pantry → Pet supplies). Items at or below their restock level are added to the shopping list automatically."
         actions={canEdit && <SupplyModal pets={list.map((p) => ({ id: p.id, name: p.name }))} />}
       />
       <PetsTabs active="supplies" />
       {supplies.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {supplies.map((x) => (
-            <SupplyCard key={x.s.id} x={x} canEdit={canEdit} canShop={viewer.can("shopping", "edit")} showPet />
+            <SupplyCard key={x.s.id} x={x} canEdit={canEdit} canShop={viewer.can("shopping", "add")} showPet />
           ))}
         </div>
       ) : (

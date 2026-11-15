@@ -244,7 +244,7 @@ export async function runDailyAutomation(family: Family, force = false) {
           week: sql<number>`count(*) filter (where ${inventoryItems.expiresOn} > ${today})::int`,
         })
         .from(inventoryItems)
-        .where(and(eq(inventoryItems.familyId, fid), isNull(inventoryItems.archivedAt), lte(inventoryItems.expiresOn, addDays(today, 7))));
+        .where(and(eq(inventoryItems.familyId, fid), isNull(inventoryItems.ownerMemberId), isNull(inventoryItems.archivedAt), lte(inventoryItems.expiresOn, addDays(today, 7))));
       const who = await viewersOf(fid, "kitchen");
       if (t > 0) await notify(fid, who, { kind: "food_expiring", title: `${t} item${t === 1 ? "" : "s"} expiring today or expired`, href: "/kitchen?view=expiring" }, today);
       else if (week > 0) await notify(fid, who, { kind: "food_expiring", title: `${week} item${week === 1 ? "" : "s"} expiring this week`, href: "/kitchen?view=expiring" }, today);
@@ -402,6 +402,7 @@ export async function addLowStockToShopping(familyId: string) {
     .where(
       and(
         eq(inventoryItems.familyId, familyId),
+        isNull(inventoryItems.ownerMemberId), // private pantries never touch the family list
         isNull(inventoryItems.archivedAt),
         sql`${inventoryItems.lowStockThreshold} is not null and ${inventoryItems.quantity} <= ${inventoryItems.lowStockThreshold}`,
       ),
@@ -428,15 +429,21 @@ export async function addLowStockToShopping(familyId: string) {
   return rows.length;
 }
 
-/** The family's default shopping list, created on first use. */
-export async function mainShoppingListId(familyId: string) {
+/**
+ * The default shopping list, created on first use: the family's, or (with
+ * ownerMemberId) that member's private "My Shopping List".
+ */
+export async function mainShoppingListId(familyId: string, ownerMemberId: string | null = null) {
   const [existing] = await db
     .select({ id: lists.id })
     .from(lists)
-    .where(and(eq(lists.familyId, familyId), eq(lists.kind, "shopping"), isNull(lists.archivedAt)))
+    .where(and(eq(lists.familyId, familyId), eq(lists.kind, "shopping"), isNull(lists.archivedAt), ownerMemberId ? eq(lists.ownerMemberId, ownerMemberId) : isNull(lists.ownerMemberId)))
     .orderBy(lists.createdAt)
     .limit(1);
   if (existing) return existing.id;
-  const [created] = await db.insert(lists).values({ familyId, title: "Groceries", kind: "shopping" }).returning({ id: lists.id });
+  const [created] = await db
+    .insert(lists)
+    .values(ownerMemberId ? { familyId, title: "My Shopping List", kind: "shopping", ownerMemberId, createdByMemberId: ownerMemberId, visibility: "private" } : { familyId, title: "Groceries", kind: "shopping" })
+    .returning({ id: lists.id });
   return created!.id;
 }

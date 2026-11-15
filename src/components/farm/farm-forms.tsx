@@ -115,7 +115,7 @@ export function ProductionModal({ animals, canKitchen, defaultKind = "eggs", tri
       <SelectField name="animalId" label="From" defaultValue={defaultAnimal ?? ""} placeholder="Whole flock / herd" options={animals.map((a) => ({ value: a.id, label: `${a.name} (${a.species})` }))} />
       {canKitchen && kind !== "wool" && (
         <>
-          <CheckboxField name="addToKitchen" label="Add to kitchen inventory" defaultChecked />
+          <CheckboxField name="addToKitchen" label="Add to the Family Pantry" defaultChecked />
           <SelectField name="location" label="Store in" defaultValue={kind === "honey" ? "pantry" : "fridge"} options={LOCATION_OPTIONS} />
         </>
       )}

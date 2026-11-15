@@ -6,11 +6,12 @@ import { db } from "@/db";
 import { inventoryEvents, inventoryItems, listItems, products, storageLocation } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { addLowStockToShopping } from "@/lib/automation";
-import { AuthorizationError, requireModule } from "@/lib/dal";
+import { AuthorizationError, getViewer, requireModule, type Viewer } from "@/lib/dal";
+import { assertChange, hasPrivateFood, ownerForNew } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
-import { addToInventory } from "@/lib/kitchen";
+import { addToInventory, FOOD_LOCATIONS } from "@/lib/kitchen";
 import { loadList } from "@/lib/lists";
 import { ownedCategoryId } from "@/lib/queries";
 import { f } from "@/lib/records";
@@ -28,13 +29,18 @@ function revalidateKitchen() {
 
 export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("kitchen", "edit");
+    const viewer = await getViewer();
     const name = f.str(fd, "name");
     if (!name) return fail("What is it?", "name");
     const quantity = f.num(fd, "quantity") ?? 1;
     if (quantity < 0) return fail("Quantity can't be negative.", "quantity");
+    const id = f.str(fd, "id");
+    const old = id ? await ownItem(viewer, id) : null;
+    if (old) assertChange(viewer, "kitchen", old);
+    const owner = old ? old.ownerMemberId : ownerForNew(viewer, "kitchen", fd);
     const loc = (f.str(fd, "location") ?? "pantry") as Loc;
-    const location = LOCATIONS.includes(loc) ? loc : "pantry";
+    // Private pantries hold food only; pet, craft and home supplies stay with the family.
+    const location = LOCATIONS.includes(loc) && (!owner || (FOOD_LOCATIONS as readonly string[]).includes(loc)) ? loc : "pantry";
     const barcode = f.str(fd, "barcode")?.replace(/\D/g, "") || null;
 
     // Cache the product so the next scan is instant.
@@ -48,7 +54,6 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
       productId = p!.id;
     }
 
-    const id = f.str(fd, "id");
     const image = await saveUpload(viewer, fd.get("image"));
     const values = {
       familyId: viewer.family.id,
@@ -66,9 +71,7 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
       ...(image ? { imageFileId: image } : {}),
     };
 
-    if (id) {
-      const [old] = await db.select().from(inventoryItems).where(and(eq(inventoryItems.id, id), eq(inventoryItems.familyId, viewer.family.id)));
-      if (!old) return fail("Item not found.");
+    if (id && old) {
       await db.update(inventoryItems).set(f.bool(fd, "removeImage") && !image ? { ...values, imageFileId: null } : values).where(eq(inventoryItems.id, id));
       if ((image || f.bool(fd, "removeImage")) && old.imageFileId) await deleteFamilyFile(viewer.family.id, old.imageFileId);
       const delta = quantity - Number(old.quantity);
@@ -78,7 +81,7 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
     } else {
       const [row] = await db
         .insert(inventoryItems)
-        .values({ ...values, purchasedOn: values.purchasedOn ?? todayIn(viewer.family.timezone) })
+        .values({ ...values, purchasedOn: values.purchasedOn ?? todayIn(viewer.family.timezone), ownerMemberId: owner, createdByMemberId: viewer.member.id })
         .returning({ id: inventoryItems.id });
       await db.insert(inventoryEvents).values({
         familyId: viewer.family.id,
@@ -94,16 +97,25 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
   });
 }
 
-async function ownItem(familyId: string, id: string) {
-  const [item] = await db.select().from(inventoryItems).where(and(eq(inventoryItems.id, id), eq(inventoryItems.familyId, familyId)));
-  if (!item) throw new AuthorizationError("Item not found.");
+/** An item in the viewer's family that they may see (family items, or their own private ones). */
+async function ownItem(viewer: Viewer, id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Item not found.");
+  const [item] = await db.select().from(inventoryItems).where(and(eq(inventoryItems.id, id), eq(inventoryItems.familyId, viewer.family.id)));
+  if (!item || (item.ownerMemberId && item.ownerMemberId !== viewer.member.id) || (!item.ownerMemberId && !viewer.can("kitchen"))) throw new AuthorizationError("Item not found.");
   return item;
+}
+
+/** Load an item and check the viewer may change it. */
+async function changeableItem(id: string) {
+  const viewer = await getViewer();
+  const item = await ownItem(viewer, id);
+  assertChange(viewer, "kitchen", item);
+  return { viewer, item };
 }
 
 /** Use some (default 1) of an item. Archives it when it runs out. */
 export async function useInventory(fd: FormData) {
-  const viewer = await requireModule("kitchen", "edit");
-  const item = await ownItem(viewer.family.id, String(fd.get("id")));
+  const { viewer, item } = await changeableItem(String(fd.get("id")));
   const amount = Math.max(0, Number(fd.get("amount") ?? 1) || 1);
   const left = Math.max(0, Number(item.quantity) - amount);
   await db.update(inventoryItems).set({ quantity: String(left), archivedAt: left === 0 ? new Date() : null }).where(eq(inventoryItems.id, item.id));
@@ -112,8 +124,7 @@ export async function useInventory(fd: FormData) {
 }
 
 export async function adjustInventory(fd: FormData) {
-  const viewer = await requireModule("kitchen", "edit");
-  const item = await ownItem(viewer.family.id, String(fd.get("id")));
+  const { viewer, item } = await changeableItem(String(fd.get("id")));
   const delta = Number(fd.get("delta") ?? 0);
   if (!delta) return;
   const next = Math.max(0, Number(item.quantity) + delta);
@@ -124,8 +135,7 @@ export async function adjustInventory(fd: FormData) {
 
 /** Mark an item used / discarded / donated (removes it) or replaced (fresh stock). */
 export async function disposeInventory(fd: FormData) {
-  const viewer = await requireModule("kitchen", "edit");
-  const item = await ownItem(viewer.family.id, String(fd.get("id")));
+  const { viewer, item } = await changeableItem(String(fd.get("id")));
   const kind = String(fd.get("kind"));
   if (!["used", "discarded", "donated", "replaced"].includes(kind)) return;
   const qty = Number(item.quantity);
@@ -149,15 +159,14 @@ export async function disposeInventory(fd: FormData) {
 }
 
 export async function deleteInventoryItem(fd: FormData) {
-  const viewer = await requireModule("kitchen", "edit");
-  const item = await ownItem(viewer.family.id, String(fd.get("id")));
+  const { viewer, item } = await changeableItem(String(fd.get("id")));
   await db.delete(inventoryItems).where(eq(inventoryItems.id, item.id));
   await deleteFamilyFile(viewer.family.id, item.imageFileId);
   revalidateKitchen();
 }
 
 export async function restockLowItems() {
-  const viewer = await requireModule("shopping", "edit");
+  const viewer = await requireModule("shopping", "add");
   const n = await addLowStockToShopping(viewer.family.id);
   revalidateKitchen();
   if (n) await logActivity(db, viewer.family.id, viewer.member.id, "shopping.low_stock", `added ${n} low-stock item${n === 1 ? "" : "s"} to the shopping list`, { module: "shopping" });
@@ -179,7 +188,8 @@ export type ProductLookup = {
  * Always succeeds (found:false lets the user enter it manually).
  */
 export async function lookupBarcode(raw: string): Promise<ProductLookup> {
-  const viewer = await requireModule("kitchen", "edit");
+  const viewer = await getViewer();
+  if (!viewer.can("kitchen", "add") && !hasPrivateFood(viewer)) throw new AuthorizationError("You don't have access to that.");
   const barcode = String(raw ?? "").replace(/\D/g, "");
   if (barcode.length < 6 || barcode.length > 14) return { found: false, source: null, message: "That doesn't look like a product barcode." };
 
@@ -212,8 +222,10 @@ export async function lookupBarcode(raw: string): Promise<ProductLookup> {
  * kitchen (merging with an existing item of the same name & unit), then cleared.
  */
 export async function putAwayChecked(fd: FormData) {
-  const viewer = await requireModule("kitchen", "edit");
+  const viewer = await getViewer();
   const list = await loadList(viewer, String(fd.get("id")), true);
+  // A private list puts away into the owner's private pantry; a family list into the family's.
+  if (!list.ownerMemberId && !viewer.can("kitchen", "add")) throw new AuthorizationError("You can't add to the family pantry.");
   const checked = await db.select().from(listItems).where(and(eq(listItems.listId, list.id), eq(listItems.checked, true)));
   if (!checked.length) return;
   const today = todayIn(viewer.family.timezone);
@@ -222,7 +234,7 @@ export async function putAwayChecked(fd: FormData) {
     await addToInventory(
       viewer.family.id,
       { name: item.text, quantity: item.quantity ? Number(item.quantity) : 1, unit: item.unit, location: locFor(item.shoppingCategory), today },
-      { source: "shopping", sourceId: list.id, memberId: viewer.member.id },
+      { source: "shopping", sourceId: list.id, memberId: viewer.member.id, owner: list.ownerMemberId },
     );
   }
   const count = checked.length;

@@ -83,9 +83,13 @@ export const inventoryItems = pgTable(
     imageFileId: uuid("image_file_id").references(() => files.id, { onDelete: "set null" }),
     notes: text("notes"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** Set = in this member's private food space (My Pantry etc.); null = the family's. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
+    createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     ...timestamps,
   },
   (t) => [
+    index("inventory_owner_idx").on(t.ownerMemberId),
     index("inventory_family_location_idx").on(t.familyId, t.location),
     index("inventory_family_expires_idx").on(t.familyId, t.expiresOn),
   ],

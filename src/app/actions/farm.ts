@@ -153,7 +153,7 @@ export async function logProduction(_: ActionState, fd: FormData): Promise<Actio
     let animalName: string | null = null;
     if (animalId) animalName = (await ownAnimal(viewer, animalId)).name;
     let inventoryItemId: string | null = null;
-    if (f.bool(fd, "addToKitchen") && viewer.can("kitchen", "edit") && kind !== "wool") {
+    if (f.bool(fd, "addToKitchen") && viewer.can("kitchen", "add") && kind !== "wool") {
       const loc = f.str(fd, "location") as (typeof LOCATIONS)[number];
       inventoryItemId = await addToInventory(
         viewer.family.id,

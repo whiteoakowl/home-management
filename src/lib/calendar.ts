@@ -195,7 +195,7 @@ export async function getCalendarItems(
       .select({ id: mealPlanEntries.id, date: mealPlanEntries.date, slot: mealPlanEntries.slot, title: mealPlanEntries.title, recipe: recipes.name })
       .from(mealPlanEntries)
       .leftJoin(recipes, eq(recipes.id, mealPlanEntries.recipeId))
-      .where(and(eq(mealPlanEntries.familyId, fid), gte(mealPlanEntries.date, from), lte(mealPlanEntries.date, to), eq(mealPlanEntries.slot, "dinner")))
+      .where(and(eq(mealPlanEntries.familyId, fid), or(isNull(mealPlanEntries.ownerMemberId), eq(mealPlanEntries.ownerMemberId, viewer.member.id)), gte(mealPlanEntries.date, from), lte(mealPlanEntries.date, to), eq(mealPlanEntries.slot, "dinner")))
       .orderBy(asc(mealPlanEntries.date));
     for (const r of rows) {
       out.push({ key: `m:${r.id}`, id: r.id, layer: "meals", title: `Dinner: ${r.recipe ?? r.title}`, date: r.date, startMin: null, endMin: null, color: "khaki", href: `/meals?week=${r.date}`, people: [] });

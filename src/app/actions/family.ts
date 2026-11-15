@@ -1,5 +1,6 @@
 "use server";
 
+import { ADD_LEVEL_MODULES } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
@@ -185,7 +186,8 @@ function parsePermissionForm(formData: FormData) {
     if (prefix !== "perm" || !memberId || !mod) continue;
     if (!MODULES.includes(mod as Module) || !ACCESS_LEVELS.includes(value as AccessLevel)) continue;
     const entry = byMember.get(memberId) ?? {};
-    entry[mod as Module] = value as AccessLevel;
+    // "Add" only exists for the Family Pantry areas.
+    entry[mod as Module] = value === "add" && !ADD_LEVEL_MODULES.includes(mod as Module) ? "view" : (value as AccessLevel);
     byMember.set(memberId, entry);
   }
   return byMember;
@@ -198,6 +200,29 @@ async function savePermissionsFromForm(formData: FormData) {
     if (!target || target.role === "parent") continue; // parents always have full access
     await setMemberPermissions(target.id, perms);
   }
+}
+
+/** A member's private food space (My Pantry, My Recipes, My Meal Plans, My Shopping List). Parents only. */
+export async function savePrivateFood(_: ActionState, formData: FormData): Promise<ActionState> {
+  const viewer = await requireParent();
+  const target = await getFamilyMember(viewer, String(formData.get("memberId") ?? ""));
+  if (!target) return { ok: false, message: "Family member not found." };
+  const enabled = formData.get("privateFood") === "enabled";
+  await db.update(familyMembers).set({ privateFood: enabled }).where(eq(familyMembers.id, target.id));
+  revalidatePath("/", "layout");
+  return { ok: true, message: enabled ? `${target.displayName}'s private food space is on. Only they can see what they put there.` : `${target.displayName}'s private food space is off. Anything already in it stays private and comes back if you turn it on again.` };
+}
+
+/** Whether parents may open members' private food spaces (read-only). Off by default. */
+export async function savePantryPrivacy(_: ActionState, formData: FormData): Promise<ActionState> {
+  const viewer = await requireParent();
+  const on = formData.get("parentsSeePrivateFood") === "on";
+  await db
+    .update(families)
+    .set({ settings: { ...viewer.family.settings, parentsSeePrivateFood: on } })
+    .where(eq(families.id, viewer.family.id));
+  revalidatePath("/", "layout");
+  return { ok: true, message: on ? "Parents can now open members' private food spaces (read-only)." : "Private food spaces are private to each member." };
 }
 
 export async function savePermissions(_: ActionState, formData: FormData): Promise<ActionState> {

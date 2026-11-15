@@ -36,6 +36,8 @@ export const recipes = pgTable(
     notes: text("notes"),
     source: text("source"),
     isFavorite: boolean("is_favorite").notNull().default(false),
+    /** Set = in this member's private food space (My Pantry etc.); null = the family's. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
     }),
@@ -70,6 +72,8 @@ export const recipeCollections = pgTable("recipe_collections", {
     .references(() => families.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
+  /** Set = in this member's private food space (My Pantry etc.); null = the family's. */
+  ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
   ...timestamps,
 });
 
@@ -115,6 +119,8 @@ export const mealPlanEntries = pgTable(
     title: text("title"),
     servings: integer("servings"),
     notes: text("notes"),
+    /** Set = in this member's private food space (My Pantry etc.); null = the family's. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
     }),

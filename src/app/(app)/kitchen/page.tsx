@@ -15,11 +15,14 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { LinkTabs } from "@/components/ui/tabs";
 import { getViewer } from "@/lib/dal";
+import { FoodSpaceNav, PrivateSpaceNote } from "@/components/food/food-space-nav";
+import { canAddIn, canChange, canOpenFood, inSpace, privateSpaceMembers, resolveSpace, withSpace } from "@/lib/food-space";
+import { redirect } from "next/navigation";
 import { daysBetween, todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { categoryOptions } from "@/lib/queries";
 
-export const metadata: Metadata = { title: "Kitchen" };
+export const metadata: Metadata = { title: "Family Pantry" };
 
 const VIEWS = [
   { key: "all", label: "Everything" },
@@ -35,7 +38,7 @@ const VIEWS = [
 const LOCATION_VIEWS = ["pantry", "fridge", "freezer", "supplies", "pets", "craft", "home"];
 
 const EMPTY_COPY: Record<string, { title: string; desc: string; example: string }> = {
-  all: { title: "Your kitchen is empty", desc: "Add what's in your pantry, fridge and freezer and we'll keep an eye on expiry dates.", example: "Scan a barcode, or add “Eggs: 12, fridge”" },
+  all: { title: "No food has been added yet.", desc: "Add what's in your pantry, fridge and freezer and we'll keep an eye on expiry dates.", example: "Scan a barcode, or add “Eggs: 12, fridge”" },
   pantry: { title: "Nothing in the pantry yet", desc: "Track canned goods, baking supplies, grains and snacks.", example: "Flour · 5 lb · Expires Mar 2027" },
   fridge: { title: "Nothing in the fridge yet", desc: "Track milk, eggs, produce and leftovers.", example: "Milk · 1 gal · Expires Friday" },
   freezer: { title: "Nothing in the freezer yet", desc: "Track meat, frozen veggies and batch-cooked meals.", example: "Ground beef · 2 lb" },
@@ -45,11 +48,15 @@ const EMPTY_COPY: Record<string, { title: string; desc: string; example: string 
 
 export default async function KitchenPage({ searchParams }: PageProps<"/kitchen">) {
   const viewer = await getViewer();
-  if (!viewer.can("kitchen")) notFound();
+  if (!canOpenFood(viewer, "kitchen")) notFound();
   const sp = await searchParams;
-  const view = VIEWS.some((v) => v.key === sp.view) ? String(sp.view) : "all";
+  const space = await resolveSpace(viewer, sp.space);
+  if (space.kind === "family" && !viewer.can("kitchen")) redirect("/kitchen?space=mine");
+  const isPrivate = space.kind === "private";
+  const view = VIEWS.some((v) => v.key === sp.view && !(isPrivate && "optional" in v)) ? String(sp.view) : "all";
   const today = todayIn(viewer.family.timezone);
-  const canEdit = viewer.can("kitchen", "edit");
+  const canEdit = canAddIn(viewer, "kitchen", space);
+  const owner = inSpace(inventoryItems.ownerMemberId, space);
 
   const [cats, rows, counts] = await Promise.all([
     categoryOptions(viewer, "inventory"),
@@ -60,6 +67,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
       .where(
         and(
           eq(inventoryItems.familyId, viewer.family.id),
+          owner,
           isNull(inventoryItems.archivedAt),
           LOCATION_VIEWS.includes(view) ? eq(inventoryItems.location, view as "pantry") : undefined,
           view === "expiring" ? sql`${inventoryItems.expiresOn} <= ${today}::date + 30` : undefined,
@@ -69,11 +77,11 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
     db
       .select({ location: inventoryItems.location, n: sql<number>`count(*)::int`, expiring: sql<number>`count(*) filter (where ${inventoryItems.expiresOn} <= ${today}::date + 7)::int` })
       .from(inventoryItems)
-      .where(and(eq(inventoryItems.familyId, viewer.family.id), isNull(inventoryItems.archivedAt)))
+      .where(and(eq(inventoryItems.familyId, viewer.family.id), owner, isNull(inventoryItems.archivedAt)))
       .groupBy(inventoryItems.location),
   ]);
 
-  const items: InventoryRowData[] = rows.map(({ i, categoryName }) => ({
+  const items: (InventoryRowData & { ownerMemberId: string | null; createdByMemberId: string | null })[] = rows.map(({ i, categoryName }) => ({
     ...i,
     quantity: i.quantity,
     lowStockThreshold: i.lowStockThreshold,
@@ -96,23 +104,25 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
       : [{ key: "all", label: "", items }];
 
   const copy = EMPTY_COPY[view]!;
-  const add = <InventoryFormModal categories={cats} defaults={{ location: LOCATION_VIEWS.includes(view) ? view : "pantry" }} defaultOpen={sp.new === "1"} />;
+  const add = <InventoryFormModal categories={cats} defaults={{ location: LOCATION_VIEWS.includes(view) ? view : "pantry" }} defaultOpen={sp.new === "1"} privateSpace={isPrivate} />;
+  const others = await privateSpaceMembers(viewer);
+  const title = isPrivate ? (space.own ? "My Pantry" : `${space.memberName}'s Pantry`) : "Family Pantry";
 
   return (
     <>
       <PageHeader
-        eyebrow="Kitchen"
-        title="Kitchen inventory"
-        description="What's in the pantry, fridge and freezer, and what needs using up."
+        eyebrow={isPrivate ? "My private food" : "Family Pantry"}
+        title={title}
+        description={isPrivate ? "Your own food: pantry, fridge and freezer, private to you." : "What's in the family's pantry, fridge and freezer, and what needs using up."}
         actions={
           canEdit ? (
             <>
-              {viewer.can("recipes") && (
-                <ButtonLink href="/kitchen/cook" variant="secondary" icon={<ChefHat className="size-4" />}>
+              {(isPrivate || viewer.can("recipes")) && (
+                <ButtonLink href={withSpace("/kitchen/cook", space)} variant="secondary" icon={<ChefHat className="size-4" />}>
                   What can I cook?
                 </ButtonLink>
               )}
-              <ButtonLink href="/kitchen/scan" variant="secondary" icon={<ScanBarcode className="size-4" />}>
+              <ButtonLink href={withSpace("/kitchen/scan", space)} variant="secondary" icon={<ScanBarcode className="size-4" />}>
                 Scan
               </ButtonLink>
               {add}
@@ -120,9 +130,11 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
           ) : undefined
         }
       />
-      <LinkTabs active={view} tabs={VIEWS.filter((v) => !("optional" in v) || countFor(v.key) > 0 || v.key === view).map((v) => ({ key: v.key, href: `/kitchen?view=${v.key}`, label: v.label, count: countFor(v.key) }))} />
+      <FoodSpaceNav viewer={viewer} active="kitchen" space={space} others={others} />
+      <PrivateSpaceNote space={space} />
+      <LinkTabs active={view} tabs={VIEWS.filter((v) => !(isPrivate && "optional" in v) && (!("optional" in v) || countFor(v.key) > 0 || v.key === view)).map((v) => ({ key: v.key, href: withSpace(`/kitchen?view=${v.key}`, space), label: v.label, count: countFor(v.key) }))} />
 
-      {lowCount > 0 && viewer.can("shopping", "edit") && (
+      {lowCount > 0 && !isPrivate && viewer.can("shopping", "add") && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-olive-100 bg-olive-50 px-4 py-3">
           <p className="flex items-center gap-2 text-[15px] text-olive-700">
             <AlarmClock className="size-4" /> {lowCount} item{lowCount === 1 ? " is" : "s are"} running low.
@@ -152,7 +164,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
                 {g.label && <h2 className="mb-2 text-lg font-semibold">{g.label}</h2>}
                 <ul className="grid gap-2 lg:grid-cols-2">
                   {g.items.map((i) => (
-                    <InventoryRow key={i.id} item={i} categories={cats} canEdit={canEdit} showLocation={view === "all" || view === "expiring"} />
+                    <InventoryRow key={i.id} item={i} categories={cats} canEdit={canChange(viewer, "kitchen", i)} showLocation={view === "all" || view === "expiring"} />
                   ))}
                 </ul>
               </section>
@@ -162,7 +174,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
       {view !== "expiring" && countFor("expiring") > 0 && (
         <p className="mt-6 text-sm text-muted">
           {countFor("expiring")} item{countFor("expiring") === 1 ? "" : "s"} expire within a week.{" "}
-          <Link href="/kitchen?view=expiring" className="font-medium text-primary-600 hover:underline">
+          <Link href={withSpace("/kitchen?view=expiring", space)} className="font-medium text-primary-600 hover:underline">
             See what to use first →
           </Link>
         </p>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   calendarEvents,
@@ -81,7 +81,7 @@ export async function saveCraftItem(_: ActionState, fd: FormData): Promise<Actio
         const ids = f.list(fd, "supplyIds");
         await tx.delete(craftItemSupplies).where(eq(craftItemSupplies.itemId, itemId!));
         if (ids.length) {
-          const valid = await tx.select({ id: inventoryItems.id }).from(inventoryItems).where(and(eq(inventoryItems.familyId, viewer.family.id), inArray(inventoryItems.id, ids)));
+          const valid = await tx.select({ id: inventoryItems.id }).from(inventoryItems).where(and(eq(inventoryItems.familyId, viewer.family.id), isNull(inventoryItems.ownerMemberId), inArray(inventoryItems.id, ids)));
           if (valid.length) await tx.insert(craftItemSupplies).values(valid.map((v) => ({ itemId: itemId!, inventoryItemId: v.id })));
         }
       }
@@ -232,10 +232,10 @@ export async function deleteCraftSupply(fd: FormData) {
 /** Put supplies onto the main shopping list (skips ones already there). */
 export async function shopForSupplies(fd: FormData) {
   const viewer = await requireModule("witchcraft", "edit");
-  if (!viewer.can("shopping", "edit")) throw new AuthorizationError("You can't edit the shopping list.");
+  if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit the shopping list.");
   const ids = f.list(fd, "ids").flatMap((s) => s.split(","));
   if (!ids.length) return;
-  const items = await db.select().from(inventoryItems).where(and(eq(inventoryItems.familyId, viewer.family.id), inArray(inventoryItems.id, ids)));
+  const items = await db.select().from(inventoryItems).where(and(eq(inventoryItems.familyId, viewer.family.id), isNull(inventoryItems.ownerMemberId), inArray(inventoryItems.id, ids)));
   const listId = await mainShoppingListId(viewer.family.id);
   const have = await db.select({ sourceId: listItems.sourceId }).from(listItems).where(and(eq(listItems.listId, listId), eq(listItems.checked, false)));
   const skip = new Set(have.map((h) => h.sourceId));
@@ -296,7 +296,7 @@ export async function saveCelebration(_: ActionState, fd: FormData): Promise<Act
       if (fd.has("linksField")) {
         await tx.delete(celebrationLinks).where(and(eq(celebrationLinks.celebrationId, cid!)));
         const rids = f.list(fd, "recipeIds");
-        const valid = rids.length ? await tx.select({ id: recipes.id }).from(recipes).where(and(eq(recipes.familyId, viewer.family.id), inArray(recipes.id, rids))) : [];
+        const valid = rids.length ? await tx.select({ id: recipes.id }).from(recipes).where(and(eq(recipes.familyId, viewer.family.id), isNull(recipes.ownerMemberId), inArray(recipes.id, rids))) : [];
         const items = f.list(fd, "craftItemIds");
         const validItems = items.length ? (await Promise.all(items.map((i) => getCraftItem(viewer, i)))).filter(Boolean) : [];
         const links = [...valid.map((r) => ({ celebrationId: cid!, recipeId: r.id })), ...validItems.map((i) => ({ celebrationId: cid!, craftItemId: i!.id }))];
@@ -327,7 +327,7 @@ export async function deleteCelebration(fd: FormData) {
 /** Send the celebration's supplies to its own shopping list (created once, reused after). */
 export async function celebrationShoppingList(fd: FormData) {
   const viewer = await requireModule("witchcraft", "edit");
-  if (!viewer.can("shopping", "edit")) throw new AuthorizationError("You can't edit shopping lists.");
+  if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit shopping lists.");
   const [c] = await db.select().from(celebrations).where(and(eq(celebrations.id, String(fd.get("id"))), eq(celebrations.familyId, viewer.family.id)));
   if (!c) return;
   let listId = c.shoppingListId;

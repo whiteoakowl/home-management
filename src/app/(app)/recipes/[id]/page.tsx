@@ -10,6 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Avatar, Badge } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
+import { canChange } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { checkIngredients, formatQty } from "@/lib/ingredients";
@@ -26,27 +27,31 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const { id } = await params;
   const sp = await searchParams;
   const viewer = await getViewer();
-  if (!viewer.can("recipes")) notFound();
   const data = await getRecipe(viewer, id);
   if (!data) notFound();
   const { r, categoryName, ingredients, ratings, collections } = data;
+  const owner = r.ownerMemberId;
+  const own = owner === viewer.member.id;
   const base = r.servings ?? null;
   const servings = Math.max(1, Math.min(50, Number(sp.servings) || base || 1));
   const scale = base ? servings / base : 1;
-  const showPantry = viewer.can("kitchen");
-  const [cats, cols, inventory, diet] = await Promise.all([categoryOptions(viewer, "recipe"), collectionOptions(viewer), showPantry ? activeInventory(viewer.family.id) : Promise.resolve([]), dietChecker(viewer)]);
+  // Private recipes check against the owner's private pantry; family recipes against the family's.
+  const showPantry = owner ? own : viewer.can("kitchen");
+  const [cats, cols, inventory, diet] = await Promise.all([categoryOptions(viewer, "recipe"), collectionOptions(viewer, owner), showPantry ? activeInventory(viewer.family.id, owner) : Promise.resolve([]), dietChecker(viewer)]);
   const warnings = diet ? diet.check(ingredients.map((i) => i.name)) : [];
   const flagged = new Set(warnings.map((w) => w.ingredient));
   const status = checkIngredients(ingredients, inventory, scale);
   const missing = status.filter((s) => !s.have && !s.optional).length;
   const mine = ratings.find((x) => x.memberId === viewer.member.id)?.rating ?? null;
   const avg = ratings.length ? ratings.reduce((s, x) => s + x.rating, 0) / ratings.length : null;
-  const canEdit = viewer.can("recipes", "edit");
+  const canEdit = canChange(viewer, "recipes", r);
+  const canShop = owner ? own : viewer.can("shopping", "add");
+  const planSpaces = { family: !owner && viewer.can("meals", "add"), mine: owner ? own : viewer.member.privateFood };
   const image = fileUrl(r.imageFileId);
 
   return (
     <article className="mx-auto flex max-w-5xl flex-col gap-6">
-      <Link href="/recipes" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink print:hidden">
+      <Link href={owner ? (own ? "/recipes?space=mine" : `/recipes?space=${owner}`) : "/recipes"} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink print:hidden">
         <ArrowLeft className="size-4" /> Recipes
       </Link>
 
@@ -90,7 +95,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
             {avg && <span>★ {avg.toFixed(1)} family rating</span>}
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1 print:hidden">
-            {viewer.can("meals", "edit") && <PlanRecipeButton recipeId={r.id} today={todayIn(viewer.family.timezone)} canShop={viewer.can("shopping", "edit")} />}
+            {(planSpaces.family || planSpaces.mine) && <PlanRecipeButton recipeId={r.id} today={todayIn(viewer.family.timezone)} canShop={canShop} planSpaces={planSpaces} />}
             {canEdit && (
               <ActionButton action={toggleFavorite} fields={{ id: r.id }} className={cn("h-11 rounded-[var(--radius-control)] border px-4 text-[15px] font-medium", r.isFavorite ? "border-wine-100 bg-wine-50 text-wine-700" : "border-line-strong bg-surface hover:bg-sunken")}>
                 <Heart className={cn("size-4", r.isFavorite && "fill-current")} /> {r.isFavorite ? "Favorite" : "Mark favorite"}
@@ -178,9 +183,9 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
               ))}
             </ul>
           )}
-          {showPantry && missing > 0 && viewer.can("shopping", "edit") && (
+          {showPantry && missing > 0 && canShop && (
             <ActionButton action={addRecipeToShopping} fields={{ id: r.id, scale }} className="mt-5 h-10 w-full rounded-[var(--radius-control)] bg-primary-50 text-sm font-semibold text-primary-700 hover:bg-primary-100 print:hidden">
-              <ShoppingBasket className="size-4" /> Add {missing} missing to shopping list
+              <ShoppingBasket className="size-4" /> Add {missing} missing to {owner ? "My Shopping List" : "the shopping list"}
             </ActionButton>
           )}
         </Card>

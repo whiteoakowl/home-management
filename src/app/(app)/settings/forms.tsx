@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Pencil } from "lucide-react";
-import { deleteCategory, saveAutomationSettings, saveCategory, updateEnabledModules, updateFamily, uploadFamilyImage } from "@/app/actions/family";
+import { deleteCategory, saveAutomationSettings, saveCategory, savePantryPrivacy, updateEnabledModules, updateFamily, uploadFamilyImage } from "@/app/actions/family";
 import { ActionForm, FormModal } from "@/components/forms/action-form";
 import { ImageField, TextField } from "@/components/forms/fields";
 import { DeleteButton } from "@/components/forms/inline";
@@ -142,3 +142,16 @@ export function CategoryManager({ domain, label, items }: { domain: string; labe
   );
 }
 
+
+export function PantryPrivacyForm({ enabled }: { enabled: boolean }) {
+  return (
+    <ActionForm action={savePantryPrivacy} submitLabel="Save" resetOnSuccess={false} showSuccess>
+      <Toggle
+        name="parentsSeePrivateFood"
+        label="Parents can open members' private food spaces"
+        description="Off by default. When on, parents can view (not change) each member's My Pantry, My Recipes, My Meal Plans and My Shopping List."
+        defaultChecked={enabled}
+      />
+    </ActionForm>
+  );
+}

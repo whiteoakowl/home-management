@@ -76,16 +76,19 @@ export function InventoryFormModal({
   defaultOpen,
   triggerContent,
   triggerClassName,
+  privateSpace,
 }: {
   categories: { id: string; name: string }[];
   defaults?: InventoryDefaults;
   defaultOpen?: boolean;
+  /** Add to the member's own private pantry instead of the family's. */
+  privateSpace?: boolean;
   triggerContent?: ReactNode;
   triggerClassName?: string;
 }) {
   return (
     <FormModal
-      title={defaults?.id ? "Edit item" : "Add to inventory"}
+      title={defaults?.id ? "Edit item" : privateSpace ? "Add to My Pantry" : "Add to the Family Pantry"}
       triggerLabel="Add item"
       action={saveInventoryItem}
       submitLabel={defaults?.id ? "Save" : "Add item"}
@@ -94,12 +97,13 @@ export function InventoryFormModal({
       triggerClassName={triggerClassName}
       description={
         !defaults?.id ? (
-          <Link href="/kitchen/scan" className="inline-flex items-center gap-1.5 font-medium text-primary-600 hover:underline">
+          <Link href={privateSpace ? "/kitchen/scan?space=mine" : "/kitchen/scan"} className="inline-flex items-center gap-1.5 font-medium text-primary-600 hover:underline">
             <ScanBarcode className="size-4" /> Scan a barcode instead
           </Link>
         ) : undefined
       }
     >
+      {privateSpace && !defaults?.id && <input type="hidden" name="space" value="mine" />}
       <InventoryFields d={{ location: defaults?.location, ...defaults }} categories={categories} />
     </FormModal>
   );

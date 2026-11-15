@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, asc, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { listItems, lists, recurrenceRules, shoppingCategory } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
-import { listModule, loadList } from "@/lib/lists";
+import { canAddToList, listModule, loadList } from "@/lib/lists";
+import { ownerForNew } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { ownedCategoryId } from "@/lib/queries";
@@ -30,18 +31,20 @@ export async function saveList(_: ActionState, fd: FormData): Promise<ActionStat
     const id = f.str(fd, "id");
     const kind = (f.str(fd, "kind") ?? "checklist") as Kind;
     if (!KINDS.includes(kind)) return fail("Choose a list type.", "kind");
-    if (!viewer.can(listModule(kind), "edit")) throw new AuthorizationError("You can't create lists.");
+    // Shopping lists can be created with Add access, or in your private food space.
+    const owner = !id && kind === "shopping" ? ownerForNew(viewer, "shopping", fd) : null;
+    if (!id && kind !== "shopping" && !viewer.can(listModule(kind), "edit")) throw new AuthorizationError("You can't create lists.");
     const title = f.str(fd, "title");
     if (!title) return fail("Give the list a name.", "title");
     const { visibility, memberIds } = visibilityFromForm(fd);
-    const values = { title, kind, store: f.str(fd, "store"), visibility, categoryId: await ownedCategoryId(viewer, "list", f.str(fd, "categoryId")) };
+    const values = { title, kind, store: f.str(fd, "store"), visibility: owner ? ("private" as const) : visibility, categoryId: await ownedCategoryId(viewer, "list", f.str(fd, "categoryId")) };
     let listId = id;
     await db.transaction(async (tx) => {
       if (id) {
         await loadList(viewer, id, true);
         await tx.update(lists).set(values).where(eq(lists.id, id));
       } else {
-        const [row] = await tx.insert(lists).values({ ...values, familyId: viewer.family.id, createdByMemberId: viewer.member.id }).returning({ id: lists.id });
+        const [row] = await tx.insert(lists).values({ ...values, familyId: viewer.family.id, createdByMemberId: viewer.member.id, ownerMemberId: owner }).returning({ id: lists.id });
         listId = row!.id;
       }
       await saveRecordAccess(tx, viewer.family.id, "list", listId!, memberIds);
@@ -88,7 +91,7 @@ export async function addItem(_: ActionState, fd: FormData): Promise<ActionState
   return guard(async () => {
     const viewer = await getViewer();
     const l = await loadList(viewer, String(fd.get("listId")));
-    if (!viewer.can(listModule(l.kind), "edit") && l.createdByMemberId !== viewer.member.id) throw new AuthorizationError("You can only check items on this list.");
+    if (!canAddToList(viewer, l)) throw new AuthorizationError("You can only check items on this list.");
     // Allow pasting several lines at once.
     const lines = String(fd.get("text") ?? "")
       .split("\n")
@@ -151,6 +154,7 @@ export async function toggleItem(fd: FormData) {
   const [item] = await db.select().from(listItems).where(eq(listItems.id, String(fd.get("id"))));
   if (!item) return;
   const l = await loadList(viewer, item.listId);
+  if (l.ownerMemberId && l.ownerMemberId !== viewer.member.id) throw new AuthorizationError("This list is read-only for you.");
   const done = fd.get("done") === "true";
 
   if (done && item.recurrenceRuleId) {
@@ -167,7 +171,7 @@ export async function toggleItem(fd: FormData) {
     .update(listItems)
     .set(done ? { checked: true, checkedAt: new Date(), checkedByMemberId: viewer.member.id } : { checked: false, checkedAt: null, checkedByMemberId: null })
     .where(eq(listItems.id, item.id));
-  if (done && l.kind === "shopping") {
+  if (done && l.kind === "shopping" && !l.ownerMemberId) {
     await logActivity(db, viewer.family.id, viewer.member.id, "shopping.purchased", `picked up ${item.text}`, { module: "shopping" });
   }
   revalidateLists(l.kind);
@@ -229,14 +233,14 @@ function guessShoppingCategory(text: string): (typeof SHOP_CATS)[number] {
 export async function quickAddItem(fd: FormData) {
   const viewer = await getViewer();
   const l = await loadList(viewer, String(fd.get("listId")));
-  if (l.kind !== "shopping" || (!viewer.can(listModule(l.kind), "edit") && l.createdByMemberId !== viewer.member.id)) throw new AuthorizationError("You can't add to this list.");
+  if (l.kind !== "shopping" || !canAddToList(viewer, l)) throw new AuthorizationError("You can't add to this list.");
   const text = String(fd.get("text") ?? "").trim().slice(0, 300);
   if (!text) return;
   const [prev] = await db
     .select({ unit: listItems.unit, cat: listItems.shoppingCategory, price: listItems.priceCents, store: listItems.store })
     .from(listItems)
     .innerJoin(lists, eq(lists.id, listItems.listId))
-    .where(and(eq(lists.familyId, viewer.family.id), sql`lower(${listItems.text}) = ${text.toLowerCase()}`))
+    .where(and(eq(lists.familyId, viewer.family.id), l.ownerMemberId ? eq(lists.ownerMemberId, l.ownerMemberId) : isNull(lists.ownerMemberId), sql`lower(${listItems.text}) = ${text.toLowerCase()}`))
     .orderBy(desc(listItems.updatedAt))
     .limit(1);
   const [{ max } = { max: 0 }] = await db.select({ max: sql<number>`coalesce(max(${listItems.position}),0)::int` }).from(listItems).where(eq(listItems.listId, l.id));

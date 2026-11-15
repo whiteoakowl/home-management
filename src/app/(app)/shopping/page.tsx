@@ -8,24 +8,39 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { mainShoppingListId } from "@/lib/automation";
 import { getViewer } from "@/lib/dal";
+import { FoodSpaceNav, PrivateSpaceNote } from "@/components/food/food-space-nav";
+import { canAddIn, canOpenFood, privateSpaceMembers, resolveSpace } from "@/lib/food-space";
 import { listIndex } from "@/lib/lists";
 import { memberOptions } from "@/lib/queries";
 
-export const metadata: Metadata = { title: "Shopping" };
+export const metadata: Metadata = { title: "Family Shopping" };
 
 export default async function ShoppingPage({ searchParams }: PageProps<"/shopping">) {
   const viewer = await getViewer();
-  if (!viewer.can("shopping")) notFound();
+  if (!canOpenFood(viewer, "shopping")) notFound();
   const sp = await searchParams;
-  // Make sure the default list exists (parents/editors only create it).
-  if (viewer.can("shopping", "edit")) await mainShoppingListId(viewer.family.id);
-  const [members, lists] = await Promise.all([memberOptions(viewer), listIndex(viewer, ["shopping"])]);
+  const space = await resolveSpace(viewer, sp.space);
+  if (space.kind === "family" && !viewer.can("shopping")) redirect("/shopping?space=mine");
+  const owner = space.kind === "private" ? space.memberId : null;
+  const own = space.kind === "private" && space.own;
+  // Make sure the default list exists (editors create the family one; members their private one).
+  if (own) await mainShoppingListId(viewer.family.id, viewer.member.id);
+  else if (!owner && viewer.can("shopping", "add")) await mainShoppingListId(viewer.family.id);
+  const [members, lists] = await Promise.all([memberOptions(viewer), listIndex(viewer, ["shopping"], { owner })]);
   if (lists.length === 1 && sp.all !== "1" && sp.new !== "1") redirect(`/shopping/${lists[0]!.id}`);
-  const canEdit = viewer.can("shopping", "edit");
-  const add = <ListFormModal members={members} categories={[]} onlyShopping defaultOpen={sp.new === "1"} />;
+  const canEdit = canAddIn(viewer, "shopping", space);
+  const add = <ListFormModal members={members} categories={[]} onlyShopping defaultOpen={sp.new === "1"} privateSpace={own} />;
+  const others = await privateSpaceMembers(viewer);
   return (
     <>
-      <PageHeader eyebrow="Kitchen" title="Shopping lists" description="Grouped by aisle, built from recipes, meal plans and low stock." actions={canEdit ? add : undefined} />
+      <PageHeader
+        eyebrow={owner ? "My private food" : "Family Pantry"}
+        title={owner ? (own ? "My Shopping List" : `${space.kind === "private" ? space.memberName : ""}'s Shopping List`) : "Family Shopping"}
+        description={owner ? "Shopping lists only you can see." : "Grouped by aisle, built from recipes, meal plans and low stock."}
+        actions={canEdit ? add : undefined}
+      />
+      <FoodSpaceNav viewer={viewer} active="shopping" space={space} others={others} />
+      <PrivateSpaceNote space={space} />
       {lists.length === 0 ? (
         <Card>
           <EmptyState icon={<ShoppingBasket />} title="No shopping lists" description="Create a list per store, or one for everything." action={canEdit ? cloneElement(add, { defaultOpen: false }) : undefined} />

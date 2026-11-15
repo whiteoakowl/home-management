@@ -60,7 +60,7 @@ export function LogGardenModal({ plantings, plants, canKitchen, defaultKind = "h
           </FormRow>
           {canKitchen && (
             <>
-              <CheckboxField name="addToKitchen" label="Add to kitchen inventory" defaultChecked />
+              <CheckboxField name="addToKitchen" label="Add to the Family Pantry" defaultChecked />
               <SelectField name="location" label="Store in" defaultValue="fridge" options={LOCATION_OPTIONS} />
             </>
           )}

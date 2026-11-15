@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -119,13 +119,14 @@ export async function kitchenReport(viewer: Viewer, today: string) {
     db
       .select({ m: sql<string>`to_char(${inventoryEvents.createdAt}, 'YYYY-MM')`, kind: inventoryEvents.kind, n: sql<number>`count(*)::int` })
       .from(inventoryEvents)
-      .where(and(eq(inventoryEvents.familyId, viewer.family.id), gte(inventoryEvents.createdAt, new Date(`${months[0]}-01T00:00:00Z`))))
+      .innerJoin(inventoryItems, eq(inventoryItems.id, inventoryEvents.itemId))
+      .where(and(eq(inventoryEvents.familyId, viewer.family.id), isNull(inventoryItems.ownerMemberId), gte(inventoryEvents.createdAt, new Date(`${months[0]}-01T00:00:00Z`))))
       .groupBy(sql`1`, inventoryEvents.kind),
     db
       .select({ name: inventoryItems.name, n: sql<number>`count(*)::int` })
       .from(inventoryEvents)
       .innerJoin(inventoryItems, eq(inventoryItems.id, inventoryEvents.itemId))
-      .where(and(eq(inventoryEvents.familyId, viewer.family.id), eq(inventoryEvents.kind, "discarded")))
+      .where(and(eq(inventoryEvents.familyId, viewer.family.id), isNull(inventoryItems.ownerMemberId), eq(inventoryEvents.kind, "discarded")))
       .groupBy(inventoryItems.name)
       .orderBy(desc(sql`2`))
       .limit(10),

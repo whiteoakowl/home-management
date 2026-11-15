@@ -9,7 +9,7 @@ import { CheckboxField, FormRow, NumberField, SelectField, TextField } from "@/c
 import { ActionButton } from "@/components/forms/inline";
 import { cn } from "@/lib/utils";
 
-export type PlannedMeal = { id: string; date: string; slot: string; recipeId: string | null; name: string; servings: number | null; missing: number | null; thumbUrl: string | null; warnings?: string[] };
+export type PlannedMeal = { id: string; date: string; slot: string; recipeId: string | null; name: string; servings: number | null; missing: number | null; thumbUrl: string | null; warnings?: string[]; canRemove?: boolean };
 
 const SLOTS = [
   { key: "breakfast", label: "Breakfast" },
@@ -17,7 +17,7 @@ const SLOTS = [
   { key: "dinner", label: "Dinner" },
 ] as const;
 
-function AddMeal({ date, slot, recipes, canShop }: { date: string; slot: string; recipes: { id: string; name: string }[]; canShop: boolean }) {
+function AddMeal({ date, slot, recipes, canShop, privateSpace }: { date: string; slot: string; recipes: { id: string; name: string }[]; canShop: boolean; privateSpace?: boolean }) {
   const [mode, setMode] = useState<"recipe" | "text">(recipes.length ? "recipe" : "text");
   const day = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
   return (
@@ -32,6 +32,7 @@ function AddMeal({ date, slot, recipes, canShop }: { date: string; slot: string;
     >
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="slot" value={slot} />
+      {privateSpace && <input type="hidden" name="space" value="mine" />}
       {recipes.length > 0 && (
         <div className="inline-flex w-fit rounded-xl bg-sunken p-1">
           {(["recipe", "text"] as const).map((m) => (
@@ -63,13 +64,16 @@ export function MealPlanner({
   recipes,
   canEdit,
   canShop,
+  privateSpace,
 }: {
   days: string[];
   today: string;
   meals: PlannedMeal[];
   recipes: { id: string; name: string }[];
+  /** May add meals (Add or Edit access, or their own private plan). */
   canEdit: boolean;
   canShop: boolean;
+  privateSpace?: boolean;
 }) {
   const at = (d: string, s: string) => meals.filter((m) => m.date === d && m.slot === s);
   return (
@@ -109,14 +113,14 @@ export function MealPlanner({
                         <p className={cn("text-[11px]", m.missing ? "text-olive-700" : "text-primary-600")}>{m.missing ? `${m.missing} to buy` : "✓ All in stock"}</p>
                       )}
                     </div>
-                    {canEdit && (
+                    {(m.canRemove ?? canEdit) && (
                       <ActionButton action={removeMeal} fields={{ id: m.id }} label={`Remove ${m.name}`} className="size-6 shrink-0 rounded-full text-muted opacity-100 hover:bg-surface hover:text-wine-500 md:opacity-0 md:group-hover:opacity-100">
                         <X className="size-3.5" />
                       </ActionButton>
                     )}
                   </div>
                 ))}
-                {canEdit && at(d, s.key).length === 0 && <AddMeal date={d} slot={s.key} recipes={recipes} canShop={canShop} />}
+                {canEdit && at(d, s.key).length === 0 && <AddMeal date={d} slot={s.key} recipes={recipes} canShop={canShop} privateSpace={privateSpace} />}
               </div>
             ))}
           </section>

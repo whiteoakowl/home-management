@@ -291,7 +291,7 @@ export async function logGarden(_: ActionState, fd: FormData): Promise<ActionSta
     }
 
     // Garden → Kitchen: harvests can go straight into inventory.
-    if (kind === "harvest" && f.bool(fd, "addToKitchen") && viewer.can("kitchen", "edit") && plantName && quantity) {
+    if (kind === "harvest" && f.bool(fd, "addToKitchen") && viewer.can("kitchen", "add") && plantName && quantity) {
       const loc = f.str(fd, "location") as (typeof LOCATIONS)[number];
       await addToInventory(
         viewer.family.id,

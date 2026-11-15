@@ -38,7 +38,7 @@ export function StarRating({ recipeId, value, label = "Your rating" }: { recipeI
   );
 }
 
-export function PlanRecipeButton({ recipeId, today, canShop }: { recipeId: string; today: string; canShop: boolean }) {
+export function PlanRecipeButton({ recipeId, today, canShop, planSpaces = { family: true, mine: false } }: { recipeId: string; today: string; canShop: boolean; planSpaces?: { family: boolean; mine: boolean } }) {
   return (
     <FormModal title="Add to meal plan" triggerLabel="Plan it" triggerVariant="secondary" triggerIcon={<CalendarPlus className="size-4" />} action={planRecipe} submitLabel="Add to plan" size="sm">
       <input type="hidden" name="id" value={recipeId} />
@@ -56,6 +56,11 @@ export function PlanRecipeButton({ recipeId, today, canShop }: { recipeId: strin
           ]}
         />
       </FormRow>
+      {planSpaces.family && planSpaces.mine ? (
+        <SelectField name="space" label="Which meal plan?" defaultValue="" options={[{ value: "", label: "Family Meal Plans" }, { value: "mine", label: "My Meal Plans (private)" }]} />
+      ) : planSpaces.mine ? (
+        <input type="hidden" name="space" value="mine" />
+      ) : null}
       {canShop && <CheckboxField name="addMissing" label="Add missing ingredients to the shopping list" defaultChecked />}
     </FormModal>
   );

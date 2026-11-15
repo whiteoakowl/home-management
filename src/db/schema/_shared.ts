@@ -40,7 +40,8 @@ export const MODULES = [
 ] as const;
 export type Module = (typeof MODULES)[number];
 
-export const ACCESS_LEVELS = ["none", "view", "edit"] as const;
+/** "add" (create, and change only what you added) is offered for the Family Pantry modules. */
+export const ACCESS_LEVELS = ["none", "view", "add", "edit"] as const;
 export type AccessLevel = (typeof ACCESS_LEVELS)[number];
 
 export const VISIBILITIES = ["family", "private", "selected"] as const;

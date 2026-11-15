@@ -108,8 +108,10 @@ Permissions are evaluated in this order (all enforced on the server in the DAL):
 
 1. **Tenant isolation.** A request can only touch rows whose `family_id` equals the signed-in
    member's family. No exceptions.
-2. **Module access.** `member_permissions(member_id, module, level)` with `level ∈ none | view | edit`.
-   Parents implicitly have `edit` everywhere. New members get sensible defaults (§3.1).
+2. **Module access.** `member_permissions(member_id, module, level)` with `level ∈ none | view | add | edit`.
+   Parents implicitly have `edit` everywhere. New members get sensible defaults (§3.1). `add` (create
+   new records, change only what you created) is offered for the Family Pantry modules only
+   (`ADD_LEVEL_MODULES` in `src/lib/permissions.ts`); elsewhere a stored `add` counts as `view`.
 3. **Record visibility.** Shareable records (events, lists, journal entries, documents, goals,
    household info) have a `visibility` column:
    * `family`: everyone with module `view`.
@@ -128,6 +130,15 @@ kids'. Another parent's fitness is visible only when that parent turns on *Share
 parents* (`family_members.share_fitness`), and then view-only. The same rule (`src/lib/fitness.ts`) covers
 the fitness pages, server actions, portal widget, calendar workouts layer, search, reports and the
 activity feed.
+
+**Family Pantry spaces** (`src/lib/food-space.ts`). Pantry items, recipes, recipe collections, meal
+plans and shopping lists have `owner_member_id`: `NULL` = the family's (governed by module access),
+set = that member's **private food space** (My Pantry / My Recipes / My Meal Plans / My Shopping
+List). Parents enable a private space per member (`family_members.private_food`). Private rows are
+visible only to their owner; parents may open them read-only only when the family turns on
+`settings.parentsSeePrivateFood` (off by default). Pages take `?space=mine` (or a member id for
+parents); every shared view (dashboards, search for other people, calendar, reports, automations,
+low-stock, put-away, craft/celebration links) filters to the family space.
 
 ### 3.1 Default member permissions
 

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
-import { frequentItems, listModule, loadList, loadListItems } from "@/lib/lists";
+import { frequentItems, listModule, loadList, canAddToList, loadListItems } from "@/lib/lists";
 import { categoryOptions, memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import type { ReactNode } from "react";
@@ -21,14 +21,16 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
   const list = await loadList(viewer, id).catch(() => null);
   if (!list) notFound();
   const mod = listModule(list.kind);
-  const canEdit = viewer.can(mod, "edit") || list.createdByMemberId === viewer.member.id;
+  // Private-space lists: the owner manages them; anyone else (a parent, if allowed) only reads.
+  const canEdit = list.ownerMemberId ? list.ownerMemberId === viewer.member.id : viewer.can(mod, "edit") || list.createdByMemberId === viewer.member.id;
+  const canAdd = canAddToList(viewer, list);
   const [items, members, cats, access] = await Promise.all([
     loadListItems(list.id),
     memberOptions(viewer),
     categoryOptions(viewer, "list"),
     getRecordAccess("list", [list.id]),
   ]);
-  const frequent = list.kind === "shopping" && canEdit ? await frequentItems(viewer.family.id, list.id) : [];
+  const frequent = list.kind === "shopping" && canAdd ? await frequentItems(viewer.family.id, list.id) : [];
   const shared = access.get(list.id) ?? [];
   const checked = items.filter((i) => i.checked).length;
 
@@ -42,7 +44,11 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
           <span className="flex items-center gap-2">
             {KIND_LABEL[list.kind]}
             {list.store && <span className="text-muted">· {list.store}</span>}
-            {list.visibility === "private" && (
+            {list.ownerMemberId ? (
+              <Badge tone="olive">
+                <Lock className="size-3" /> My private list
+              </Badge>
+            ) : list.visibility === "private" && (
               <Badge tone="mist">
                 <Lock className="size-3" /> Private
               </Badge>
@@ -106,7 +112,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
           items={items}
           members={members}
           canEdit={canEdit}
-          canAdd={canEdit}
+          canAdd={canAdd}
           today={todayIn(viewer.family.timezone)}
         />
         {items.length === 0 && <p className="px-2 pt-3 text-[15px] text-muted">This list is empty. Add your first item above.</p>}

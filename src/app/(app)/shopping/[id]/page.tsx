@@ -11,6 +11,7 @@ import { ShoppingExpenseModal } from "@/components/budget/budget-forms";
 import { budgetCategories } from "@/lib/budget";
 import { todayIn } from "@/lib/dates";
 import { getViewer } from "@/lib/dal";
+import { loadList } from "@/lib/lists";
 
 export const metadata: Metadata = { title: "Shopping list" };
 
@@ -18,7 +19,9 @@ export default async function ShoppingListPage({ params }: PageProps<"/shopping/
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await getViewer();
-  if (!viewer.can("shopping")) notFound();
+  const list = await loadList(viewer, id).catch(() => null);
+  if (!list) notFound();
+  const own = list.ownerMemberId === viewer.member.id;
   const [{ n, cart } = { n: 0, cart: 0 }] = await db.select({ n: count(), cart: sql<number>`coalesce(sum(${listItems.priceCents}),0)::int` }).from(listItems).where(and(eq(listItems.listId, id), eq(listItems.checked, true)));
   const cats = viewer.can("budget", "edit") ? await budgetCategories(viewer) : [];
   const btn = "inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-sunken";
@@ -26,16 +29,16 @@ export default async function ShoppingListPage({ params }: PageProps<"/shopping/
     <ListDetail
       viewer={viewer}
       id={id}
-      backHref="/shopping?all=1"
+      backHref={list.ownerMemberId ? (own ? "/shopping?space=mine&all=1" : `/shopping?space=${list.ownerMemberId}&all=1`) : "/shopping?all=1"}
       extraActions={
         <>
-          {viewer.can("kitchen", "edit") && n > 0 && (
+          {(list.ownerMemberId ? own : viewer.can("kitchen", "add")) && n > 0 && (
             <ActionButton action={putAwayChecked} fields={{ id }} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary-600 px-3 text-sm font-semibold text-white hover:bg-primary-700">
-              <PackageCheck className="size-4" /> Put {n} away in kitchen
+              <PackageCheck className="size-4" /> Put {n} away in {list.ownerMemberId ? "My Pantry" : "the Family Pantry"}
             </ActionButton>
           )}
           {viewer.can("budget", "edit") && <ShoppingExpenseModal listId={id} categories={cats} today={todayIn(viewer.family.timezone)} defaultCategory={cats.find((c) => /grocer/i.test(c.name))?.id} defaultAmount={cart || undefined} />}
-          {viewer.can("shopping", "edit") && viewer.can("kitchen") && (
+          {!list.ownerMemberId && viewer.can("shopping", "add") && viewer.can("kitchen") && (
             <ActionButton action={restockLowItems} fields={{}} className={btn}>
               <TriangleAlert className="size-4" /> Add low stock
             </ActionButton>

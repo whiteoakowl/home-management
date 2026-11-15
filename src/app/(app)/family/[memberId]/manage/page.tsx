@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/display";
 import { MODULES } from "@/db/schema/_shared";
 import { getFamilyMember, requireParent } from "@/lib/dal";
 import { getStoredPermissions } from "@/lib/family";
-import { LoginForm, PermissionsForm } from "./forms";
+import { LoginForm, PermissionsForm, PrivateFoodForm } from "./forms";
 import { MemberEmailForm, ResetPasswordForm } from "../../../account/forms";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -54,6 +54,11 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
             modules={modules}
           />
         )}
+      </Card>
+
+      <Card>
+        <CardHeader title="Family Pantry: private food space" />
+        <PrivateFoodForm memberId={member.id} name={member.displayName} enabled={member.privateFood} parentsCanSee={!!viewer.family.settings?.parentsSeePrivateFood} />
       </Card>
 
       <Card>

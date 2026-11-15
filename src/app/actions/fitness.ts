@@ -283,7 +283,7 @@ export async function logPlannedMeal(fd: FormData) {
     .from(mealPlanEntries)
     .leftJoin(recipes, eq(recipes.id, mealPlanEntries.recipeId))
     .where(and(eq(mealPlanEntries.id, String(fd.get("id"))), eq(mealPlanEntries.familyId, viewer.family.id)));
-  if (!e) return;
+  if (!e || (e.e.ownerMemberId && e.e.ownerMemberId !== viewer.member.id)) return;
   await db.insert(foodJournalEntries).values({ familyId: viewer.family.id, memberId, date: e.e.date, slot: e.e.slot, food: e.name ?? e.e.title ?? "Meal", mealPlanEntryId: e.e.id });
   revalidateFitness();
 }

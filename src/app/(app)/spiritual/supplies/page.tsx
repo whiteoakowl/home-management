@@ -40,7 +40,7 @@ export default async function SuppliesPage() {
         description="Candles, herbs, oils, incense, salts, jars and more. Part of the household inventory, so low stock flows to the shopping list."
         actions={
           <>
-            {low.length > 0 && viewer.can("shopping", "edit") && (
+            {low.length > 0 && viewer.can("shopping", "add") && (
               <ActionButton action={shopForSupplies} fields={{ ids: low.map((r) => r.id).join(",") }} className="h-11 rounded-[var(--radius-control)] bg-primary-50 px-4 text-sm font-semibold text-primary-700 hover:bg-primary-100">
                 <ShoppingBasket className="size-4" /> Add {low.length} low to shopping
               </ActionButton>

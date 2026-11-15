@@ -17,7 +17,7 @@ const FORMATS: BarcodeFormat[] = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128
  * Phone-camera barcode scanner (native BarcodeDetector, or ZXing on browsers
  * without it, e.g. iPhone Safari). Typing the number always works too.
  */
-export function Scanner({ categories }: { categories: { id: string; name: string }[] }) {
+export function Scanner({ categories, privateSpace }: { categories: { id: string; name: string }[]; privateSpace?: boolean }) {
   const router = useRouter();
   const [barcode, setBarcode] = useState<string | null>(null);
   const [manual, setManual] = useState("");
@@ -44,8 +44,8 @@ export function Scanner({ categories }: { categories: { id: string; name: string
       {saved > 0 && !barcode && (
         <p className="flex items-center gap-2 rounded-xl bg-primary-50 px-4 py-3 text-[15px] text-primary-700">
           <CheckCircle2 className="size-5" /> Saved! Scan the next item, or{" "}
-          <button type="button" onClick={() => router.push("/kitchen")} className="font-semibold underline">
-            go to the kitchen
+          <button type="button" onClick={() => router.push(privateSpace ? "/kitchen?space=mine" : "/kitchen")} className="font-semibold underline">
+            go to {privateSpace ? "My Pantry" : "the Family Pantry"}
           </button>
           .
         </p>
@@ -115,7 +115,7 @@ export function Scanner({ categories }: { categories: { id: string; name: string
           </div>
           <ActionForm
             action={saveInventoryItem}
-            submitLabel="Save to inventory"
+            submitLabel={privateSpace ? "Save to My Pantry" : "Save to the Family Pantry"}
             onSuccess={() => {
               setSaved((n) => n + 1);
               reset();
@@ -126,6 +126,7 @@ export function Scanner({ categories }: { categories: { id: string; name: string
               </Button>
             }
           >
+            {privateSpace && <input type="hidden" name="space" value="mine" />}
             <InventoryFields
               categories={categories}
               d={{ barcode, name: lookup.name ?? "", brand: lookup.brand ?? null, productImageUrl: lookup.imageUrl ?? null, unit: lookup.unit ?? null, location: lookup.location ?? "pantry" }}

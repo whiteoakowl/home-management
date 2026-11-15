@@ -3,7 +3,7 @@ import { importRecipe } from "@/app/actions/recipes";
 import { FormModal } from "@/components/forms/action-form";
 import { TextAreaField, TextField } from "@/components/forms/fields";
 
-export function ImportRecipeModal({ defaultOpen }: { defaultOpen?: boolean }) {
+export function ImportRecipeModal({ defaultOpen, privateSpace }: { defaultOpen?: boolean; privateSpace?: boolean }) {
   return (
     <FormModal
       title="Import a recipe"
@@ -16,6 +16,7 @@ export function ImportRecipeModal({ defaultOpen }: { defaultOpen?: boolean }) {
       defaultOpen={defaultOpen}
       size="lg"
     >
+      {privateSpace && <input type="hidden" name="space" value="mine" />}
       <TextField name="url" label="Recipe link" type="url" placeholder="https://…" />
       <p className="text-center text-sm text-muted">or</p>
       <TextAreaField name="text" label="Paste the recipe" rows={8} placeholder={"Grandma's pancakes\nServes 4\n\nIngredients\n2 cups flour\n2 eggs\n\nDirections\n1. Whisk everything together…"} />

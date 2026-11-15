@@ -114,7 +114,7 @@ export default async function AnimalPage({ params }: PageProps<"/farm/animals/[i
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Production" action={canEdit ? <ProductionModal animals={opts} canKitchen={viewer.can("kitchen", "edit")} defaultAnimal={id} triggerLabel="Record" /> : undefined} />
+          <CardHeader title="Production" action={canEdit ? <ProductionModal animals={opts} canKitchen={viewer.can("kitchen", "add")} defaultAnimal={id} triggerLabel="Record" /> : undefined} />
           {production.length === 0 ? (
             <p className="text-sm text-muted">Nothing recorded for {a.name} yet.</p>
           ) : (

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { ChevronLeft, ChevronRight, Utensils } from "lucide-react";
 import { db } from "@/db";
 import { foodJournalEntries, mealPlanEntries, recipes } from "@/db/schema";
@@ -41,7 +41,7 @@ export default async function FoodPage({ searchParams }: PageProps<"/fitness/foo
           .select({ e: mealPlanEntries, name: recipes.name })
           .from(mealPlanEntries)
           .leftJoin(recipes, eq(recipes.id, mealPlanEntries.recipeId))
-          .where(and(eq(mealPlanEntries.familyId, viewer.family.id), eq(mealPlanEntries.date, date)))
+          .where(and(eq(mealPlanEntries.familyId, viewer.family.id), eq(mealPlanEntries.date, date), or(isNull(mealPlanEntries.ownerMemberId), eq(mealPlanEntries.ownerMemberId, viewer.member.id))))
       : Promise.resolve([]),
     db.select().from(foodJournalEntries).where(and(eq(foodJournalEntries.memberId, subject.id), gte(foodJournalEntries.date, addDays(today, -6)), lte(foodJournalEntries.date, today))).orderBy(desc(foodJournalEntries.date)),
   ]);

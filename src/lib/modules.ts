@@ -1,6 +1,6 @@
 import type { AccessLevel, Module } from "@/db/schema/_shared";
 
-export type NavGroup = "Today" | "Household" | "Care" | "Kitchen" | "Land" | "Personal" | "Spirit" | "Money";
+export type NavGroup = "Today" | "Household" | "Care" | "Family Pantry" | "Land" | "Personal" | "Spirit" | "Money";
 
 export type ModuleMeta = {
   id: Module;
@@ -70,10 +70,10 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
   kitchen: {
     id: "kitchen",
-    label: "Kitchen",
+    label: "Family Pantry",
     href: "/kitchen",
     icon: "Refrigerator",
-    group: "Kitchen",
+    group: "Family Pantry",
     phase: 3,
     inNav: true,
     defaultMemberAccess: "view",
@@ -82,10 +82,10 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
   meals: {
     id: "meals",
-    label: "Meals",
+    label: "Family Meal Plans",
     href: "/meals",
     icon: "UtensilsCrossed",
-    group: "Kitchen",
+    group: "Family Pantry",
     phase: 3,
     inNav: true,
     defaultMemberAccess: "edit",
@@ -94,10 +94,10 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
   recipes: {
     id: "recipes",
-    label: "Recipes",
+    label: "Family Recipes",
     href: "/recipes",
     icon: "BookOpen",
-    group: "Kitchen",
+    group: "Family Pantry",
     phase: 3,
     inNav: true,
     defaultMemberAccess: "edit",
@@ -106,10 +106,10 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
   shopping: {
     id: "shopping",
-    label: "Shopping",
+    label: "Family Shopping",
     href: "/shopping",
     icon: "ShoppingBasket",
-    group: "Kitchen",
+    group: "Family Pantry",
     phase: 3,
     inNav: false,
     defaultMemberAccess: "view",
@@ -262,7 +262,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
 };
 
-export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Care", "Kitchen", "Land", "Personal", "Spirit", "Money"];
+export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Care", "Family Pantry", "Land", "Personal", "Spirit", "Money"];
 
 export function moduleByHref(href: string): ModuleMeta | undefined {
   return Object.values(MODULE_META).find((m) => m.href === href);

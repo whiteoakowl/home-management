@@ -8,7 +8,11 @@ import { describeRule, type Rule } from "./recurrence";
 type Kind = (typeof lists.$inferSelect)["kind"];
 export const listModule = (kind: Kind) => (kind === "shopping" ? "shopping" : "lists");
 
-/** Load a list the viewer can see; optionally require edit rights on its module. */
+/**
+ * Load a list the viewer can see; optionally require the right to change it.
+ * Private-space lists (owner_member_id) belong to their owner; a parent may
+ * open them read-only when the family allows it.
+ */
 export async function loadList(viewer: Viewer, id: string, edit = false) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("List not found.");
   const [l] = await db
@@ -22,10 +26,22 @@ export async function loadList(viewer: Viewer, id: string, edit = false) {
       ),
     );
   if (!l) throw new AuthorizationError("List not found.");
-  if (!viewer.can(listModule(l.kind), edit ? "edit" : "view") && !(l.createdByMemberId === viewer.member.id)) {
-    throw new AuthorizationError("You don't have access to that list.");
+  if (l.ownerMemberId) {
+    if (l.ownerMemberId === viewer.member.id) return l;
+    if (!edit && viewer.isParent && viewer.family.settings?.parentsSeePrivateFood) return l;
+    throw new AuthorizationError("List not found.");
   }
+  const mine = l.createdByMemberId === viewer.member.id;
+  const mod = listModule(l.kind);
+  const allowed = edit ? viewer.can(mod, "edit") || (viewer.can(mod, "add") && mine) || (mod === "lists" && mine) : viewer.can(mod, "view") || mine;
+  if (!allowed) throw new AuthorizationError("You don't have access to that list.");
   return l;
+}
+
+/** May the viewer add items to this list (and tick them off)? */
+export function canAddToList(viewer: Viewer, l: { kind: Kind; ownerMemberId: string | null; createdByMemberId: string | null }) {
+  if (l.ownerMemberId) return l.ownerMemberId === viewer.member.id;
+  return viewer.can(listModule(l.kind), "add") || l.createdByMemberId === viewer.member.id;
 }
 
 export async function loadListItems(listId: string) {
@@ -65,6 +81,7 @@ export async function frequentItems(familyId: string, listId: string, limit = 14
     select min(i.text) as text, count(*)::int as n
     from list_items i join lists l on l.id = i.list_id
     where l.family_id = ${familyId} and l.kind = 'shopping'
+      and l.owner_member_id is not distinct from (select owner_member_id from lists where id = ${listId})
       and lower(i.text) not in (select lower(text) from list_items where list_id = ${listId} and not checked)
     group by lower(i.text)
     order by count(*) desc, max(i.created_at) desc
@@ -73,7 +90,7 @@ export async function frequentItems(familyId: string, listId: string, limit = 14
 }
 
 /** Lists index with open/total counts. */
-export async function listIndex(viewer: Viewer, kinds: Kind[], opts: { archived?: boolean } = {}) {
+export async function listIndex(viewer: Viewer, kinds: Kind[], opts: { archived?: boolean; owner?: string | null } = {}) {
   return db
     .select({
       id: lists.id,
@@ -97,6 +114,7 @@ export async function listIndex(viewer: Viewer, kinds: Kind[], opts: { archived?
         eq(lists.familyId, viewer.family.id),
         inArray(lists.kind, kinds),
         opts.archived ? isNotNull(lists.archivedAt) : isNull(lists.archivedAt),
+        opts.owner ? eq(lists.ownerMemberId, opts.owner) : isNull(lists.ownerMemberId),
         visibleTo(viewer, { id: lists.id, visibility: lists.visibility, author: lists.createdByMemberId }, "list"),
       ),
     )

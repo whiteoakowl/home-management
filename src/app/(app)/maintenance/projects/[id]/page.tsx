@@ -201,7 +201,7 @@ export default async function ProjectPage({ params }: PageProps<"/maintenance/pr
           action={
             canEdit && (
               <div className="flex gap-2">
-                {viewer.can("shopping", "edit") && materials.some((m) => !m.purchased) && (
+                {viewer.can("shopping", "add") && materials.some((m) => !m.purchased) && (
                   <ActionButton action={materialsToShopping} fields={{ projectId: p.id }} className="h-9 rounded-full bg-primary-50 px-3 text-sm font-semibold text-primary-700 hover:bg-primary-100">
                     <ShoppingBasket className="size-4" /> Shopping list
                   </ActionButton>

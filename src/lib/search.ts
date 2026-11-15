@@ -1,5 +1,6 @@
 import "server-only";
 import { and, eq, ilike, inArray, isNull, or, sql, ne } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
   books,
@@ -112,7 +113,10 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
     );
   }
 
-  if (viewer.can("recipes")) {
+  // Food: family items (with access) plus the viewer's own private food space; never anyone else's.
+  const mineOrFamily = (owner: PgColumn, module: "recipes" | "kitchen") =>
+    viewer.can(module) ? or(isNull(owner), eq(owner, viewer.member.id))! : eq(owner, viewer.member.id);
+  if (viewer.can("recipes") || viewer.member.privateFood) {
     group(
       "recipes",
       "Recipes",
@@ -123,6 +127,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         .where(
           and(
             eq(recipes.familyId, fid),
+            mineOrFamily(recipes.ownerMemberId, "recipes"),
             or(ilike(recipes.name, like), sql`${q.toLowerCase()} = any(${recipes.tags})`, sql`exists (select 1 from ${recipeIngredients} ri where ri.recipe_id = ${recipes.id} and ri.name ilike ${like})`),
           ),
         )
@@ -131,17 +136,17 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
     );
   }
 
-  if (viewer.can("kitchen")) {
+  if (viewer.can("kitchen") || viewer.member.privateFood) {
     group(
       "inventory",
-      "Kitchen inventory",
+      "Family Pantry",
       "Refrigerator",
       db
-        .select({ id: inventoryItems.id, title: inventoryItems.name, qty: inventoryItems.quantity, unit: inventoryItems.unit, location: inventoryItems.location })
+        .select({ id: inventoryItems.id, title: inventoryItems.name, qty: inventoryItems.quantity, unit: inventoryItems.unit, location: inventoryItems.location, owner: inventoryItems.ownerMemberId })
         .from(inventoryItems)
-        .where(and(eq(inventoryItems.familyId, fid), isNull(inventoryItems.archivedAt), ilike(inventoryItems.name, like)))
+        .where(and(eq(inventoryItems.familyId, fid), mineOrFamily(inventoryItems.ownerMemberId, "kitchen"), isNull(inventoryItems.archivedAt), ilike(inventoryItems.name, like)))
         .limit(LIMIT)
-        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${Number(x.qty)} ${x.unit ?? ""} · ${x.location}`, href: `/kitchen?view=${["pantry", "fridge", "freezer", "supplies", "pets", "craft", "home"].includes(x.location) ? x.location : "all"}` }))),
+        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${Number(x.qty)} ${x.unit ?? ""} · ${x.location}`, href: `/kitchen?view=${["pantry", "fridge", "freezer", "supplies", "pets", "craft", "home"].includes(x.location) ? x.location : "all"}${x.owner ? "&space=mine" : ""}` }))),
     );
   }
 
@@ -156,7 +161,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         .selectDistinct({ id: lists.id, title: lists.title, kind: lists.kind })
         .from(lists)
         .leftJoin(listItems, eq(listItems.listId, lists.id))
-        .where(and(eq(lists.familyId, fid), isNull(lists.archivedAt), listVis, kindsOk, or(ilike(lists.title, like), ilike(listItems.text, like))))
+        .where(and(eq(lists.familyId, fid), isNull(lists.archivedAt), listVis, kindsOk, or(isNull(lists.ownerMemberId), eq(lists.ownerMemberId, viewer.member.id)), or(ilike(lists.title, like), ilike(listItems.text, like))))
         .limit(LIMIT)
         .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: x.kind === "shopping" ? "Shopping list" : `${x.kind[0]!.toUpperCase()}${x.kind.slice(1)} list`, href: `${x.kind === "shopping" ? "/shopping" : "/lists"}/${x.id}` }))),
     );

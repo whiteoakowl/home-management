@@ -137,7 +137,7 @@ export async function getMealsToday(s: Scope) {
     .select({ slot: mealPlanEntries.slot, title: mealPlanEntries.title, recipeName: recipes.name, recipeId: recipes.id })
     .from(mealPlanEntries)
     .leftJoin(recipes, eq(recipes.id, mealPlanEntries.recipeId))
-    .where(and(eq(mealPlanEntries.familyId, fid(s)), eq(mealPlanEntries.date, s.today)))
+    .where(and(eq(mealPlanEntries.familyId, fid(s)), isNull(mealPlanEntries.ownerMemberId), eq(mealPlanEntries.date, s.today)))
     .orderBy(sql`array_position(array['breakfast','lunch','dinner','snack']::meal_slot[], ${mealPlanEntries.slot})`);
 }
 
@@ -150,6 +150,7 @@ export async function getShopping(s: Scope) {
       and(
         eq(lists.familyId, fid(s)),
         eq(lists.kind, "shopping"),
+        isNull(lists.ownerMemberId),
         isNull(lists.archivedAt),
         eq(listItems.checked, false),
         visibleTo(s.viewer, { id: lists.id, visibility: lists.visibility, author: lists.createdByMemberId }, "list"),
@@ -161,7 +162,7 @@ export async function getShopping(s: Scope) {
     .select({ count: sql<number>`count(*)::int` })
     .from(listItems)
     .innerJoin(lists, eq(lists.id, listItems.listId))
-    .where(and(eq(lists.familyId, fid(s)), eq(lists.kind, "shopping"), isNull(lists.archivedAt), eq(listItems.checked, false)));
+    .where(and(eq(lists.familyId, fid(s)), eq(lists.kind, "shopping"), isNull(lists.ownerMemberId), isNull(lists.archivedAt), eq(listItems.checked, false), visibleTo(s.viewer, { id: lists.id, visibility: lists.visibility, author: lists.createdByMemberId }, "list")));
   return { items, count };
 }
 
@@ -172,6 +173,7 @@ export async function getPantryAlerts(s: Scope) {
     .where(
       and(
         eq(inventoryItems.familyId, fid(s)),
+        isNull(inventoryItems.ownerMemberId),
         isNull(inventoryItems.archivedAt),
         lte(inventoryItems.expiresOn, addDays(s.today, 7)),
       ),
@@ -184,6 +186,7 @@ export async function getPantryAlerts(s: Scope) {
     .where(
       and(
         eq(inventoryItems.familyId, fid(s)),
+        isNull(inventoryItems.ownerMemberId),
         isNull(inventoryItems.archivedAt),
         sql`${inventoryItems.lowStockThreshold} is not null and ${inventoryItems.quantity} <= ${inventoryItems.lowStockThreshold}`,
       ),

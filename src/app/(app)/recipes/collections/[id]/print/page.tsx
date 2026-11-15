@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { recipeCollections } from "@/db/schema";
 import { PrintButton } from "@/components/recipes/recipe-actions";
 import { getViewer } from "@/lib/dal";
+import { canReadOwned } from "@/lib/food-space";
 import { fileUrl } from "@/lib/files";
 import { formatQty } from "@/lib/ingredients";
 import { getRecipe, listRecipes } from "@/lib/recipes";
@@ -18,10 +19,9 @@ export default async function PrintBookPage({ params }: PageProps<"/recipes/coll
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await getViewer();
-  if (!viewer.can("recipes")) notFound();
   const [c] = await db.select().from(recipeCollections).where(and(eq(recipeCollections.id, id), eq(recipeCollections.familyId, viewer.family.id)));
-  if (!c) notFound();
-  const list = await listRecipes(viewer, { collectionId: id });
+  if (!c || !canReadOwned(viewer, "recipes", c.ownerMemberId)) notFound();
+  const list = await listRecipes(viewer, { collectionId: id, owner: c.ownerMemberId });
   const full = (await Promise.all(list.map((r) => getRecipe(viewer, r.id)))).filter((x): x is NonNullable<typeof x> => !!x);
 
   return (

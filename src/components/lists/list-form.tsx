@@ -24,7 +24,10 @@ export function ListFormModal({
   trigger,
   triggerContent,
   defaultOpen,
+  privateSpace,
 }: {
+  /** New shopping list goes into the member's private food space. */
+  privateSpace?: boolean;
   members: MemberOption[];
   categories: { id: string; name: string }[];
   list?: { id: string; title: string; kind: string; categoryId: string | null; store: string | null; visibility: "family" | "private" | "selected"; sharedWith: string[] };
@@ -49,6 +52,7 @@ export function ListFormModal({
       defaultOpen={defaultOpen}
     >
       {list && <input type="hidden" name="id" value={list.id} />}
+      {!list && privateSpace && <input type="hidden" name="space" value="mine" />}
       <TextField name="title" label="Name" required defaultValue={list?.title} placeholder={onlyShopping ? "Costco run" : "Packing for the lake"} />
       {options.length > 1 && !list && (
         <fieldset>
@@ -79,7 +83,7 @@ export function ListFormModal({
           <SelectField name="categoryId" label="Category" defaultValue={list?.categoryId ?? ""} placeholder="None" options={categories.map((c) => ({ value: c.id, label: c.name }))} />
         )
       )}
-      <VisibilityField members={members} defaultValue={list?.visibility} defaultSelected={list?.sharedWith} />
+      {!privateSpace && <VisibilityField members={members} defaultValue={list?.visibility} defaultSelected={list?.sharedWith} />}
     </FormModal>
   );
 }

@@ -162,7 +162,7 @@ export default async function PetPage({ params }: PageProps<"/pets/[id]">) {
         {supplies.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {supplies.map((x) => (
-              <SupplyCard key={x.s.id} x={x} canEdit={canEdit} canShop={viewer.can("shopping", "edit")} />
+              <SupplyCard key={x.s.id} x={x} canEdit={canEdit} canShop={viewer.can("shopping", "add")} />
             ))}
           </div>
         ) : (
