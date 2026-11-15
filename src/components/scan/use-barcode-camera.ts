@@ -33,8 +33,12 @@ export function useBarcodeCamera({ formats, onDetect }: { formats: BarcodeFormat
     () => false,
   );
   const [camera, setCamera] = useState<"off" | "starting" | "on" | "error">("off");
+  const [error, setError] = useState<string | null>(null);
+  // Bumped on every stop, so a camera that finishes opening after we stopped is closed again.
+  const run = useRef(0);
 
   const stop = useCallback(() => {
+    run.current++;
     zxingStop.current?.();
     zxingStop.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -52,11 +56,33 @@ export function useBarcodeCamera({ formats, onDetect }: { formats: BarcodeFormat
   );
 
   const start = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError(cameraHelp("unsupported"));
+      setCamera("error");
+      return;
+    }
+    const token = ++run.current;
+    setError(null);
     setCamera("starting");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      // This is what makes the phone ask "Allow camera?". Prefer the back camera; any camera will do.
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+      } catch (e) {
+        if ((e as Error)?.name !== "OverconstrainedError" && (e as Error)?.name !== "NotFoundError") throw e;
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+      if (token !== run.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       streamRef.current = stream;
       const video = videoRef.current!;
+      // iPhone/iPad only show a live camera inline when these are real attributes.
+      video.setAttribute("playsinline", "");
+      video.setAttribute("muted", "");
+      video.muted = true;
       if (window.BarcodeDetector) {
         video.srcObject = stream;
         await video.play();
@@ -85,12 +111,41 @@ export function useBarcodeCamera({ formats, onDetect }: { formats: BarcodeFormat
         if (!streamRef.current) controls.stop();
         else setCamera("on");
       }
-    } catch {
+    } catch (e) {
+      if (token !== run.current) return;
       stop();
+      setError(cameraHelp((e as Error)?.name));
       setCamera("error");
     }
   }, [formats, found, stop]);
 
   useEffect(() => stop, [stop]);
-  return { videoRef, camera, start, stop, supported };
+  return { videoRef, camera, start, stop, supported, error };
+}
+
+/** Plain-language help for why the camera didn't open. */
+export function cameraHelp(name: string | undefined) {
+  // iPads report themselves as a Mac, but with a touch screen.
+  const ios = typeof navigator !== "undefined" && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
+  if (name === "NotAllowedError" || name === "SecurityError")
+    return ios
+      ? "Camera access is blocked for this site. In Safari, tap the aA (or ⋯) button in the address bar → Website Settings → Camera → Allow, then tap Start scanning. If you use the Home Screen app, go to the iPhone/iPad Settings app → Apps → Safari → Camera → Ask or Allow."
+      : "Camera access is blocked for this site. Tap the lock or settings icon next to the web address → Permissions → Camera → Allow, then tap Start scanning. Also check the phone's Settings → Apps → your browser → Permissions → Camera.";
+  if (name === "NotReadableError" || name === "AbortError") return "The camera is busy in another app. Close other apps using the camera, then tap Start scanning.";
+  if (name === "NotFoundError" || name === "OverconstrainedError") return "No camera was found on this device. Type the number below instead.";
+  if (name === "unsupported")
+    return typeof window !== "undefined" && !window.isSecureContext
+      ? "The camera only works when the site is opened with https://. Open the secure address and try again."
+      : "This browser can't open the camera. Try Safari on iPhone/iPad or Chrome on Android, or type the number below.";
+  return "We couldn't open the camera. Tap Start scanning to try again, or type the number below.";
+}
+
+/** Ask for the camera as soon as a scanner page opens (the browser shows its permission prompt). */
+export function useAutoStart(start: () => void, supported: boolean) {
+  const done = useRef(false);
+  useEffect(() => {
+    if (!supported || done.current) return;
+    done.current = true;
+    start();
+  }, [supported, start]);
 }

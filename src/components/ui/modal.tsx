@@ -41,8 +41,13 @@ export function Modal({
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}
+      // The sheet's frame must never scroll (only its body does). Some phones scroll it when a
+      // hidden radio inside gets focus, which leaves a blank white sheet. Snap it back.
+      onScroll={(e) => {
+        if (e.target === ref.current && ref.current.scrollTop) ref.current.scrollTop = 0;
+      }}
       className={cn(
-        "m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-clip rounded-t-[var(--radius-card)] bg-surface p-0 text-ink shadow-[var(--shadow-pop)]",
+        "m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-[var(--radius-card)] bg-surface p-0 text-ink shadow-[var(--shadow-pop)]",
         "sm:m-auto sm:rounded-[var(--radius-card)]",
         { sm: "sm:max-w-md", md: "sm:max-w-xl", lg: "sm:max-w-3xl" }[size],
       )}

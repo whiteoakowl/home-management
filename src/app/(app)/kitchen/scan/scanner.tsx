@@ -9,7 +9,7 @@ import { InventoryFields } from "@/components/kitchen/inventory-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/form";
-import { useBarcodeCamera, type BarcodeFormat } from "@/components/scan/use-barcode-camera";
+import { useAutoStart, useBarcodeCamera, type BarcodeFormat } from "@/components/scan/use-barcode-camera";
 
 const FORMATS: BarcodeFormat[] = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"];
 
@@ -31,7 +31,8 @@ export function Scanner({ categories, privateSpace }: { categories: { id: string
     setLookup(await lookupBarcode(code));
     setLooking(false);
   }, []);
-  const { videoRef, camera, start: startCamera, stop, supported } = useBarcodeCamera({ formats: FORMATS, onDetect: identify });
+  const { videoRef, camera, start: startCamera, stop, supported, error } = useBarcodeCamera({ formats: FORMATS, onDetect: identify });
+  useAutoStart(startCamera, supported);
 
   const reset = () => {
     setBarcode(null);
@@ -54,7 +55,7 @@ export function Scanner({ categories, privateSpace }: { categories: { id: string
       {!barcode && (
         <Card className="flex flex-col items-center gap-4 p-4 sm:p-5">
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-primary-800">
-            <video ref={videoRef} playsInline muted className="size-full object-cover" />
+            <video ref={videoRef} playsInline muted autoPlay className="size-full object-cover" />
             {camera === "on" && <div className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary-300 shadow-[0_0_12px_#c991c4]" />}
             {camera !== "on" && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-white/90">
@@ -63,12 +64,10 @@ export function Scanner({ categories, privateSpace }: { categories: { id: string
               </div>
             )}
           </div>
-          {supported && (
-            <Button onClick={camera === "on" ? stop : startCamera} disabled={camera === "starting"} variant={camera === "on" ? "secondary" : "primary"} icon={camera === "on" ? <CameraOff className="size-4" /> : <Camera className="size-4" />}>
-              {camera === "on" ? "Stop camera" : camera === "starting" ? "Starting…" : "Start scanning"}
-            </Button>
-          )}
-          {camera === "error" && <p className="text-sm text-wine-700">We couldn&apos;t open the camera. Check camera permissions, or enter the number below.</p>}
+          <Button onClick={camera === "on" ? stop : startCamera} disabled={camera === "starting"} variant={camera === "on" ? "secondary" : "primary"} icon={camera === "on" ? <CameraOff className="size-4" /> : <Camera className="size-4" />}>
+            {camera === "on" ? "Stop camera" : camera === "starting" ? "Starting…" : "Start scanning"}
+          </Button>
+          {camera === "error" && <p role="alert" className="max-w-xl text-sm text-wine-700">{error}</p>}
           <form
             className="flex w-full gap-2"
             onSubmit={(e) => {

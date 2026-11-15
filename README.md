@@ -68,6 +68,14 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Reports | Cleaning, garden, farm, kitchen, budget, fitness and goal history |
 | Everywhere | Global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
 
+## Supported devices
+
+iPhone and iPad on **iOS/iPadOS 15.4 or newer** (devices stuck on iOS 15 should install the latest
+15.x update), Android 8+ with Chrome 80+, and current desktop browsers. The build targets these
+through `browserslist` in `package.json`, `src/instrumentation-client.ts` adds missing built-in
+features, and `scripts/legacy-css.mjs` (run by `npm run build`) flattens CSS cascade layers and adds
+fallbacks so the styling works there too. On iOS 15 a few grids stay single-column.
+
 ## Install as an app
 
 Vanderbilt Family is an installable web app (PWA):
