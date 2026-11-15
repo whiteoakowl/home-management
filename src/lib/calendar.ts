@@ -52,6 +52,14 @@ export type CalendarItem = {
   recurring?: boolean;
   people: string[]; // member ids
   done?: boolean;
+  /** Calendar category (events only). */
+  categoryId?: string | null;
+  category?: string | null;
+  /** Who can see it; items from other modules follow that module's access (shown as family). */
+  visibility?: "family" | "private" | "selected";
+  /** Finer event type: "event", "medical", "celebration"… (events) or the layer name. */
+  type?: string;
+  description?: string | null;
 };
 
 const DEFAULT_CALENDAR_CATEGORIES = [
@@ -95,7 +103,7 @@ export async function getCalendarItems(
     const fromUtc = zonedToUtc(from, "00:00", tz);
     const toUtc = zonedToUtc(addDays(to, 1), "00:00", tz);
     const rows = await db
-      .select({ e: calendarEvents, rule: recurrenceRules, catColor: categories.color })
+      .select({ e: calendarEvents, rule: recurrenceRules, catColor: categories.color, catName: categories.name })
       .from(calendarEvents)
       .leftJoin(recurrenceRules, eq(recurrenceRules.id, calendarEvents.recurrenceRuleId))
       .leftJoin(categories, eq(categories.id, calendarEvents.categoryId))
@@ -115,7 +123,7 @@ export async function getCalendarItems(
     const people = Map.groupBy(att, (a) => a.eventId);
     const colorOf = await memberColorMap(fid);
 
-    for (const { e, rule, catColor } of rows) {
+    for (const { e, rule, catColor, catName } of rows) {
       const ids = (people.get(e.id) ?? []).map((a) => a.memberId);
       if (subject && !ids.includes(subject)) continue;
       const color = e.color ?? catColor ?? (ids[0] ? colorOf.get(ids[0]) : null) ?? "plum";
@@ -136,6 +144,11 @@ export async function getCalendarItems(
           href: `/calendar/event/${e.id}${rule ? `?on=${date}` : ""}`,
           recurring: !!rule,
           people: ids,
+          categoryId: e.categoryId,
+          category: catName,
+          visibility: e.visibility,
+          type: e.source === "manual" ? "event" : e.source,
+          description: e.description,
         });
       }
     }

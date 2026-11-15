@@ -49,7 +49,7 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 |---|---|
 | Home | Today-first dashboard with 22 customizable widgets, announcements, family activity |
 | Family | Member portals (“Emma's Home”), roles, logins, per-area permissions |
-| Calendar | Month / week / day / agenda, recurring events, per-event visibility, layers for chores, workouts, meals, harvests, animal care, pets, home projects and moon & sabbats |
+| Calendar | Month (named colour bars) / week / day (full details) / List with filters (member, category, type, visibility, colour, search; Today / This Week / This Month / Upcoming / custom range), recurring events, per-event visibility, layers for chores, workouts, meals, harvests, animal care, pets, home projects and moon & sabbats |
 | House | Cleaning (daily → annual) with room-by-room cleanliness meters, chores with per-person checklists and take-turns rotation, tasks, points & rewards with parent approval and a fair-share view, important info |
 | Home Maintenance | Rooms & systems, maintenance schedules with costs, repair log with photos & warranties, remodeling projects, to-do lists, documents & warranties, home inventory with insurance report, service providers, printable household manual, calendar |
 | Medical | Private health profiles, allergies & food restrictions (flagged in recipes and meal plans), conditions, medications with refill reminders, documents, appointments |

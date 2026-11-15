@@ -189,6 +189,11 @@ That gives one completion history, one "My Chores" view, one reporting pipeline.
 * `event_attendees`: (event_id, member_id)
 * `event_attachments`: (event_id, file_id)
 * Visibility per event uses `record_access`.
+* Views (`components/calendar/views.tsx`): Month shows named colour bars (tooltip = full details),
+  Week/Day time grid with times and members, Day adds a details list, and `?view=list` is a
+  chronological list grouped by date with filters in the URL (`range` today|week|month|upcoming|custom
+  + `from`/`to`, `member`, `category`, `type`, `vis`, `color`, `q`). Items link to the existing event
+  page; `?view=agenda` still works and opens the List view.
 
 ### Lists (`lists.ts`)
 * `lists`: title, kind `checklist | bullet | numbered | todo | shopping`, category_id, visibility,
@@ -390,7 +395,7 @@ terracotta and honey accents, soft shadows, generous radius.
 | Phase | Scope | Status |
 |---|---|---|
 | 1. Foundation | Auth, onboarding, family & members, permissions, dashboard & widgets, navigation, design system, full DB schema | ✅ Done |
-| 2. Household | House overview, cleaning (daily → annual + custom), chores with per-person checklists & history, maintenance, tasks, projects, documents, important info, lists (checklist/bullet/numbered/to-do), calendar (month/week/day/agenda, per-event visibility) | ✅ Done |
+| 2. Household | House overview, cleaning (daily → annual + custom), chores with per-person checklists & history, maintenance, tasks, projects, documents, important info, lists (checklist/bullet/numbered/to-do), calendar (month/week/day/list, per-event visibility) | ✅ Done |
 | 3. Kitchen | Inventory (pantry/fridge/freezer/supplies), barcode scanning, expiration groups & used/discarded/donated/replaced, recipes with collections & printable books, weekly meal planner with pantry check, shopping lists by aisle | ✅ Done |
 | 4. Garden & Farm | Plant database (36 reference plants + custom), drag-and-drop garden & farm blueprints, plantings & garden log, harvests → kitchen, animals, health, feed, production → kitchen | ✅ Done |
 | 5. Personal | Journal (private/shared, moods, photos, timeline/calendar/search), goals & savings with milestones, fitness plans/logs/PRs/metrics, food journal | ✅ Done |
