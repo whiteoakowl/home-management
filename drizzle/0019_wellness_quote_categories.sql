@@ -1,0 +1,1 @@
+ALTER TABLE "personal_health_profiles" ADD COLUMN "quote_categories" text[] DEFAULT '{}' NOT NULL;

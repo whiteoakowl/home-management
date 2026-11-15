@@ -38,6 +38,7 @@ import {
   recurrenceRules,
   transactions,
   workouts,
+  personalHealthProfiles,
 } from "@/db/schema";
 
 type Family = typeof families.$inferSelect;
@@ -316,6 +317,28 @@ export async function runDailyAutomation(family: Family, force = false) {
       .from(medicalDocuments)
       .where(and(eq(medicalDocuments.familyId, fid), lte(medicalDocuments.expiresOn, addDays(today, 30)), gte(medicalDocuments.expiresOn, today)));
     for (const d of docs) await notify(fid, to(d), { kind: "medical_reminder", title: `Expires soon: ${d.title}`, href: "/medical/documents" }, today);
+  }
+
+  // Personal wellness reminders: only the ones each person turned on, always gentle (no streak guilt).
+  {
+    const profiles = await db
+      .select({ memberId: personalHealthProfiles.memberId, reminders: personalHealthProfiles.reminders })
+      .from(personalHealthProfiles)
+      .where(eq(personalHealthProfiles.familyId, fid));
+    const dow = new Date(`${today}T12:00:00Z`).getUTCDay();
+    const due = (f: string | undefined) => f === "daily" || (f === "weekdays" && dow >= 1 && dow <= 5) || (f === "weekly" && dow === 1);
+    const TEXT = {
+      checkIn: "Ready for today's check-in?",
+      journal: "A few quiet minutes for your journal today?",
+      gratitude: "What's one good thing from today?",
+      selfCare: "What's one kind thing you could do for yourself today?",
+      goals: "A gentle look at your wellness goals this week",
+    } as const;
+    for (const p of profiles) {
+      for (const [k, title] of Object.entries(TEXT) as [keyof typeof TEXT, string][]) {
+        if (due(p.reminders?.[k])) await notify(fid, [p.memberId], { kind: "wellness_reminder", title, href: k === "journal" || k === "gratitude" ? "/wellness/journal" : "/wellness" }, today);
+      }
+    }
   }
 
   if (on("petReminders") && enabled("pets")) {

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import { familyMembers, journalEntries, journalEntryFiles, journalEntryMembers } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
@@ -24,7 +24,7 @@ export const moodOf = (k: string | null) => MOODS.find((m) => m.key === k);
  */
 const visible = (viewer: Viewer) =>
   and(
-    ne(journalEntries.book, "grimoire"),
+    notInArray(journalEntries.book, ["grimoire", "wellness"]),
     visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
   )!;
 

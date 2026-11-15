@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or, sql, notInArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { itemVisible } from "./lists";
 import { db } from "@/db";
@@ -292,7 +292,7 @@ export async function getJournal(s: Scope) {
   const [latest] = await db
     .select({ id: journalEntries.id, date: journalEntries.date, title: journalEntries.title })
     .from(journalEntries)
-    .where(and(eq(journalEntries.familyId, fid(s)), eq(journalEntries.authorMemberId, s.subjectId ?? s.viewer.member.id), ne(journalEntries.book, "grimoire")))
+    .where(and(eq(journalEntries.familyId, fid(s)), eq(journalEntries.authorMemberId, s.subjectId ?? s.viewer.member.id), notInArray(journalEntries.book, ["grimoire", "wellness"])))
     .orderBy(desc(journalEntries.date))
     .limit(1);
   return latest ?? null;

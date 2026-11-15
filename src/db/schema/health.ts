@@ -59,6 +59,8 @@ export const personalHealthProfiles = pgTable("personal_health_profiles", {
   customSymptoms: text("custom_symptoms").array().notNull().default([]),
   customFeelings: text("custom_feelings").array().notNull().default([]),
   customSelfCare: text("custom_self_care").array().notNull().default([]),
+  /** Daily quote categories the person prefers (empty = all). */
+  quoteCategories: text("quote_categories").array().notNull().default([]),
   reminders: jsonb("reminders").$type<WellnessReminders>().notNull().default({}),
   ...timestamps,
 });

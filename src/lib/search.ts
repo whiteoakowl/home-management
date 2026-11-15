@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, ilike, inArray, isNull, or, sql, ne } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, or, sql, notInArray } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { itemVisible } from "./lists";
 import { db } from "@/db";
@@ -29,6 +29,7 @@ import {
   inventoryItems,
   journalEntries,
   listItems,
+  foodJournalEntries,
   lists,
   plants,
   recipeIngredients,
@@ -207,7 +208,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         .where(
           and(
             eq(journalEntries.familyId, fid),
-            ne(journalEntries.book, "grimoire"),
+            notInArray(journalEntries.book, ["grimoire", "wellness"]),
             visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
             or(ilike(journalEntries.title, like), ilike(journalEntries.body, like), sql`${q.toLowerCase()} = any(${journalEntries.tags})`),
           ),
@@ -398,6 +399,32 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       ]),
     );
   }
+
+  // Personal: only your own food journal and wellness journal (never anyone else's).
+  group(
+    "food-journal",
+    "My food journal",
+    "Utensils",
+    db
+      .select({ id: foodJournalEntries.id, food: foodJournalEntries.food, date: foodJournalEntries.date })
+      .from(foodJournalEntries)
+      .where(and(eq(foodJournalEntries.memberId, viewer.member.id), or(ilike(foodJournalEntries.food, like), ilike(foodJournalEntries.notes, like))))
+      .orderBy(sql`${foodJournalEntries.date} desc`)
+      .limit(LIMIT)
+      .then((r) => r.map((x) => ({ id: x.id, title: x.food, subtitle: x.date, href: `/health/food?view=day&date=${x.date}` }))),
+  );
+  group(
+    "wellness",
+    "My wellness journal",
+    "Smile",
+    db
+      .select({ id: journalEntries.id, title: journalEntries.title, body: journalEntries.body, date: journalEntries.date })
+      .from(journalEntries)
+      .where(and(eq(journalEntries.authorMemberId, viewer.member.id), eq(journalEntries.book, "wellness"), or(ilike(journalEntries.title, like), ilike(journalEntries.body, like))))
+      .orderBy(sql`${journalEntries.date} desc`)
+      .limit(LIMIT)
+      .then((r) => r.map((x) => ({ id: x.id, title: x.title ?? x.body.slice(0, 60), subtitle: x.date, href: `/wellness/journal?q=${encodeURIComponent(q)}` }))),
+  );
 
   return (await Promise.all(tasks)).filter((g): g is SearchGroup => !!g);
 }
