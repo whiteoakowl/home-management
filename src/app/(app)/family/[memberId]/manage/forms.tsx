@@ -6,6 +6,7 @@ import { createMemberLogin, savePermissions, savePrivateFood } from "@/app/actio
 import { Field, FormMessage, Input, Select, SubmitButton } from "@/components/ui/form";
 import { PermissionLegend, PermissionRows } from "@/components/family/permissions-matrix";
 import { saveParentAccess } from "@/app/actions/privacy";
+import { saveOvulationSetting } from "@/app/actions/health";
 
 export function PermissionsForm({
   member,
@@ -102,6 +103,38 @@ export function ParentAccessForm({ memberId, name, areas, selected, hasLogin }: 
           </div>
         </>
       )}
+    </form>
+  );
+}
+
+/** Parents: simple period tracking (default) or ovulation estimates for a minor. */
+export function OvulationForm({ memberId, name, on }: { memberId: string; name: string; on: boolean }) {
+  const [state, action] = useActionState(saveOvulationSetting, undefined);
+  return (
+    <form action={action} className="flex flex-col gap-3 border-t border-line pt-4">
+      <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
+      <input type="hidden" name="memberId" value={memberId} />
+      <p className="text-[15px] font-medium">Period Tracker</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="flex min-h-11 items-start gap-2 rounded-xl border border-line-strong p-3 text-sm">
+          <input type="radio" name="showOvulation" value="false" defaultChecked={!on} className="mt-0.5 size-4 accent-[var(--color-primary-600)]" />
+          <span>
+            <span className="font-medium">Simple period tracking</span>
+            <span className="block text-muted">Periods, symptoms and feelings only. No ovulation estimates.</span>
+          </span>
+        </label>
+        <label className="flex min-h-11 items-start gap-2 rounded-xl border border-line-strong p-3 text-sm">
+          <input type="radio" name="showOvulation" value="true" defaultChecked={on} className="mt-0.5 size-4 accent-[var(--color-primary-600)]" />
+          <span>
+            <span className="font-medium">Include ovulation estimates</span>
+            <span className="block text-muted">Also shows the estimated ovulation window.</span>
+          </span>
+        </label>
+      </div>
+      <p className="text-xs text-muted">This changes what {name}&apos;s tracker shows. It doesn&apos;t let you see {name}&apos;s records.</p>
+      <div className="flex justify-end">
+        <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
+      </div>
     </form>
   );
 }

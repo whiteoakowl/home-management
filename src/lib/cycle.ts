@@ -80,12 +80,13 @@ export function cycleStats(periods: Period[]): CycleStats {
   };
 }
 
-export type Phase = "period" | "follicular" | "fertile" | "ovulation" | "luteal" | "late";
+export type Phase = "period" | "between" | "follicular" | "fertile" | "ovulation" | "luteal" | "late";
 export const PHASE_LABEL: Record<Phase, string> = {
   period: "Period",
-  follicular: "Before the fertile window",
-  fertile: "Estimated fertile window",
-  ovulation: "Estimated ovulation",
+  between: "Between periods",
+  follicular: "Before the ovulation window",
+  fertile: "Estimated ovulation window",
+  ovulation: "Estimated ovulation day",
   luteal: "After ovulation",
   late: "Period expected any day",
 };
@@ -110,7 +111,8 @@ export type CycleEstimate = {
  * ovulation ≈ 14 days before the next period; fertile window ≈ 5 days before
  * ovulation through 1 day after. Falls back to the person's typical lengths.
  */
-export function estimate(days: DayRecord[], today: string, typical: { cycle: number; period: number }): CycleEstimate {
+export function estimate(days: DayRecord[], today: string, typical: { cycle: number; period: number }, opts: { ovulation?: boolean } = {}): CycleEstimate {
+  const showOvulation = opts.ovulation ?? true;
   const periods = periodsFrom(days);
   const stats = cycleStats(periods);
   const cycleLength = Math.round(stats.averageCycle ?? typical.cycle);
@@ -128,10 +130,12 @@ export function estimate(days: DayRecord[], today: string, typical: { cycle: num
   let phase: Phase;
   if (today <= lastPeriod.end || cycleDay <= periodLength) phase = "period";
   else if (today >= nextPeriodStart) phase = "late";
+  else if (!showOvulation) phase = "between";
   else if (today === ovulation) phase = "ovulation";
   else if (today >= fertileStart && today <= fertileEnd) phase = "fertile";
   else if (today < fertileStart) phase = "follicular";
   else phase = "luteal";
+  if (!showOvulation) return { ...base, cycleDay, phase, nextPeriodStart, ovulation: null, fertileStart: null, fertileEnd: null };
   return { ...base, cycleDay, phase, nextPeriodStart, ovulation, fertileStart, fertileEnd };
 }
 
@@ -144,6 +148,7 @@ export function predictedMarks(e: CycleEstimate, cycles = 3): Map<string, DayMar
   for (let c = 0; c < cycles; c++) {
     const start = addDays(e.nextPeriodStart, c * e.cycleLength);
     for (let i = 0; i < e.periodLength; i++) out.set(addDays(start, i), "predicted");
+    if (!e.ovulation) continue; // simple tracking: no ovulation marks
     const ov = addDays(start, -14);
     for (let i = -5; i <= 1; i++) if (!out.has(addDays(ov, i))) out.set(addDays(ov, i), "fertile");
     out.set(ov, "ovulation");

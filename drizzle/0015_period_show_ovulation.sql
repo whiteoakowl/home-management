@@ -1,0 +1,1 @@
+ALTER TABLE "personal_health_profiles" ADD COLUMN "show_ovulation" boolean DEFAULT false NOT NULL;

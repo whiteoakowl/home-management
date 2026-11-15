@@ -5,7 +5,9 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { periodDays, personalHealthProfiles } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { getViewer } from "@/lib/dal";
+import { getFamilyMember, getViewer, requireParent } from "@/lib/dal";
+import { todayIn } from "@/lib/dates";
+import { isMinor } from "@/lib/privacy";
 import { healthProfile, managedMember } from "@/lib/personal-health";
 import { f } from "@/lib/records";
 
@@ -55,6 +57,8 @@ export async function savePeriodSettings(_: ActionState, fd: FormData): Promise<
       .update(personalHealthProfiles)
       .set({
         periodEnabled: fd.has("periodEnabled") ? f.bool(fd, "periodEnabled") : undefined,
+        // Adults choose for themselves; for a minor, only parents decide (on the member's Manage page).
+        ...(fd.has("showOvulationSet") && !isMinor(member, todayIn(viewer.family.timezone)) ? { showOvulation: f.bool(fd, "showOvulation") } : {}),
         ...(cycle !== null ? { typicalCycleLength: cycle } : {}),
         ...(period !== null ? { typicalPeriodLength: period } : {}),
         ...(fd.has("customSymptoms") ? { customSymptoms: clean(String(fd.get("customSymptoms")).split(",")) } : {}),
@@ -72,4 +76,18 @@ export async function enablePeriodTracker() {
   await healthProfile(viewer.family.id, viewer.member.id);
   await db.update(personalHealthProfiles).set({ periodEnabled: true }).where(eq(personalHealthProfiles.memberId, viewer.member.id));
   revalidatePath("/health", "layout");
+}
+
+/** Parents: simple period tracking or ovulation estimates for a minor. */
+export async function saveOvulationSetting(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireParent();
+    const target = await getFamilyMember(viewer, String(fd.get("memberId") ?? ""));
+    if (!target) return fail("Family member not found.");
+    await healthProfile(viewer.family.id, target.id);
+    const on = f.bool(fd, "showOvulation");
+    await db.update(personalHealthProfiles).set({ showOvulation: on }).where(eq(personalHealthProfiles.memberId, target.id));
+    revalidatePath("/", "layout");
+    return ok(on ? `${target.displayName}'s Period Tracker shows ovulation estimates.` : `${target.displayName}'s Period Tracker uses simple period tracking.`);
+  });
 }

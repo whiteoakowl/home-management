@@ -10,7 +10,8 @@ import { PageHeader } from "@/components/ui/display";
 import { MODULES } from "@/db/schema/_shared";
 import { getFamilyMember, requireParent } from "@/lib/dal";
 import { getStoredPermissions } from "@/lib/family";
-import { LoginForm, ParentAccessForm, PermissionsForm, PrivateFoodForm } from "./forms";
+import { LoginForm, OvulationForm, ParentAccessForm, PermissionsForm, PrivateFoodForm } from "./forms";
+import { healthProfile } from "@/lib/personal-health";
 import { todayIn } from "@/lib/dates";
 import { isMinor, PRIVACY_META } from "@/lib/privacy";
 import { PRIVACY_CATEGORIES } from "@/db/schema";
@@ -69,6 +70,7 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
             selected={member.parentAccess}
             areas={PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry).map((c) => ({ key: c, label: PRIVACY_META[c].label }))}
           />
+          <OvulationForm memberId={member.id} name={member.displayName} on={(await healthProfile(viewer.family.id, member.id)).showOvulation} />
         </Card>
       )}
 

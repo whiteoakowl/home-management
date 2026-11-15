@@ -10,7 +10,7 @@ import { CYCLE_FEELINGS, cycleStats, estimate, PHASE_LABEL, PHYSICAL_SYMPTOMS, p
 import { getViewer } from "@/lib/dal";
 import { addDays, addMonths, daysBetween, formatShortDate, monthLabel, startOfMonth, todayIn } from "@/lib/dates";
 import { healthProfile, periodDaysFor } from "@/lib/personal-health";
-import { AUDIENCE_LABEL, personalSubject, privacyFor } from "@/lib/privacy";
+import { AUDIENCE_LABEL, isMinor, personalSubject, privacyFor } from "@/lib/privacy";
 
 export const metadata: Metadata = { title: "Period Tracker" };
 
@@ -47,7 +47,9 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
   }
 
   const [all, privacy] = await Promise.all([periodDaysFor(subject.id), privacyFor(viewer.member.id, "period")]);
-  const est = estimate(all, today, { cycle: profile.typicalCycleLength, period: profile.typicalPeriodLength });
+  const showOvulation = profile.showOvulation;
+  const est = estimate(all, today, { cycle: profile.typicalCycleLength, period: profile.typicalPeriodLength }, { ovulation: showOvulation });
+  const minor = isMinor(subject, today);
   const periods = periodsFrom(all);
   const stats = cycleStats(periods);
   const prev = periods.length > 1 ? periods[periods.length - 2]! : null;
@@ -81,14 +83,23 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
               <dt className="text-xs font-semibold tracking-wider uppercase">Next period (estimate)</dt>
               <dd className="mt-1 text-lg font-semibold">{fmt(est.nextPeriodStart)}</dd>
             </div>
-            <div className="rounded-xl bg-olive-50 p-3 text-olive-700">
-              <dt className="text-xs font-semibold tracking-wider uppercase">Fertile window (estimate)</dt>
-              <dd className="mt-1 text-lg font-semibold">{est.fertileStart ? `${fmt(est.fertileStart)} – ${fmt(est.fertileEnd)}` : "—"}</dd>
-            </div>
-            <div className="rounded-xl bg-olive-50 p-3 text-olive-700">
-              <dt className="text-xs font-semibold tracking-wider uppercase">Ovulation (estimate)</dt>
-              <dd className="mt-1 text-lg font-semibold">{fmt(est.ovulation)}</dd>
-            </div>
+            {showOvulation ? (
+              <>
+                <div className="rounded-xl bg-olive-50 p-3 text-olive-700">
+                  <dt className="text-xs font-semibold tracking-wider uppercase">Ovulation window (estimate)</dt>
+                  <dd className="mt-1 text-lg font-semibold">{est.fertileStart ? `${fmt(est.fertileStart)} – ${fmt(est.fertileEnd)}` : "—"}</dd>
+                </div>
+                <div className="rounded-xl bg-olive-50 p-3 text-olive-700">
+                  <dt className="text-xs font-semibold tracking-wider uppercase">Ovulation day (estimate)</dt>
+                  <dd className="mt-1 text-lg font-semibold">{fmt(est.ovulation)}</dd>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl bg-sunken p-3">
+                <dt className="text-xs font-semibold tracking-wider text-muted uppercase">Days until next period</dt>
+                <dd className="mt-1 text-lg font-semibold">{est.nextPeriodStart ? (daysBetween(today, est.nextPeriodStart) > 0 ? `About ${daysBetween(today, est.nextPeriodStart)}` : "Any day now") : "—"}</dd>
+              </div>
+            )}
             <div className="rounded-xl bg-sunken p-3">
               <dt className="text-xs font-semibold tracking-wider text-muted uppercase">Last period</dt>
               <dd className="mt-1 text-lg font-semibold">{est.lastPeriod ? `${fmt(est.lastPeriod.start)} · ${days(est.lastPeriod.length)}` : "—"}</dd>
@@ -96,7 +107,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
           </dl>
           <p className="flex items-start gap-2 text-xs text-muted">
             <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            Estimates are based on {est.usingTypical ? "your typical lengths until you've recorded at least two periods" : `your ${stats.recordedCycles} recorded cycle${stats.recordedCycles === 1 ? "" : "s"}`}. Cycles vary, so predictions can be wrong. They aren&apos;t reliable as contraception or a medical diagnosis.
+            Estimates are based on {est.usingTypical ? "your typical lengths until you've recorded at least two periods" : `your ${stats.recordedCycles} recorded cycle${stats.recordedCycles === 1 ? "" : "s"}`}. Cycles vary, so predictions can be wrong. {showOvulation ? "They aren't reliable as contraception or a medical diagnosis." : "They aren't a medical diagnosis."}
           </p>
         </Card>
 
@@ -117,6 +128,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
             marks={marks}
             memberId={subject.id}
             canEdit={canManage}
+            showOvulation={showOvulation}
             symptoms={[...PHYSICAL_SYMPTOMS, ...profile.customSymptoms]}
             feelings={[...CYCLE_FEELINGS, ...profile.customFeelings]}
           />
@@ -183,7 +195,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
         <details className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
           <summary className="cursor-pointer font-medium">Tracker settings</summary>
           <div className="mt-4">
-            <PeriodSettingsForm memberId={subject.id} cycle={profile.typicalCycleLength} period={profile.typicalPeriodLength} customSymptoms={profile.customSymptoms} customFeelings={profile.customFeelings} />
+            <PeriodSettingsForm memberId={subject.id} cycle={profile.typicalCycleLength} period={profile.typicalPeriodLength} customSymptoms={profile.customSymptoms} customFeelings={profile.customFeelings} showOvulation={showOvulation} canChooseOvulation={!minor} />
           </div>
         </details>
       )}

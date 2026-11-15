@@ -62,3 +62,15 @@ test("predicted calendar marks", () => {
   assert.equal(m.get("2026-01-15"), "ovulation");
   assert.equal(m.get("2026-01-10"), "fertile");
 });
+
+test("simple tracking hides ovulation estimates", () => {
+  const days = [...flowDays("2026-01-01", 5), ...flowDays("2026-01-29", 5)];
+  const e = estimate(days, "2026-02-10", { cycle: 28, period: 5 }, { ovulation: false });
+  assert.equal(e.phase, "between");
+  assert.equal(e.ovulation, null);
+  assert.equal(e.fertileStart, null);
+  assert.equal(e.nextPeriodStart, "2026-02-26");
+  const m = predictedMarks(e, 1);
+  assert.equal(m.get("2026-02-26"), "predicted");
+  assert.ok(![...m.values()].some((v) => v === "fertile" || v === "ovulation"));
+});

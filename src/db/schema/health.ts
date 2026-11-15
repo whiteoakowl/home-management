@@ -48,6 +48,11 @@ export const personalHealthProfiles = pgTable("personal_health_profiles", {
     .notNull()
     .references(() => families.id, { onDelete: "cascade" }),
   periodEnabled: boolean("period_enabled").notNull().default(false),
+  /**
+   * Show ovulation estimates (off = simple period tracking). For a minor only parents can
+   * turn this on; adults choose for themselves.
+   */
+  showOvulation: boolean("show_ovulation").notNull().default(false),
   /** Used for predictions until enough cycles are recorded. */
   typicalCycleLength: smallint("typical_cycle_length").notNull().default(28),
   typicalPeriodLength: smallint("typical_period_length").notNull().default(5),
