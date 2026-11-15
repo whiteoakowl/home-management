@@ -29,7 +29,7 @@ export default async function HouseholdManual() {
   const fid = viewer.family.id;
   const today = todayIn(viewer.family.timezone);
   const [info, spaces, appliances, docs, providers, upkeep, petRows] = await Promise.all([
-    viewer.can("house")
+    viewer.can("info")
       ? db.select().from(householdInfo).where(and(eq(householdInfo.familyId, fid), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info"))).orderBy(asc(householdInfo.title))
       : Promise.resolve([]),
     db.select().from(rooms).where(eq(rooms.familyId, fid)).orderBy(asc(rooms.kind), asc(rooms.sortOrder), asc(rooms.name)),

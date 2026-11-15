@@ -75,6 +75,14 @@ export function buildNav(viewer: Viewer): NavSection[] {
       .map((m) => ({ href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`, label: viewer.can(m.id) ? m.label : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ?? m.label), icon: m.icon, children: SUBMENUS[m.href] })),
   }));
   sections[0]!.items.unshift({ href: "/", label: "Home", icon: "LayoutDashboard" });
+  // Personal spaces belong to each person (private unless shared), so everyone has them.
+  const personal = sections.find((s) => s.group === "Personal");
+  const mine: NavItem[] = [
+    { href: "/health", label: "Personal Health", icon: "HeartPulse", children: [{ href: "/health", label: "Overview" }, { href: "/health/period", label: "Period Tracker" }, { href: "/privacy", label: "Privacy Center" }] },
+    { href: "/health/food", label: "Food Journal", icon: "Utensils" },
+    { href: "/wellness", label: "Mental Wellness", icon: "Smile" },
+  ];
+  if (personal) personal.items.unshift(...mine);
   sections[1]!.items.unshift({ href: "/family", label: "Family", icon: "Users" });
   if (viewer.isParent) sections.push({ group: "Admin", items: [{ href: "/settings", label: "Settings", icon: "Settings" }] });
   return sections.filter((s) => s.items.length > 0);

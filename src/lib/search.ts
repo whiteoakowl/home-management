@@ -71,8 +71,8 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: x.role === "parent" ? "Parent" : "Family member", href: `/family/${x.id}` }))),
   );
 
-  if (viewer.can("chores") || viewer.can("house") || viewer.can("maintenance")) {
-    const kinds = [...(viewer.can("chores") ? ["chore", "task"] : []), ...(viewer.can("house") ? ["cleaning"] : []), ...(viewer.can("maintenance") ? ["maintenance"] : [])] as ("chore" | "task" | "cleaning" | "maintenance")[];
+  if (viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance")) {
+    const kinds = [...(viewer.can("chores") ? ["chore", "task"] : []), ...(viewer.can("cleaning") ? ["cleaning"] : []), ...(viewer.can("maintenance") ? ["maintenance"] : [])] as ("chore" | "task" | "cleaning" | "maintenance")[];
     group(
       "chores",
       "Chores & tasks",
@@ -268,13 +268,13 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
     );
   }
 
-  if (viewer.can("house") || viewer.can("maintenance")) {
+  if (viewer.can("info") || viewer.can("maintenance")) {
     group(
       "house",
       "Household info & documents",
       "House",
       Promise.all([
-        !viewer.can("house") ? Promise.resolve([]) : db
+        !viewer.can("info") ? Promise.resolve([]) : db
           .select({ id: householdInfo.id, title: householdInfo.title })
           .from(householdInfo)
           .where(and(eq(householdInfo.familyId, fid), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info"), or(ilike(householdInfo.title, like), ilike(householdInfo.body, like))))

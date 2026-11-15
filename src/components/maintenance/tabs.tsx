@@ -9,7 +9,7 @@ export function MaintenanceTabs({ active }: { active: string }) {
         { key: "rooms", href: "/maintenance/rooms", label: "Rooms & systems" },
         { key: "schedule", href: "/maintenance/schedule", label: "Maintenance schedule" },
         { key: "repairs", href: "/maintenance/repairs", label: "Repair log" },
-        { key: "projects", href: "/maintenance/projects", label: "Remodeling projects" },
+        { key: "projects", href: "/maintenance/projects", label: "House projects" },
         { key: "todo", href: "/maintenance/todo", label: "To-do lists" },
         { key: "documents", href: "/maintenance/documents", label: "Documents & warranties" },
         { key: "inventory", href: "/maintenance/inventory", label: "Home inventory" },

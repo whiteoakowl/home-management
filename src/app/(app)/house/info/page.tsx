@@ -31,8 +31,8 @@ function InfoFields({ i, members, shared }: { i?: I; members: MemberOption[]; sh
 
 export default async function InfoPage() {
   const viewer = await getViewer();
-  if (!viewer.can("house")) notFound();
-  const canManage = viewer.can("house", "edit");
+  if (!viewer.can("info")) notFound();
+  const canManage = viewer.can("info", "edit");
   const [members, rows] = await Promise.all([
     memberOptions(viewer),
     db

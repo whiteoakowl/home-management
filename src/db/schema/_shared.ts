@@ -19,6 +19,9 @@ export const timestamps = {
 export const MODULES = [
   "calendar",
   "house",
+  "cleaning",
+  "projects",
+  "info",
   "chores",
   "lists",
   "kitchen",

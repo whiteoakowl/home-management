@@ -28,10 +28,10 @@ const CADENCES = [
 
 export default async function CleaningPage({ searchParams }: PageProps<"/house/cleaning">) {
   const viewer = await getViewer();
-  if (!viewer.can("house")) notFound();
+  if (!viewer.can("cleaning")) notFound();
   const sp = await searchParams;
   const today = todayIn(viewer.family.timezone);
-  const canManage = viewer.can("house", "edit");
+  const canManage = viewer.can("cleaning", "edit");
   const [members, rooms, cats, templates, thisWeek] = await Promise.all([
     memberOptions(viewer),
     roomOptions(viewer),
@@ -45,7 +45,7 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
     <>
       <PageHeader eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canManage ? form : undefined} />
       <HouseTabs active="cleaning" viewer={viewer} />
-      <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("house")} />
+      <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("cleaning")} />
       {thisWeek.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-xl font-semibold">Due this week</h2>

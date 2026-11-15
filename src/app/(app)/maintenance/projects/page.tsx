@@ -12,12 +12,12 @@ import { fileUrl } from "@/lib/files";
 import { roomOpts } from "@/lib/maintenance";
 import { PROJECT_STATUSES } from "@/lib/maintenance-config";
 import { memberOptions } from "@/lib/queries";
-import { ProjectModal, maintViewer } from "../shared";
+import { ProjectModal, projectsViewer } from "../shared";
 
 export const metadata: Metadata = { title: "Remodeling projects" };
 
 export default async function ProjectsPage({ searchParams }: PageProps<"/maintenance/projects">) {
-  const viewer = await maintViewer();
+  const viewer = await projectsViewer();
   const sp = await searchParams;
   const [members, rooms, rows] = await Promise.all([
     memberOptions(viewer),
@@ -33,7 +33,7 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/mainten
       .where(and(eq(homeProjects.familyId, viewer.family.id)))
       .orderBy(asc(homeProjects.targetDate)),
   ]);
-  const canEdit = viewer.can("maintenance", "edit");
+  const canEdit = viewer.can("projects", "edit");
   const add = canEdit ? <ProjectModal rooms={rooms} members={members} defaultOpen={sp.new === "1"} /> : undefined;
   return (
     <>

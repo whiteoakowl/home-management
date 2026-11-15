@@ -19,6 +19,8 @@ import { f, familyMemberIdOrNull, saveRecordAccess, visibilityFromForm } from "@
 
 type V = Awaited<ReturnType<typeof requireModule>>;
 const edit = () => requireModule("maintenance", "edit");
+/** House (remodeling) projects have their own permission area. */
+const editProjects = () => requireModule("projects", "edit");
 function revalidateHome() {
   revalidatePath("/maintenance", "layout");
   revalidatePath("/house", "layout");
@@ -66,7 +68,7 @@ export async function deleteHomeRoom(fd: FormData) {
 
 export async function saveHomeProject(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await editProjects();
     const { values, errors } = parseFields(fd, PROJECT_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
@@ -99,7 +101,7 @@ export async function saveHomeProject(_: ActionState, fd: FormData): Promise<Act
 }
 
 export async function setProjectStatus(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await editProjects();
   const p = await getProject(viewer, String(fd.get("id")));
   const status = String(fd.get("status"));
   if (!p || !["idea", "planning", "budgeting", "ready", "in_progress", "on_hold", "completed"].includes(status)) return;
@@ -111,7 +113,7 @@ export async function setProjectStatus(fd: FormData) {
 }
 
 export async function deleteHomeProject(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await editProjects();
   const p = await getProject(viewer, String(fd.get("id")));
   if (!p) return;
   const photos = await db.select().from(homePhotos).where(eq(homePhotos.projectId, p.id));
@@ -130,7 +132,7 @@ async function ownProject(viewer: V, id: string | null) {
 
 export async function saveStage(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await editProjects();
     const p = await ownProject(viewer, f.str(fd, "projectId"));
     const name = f.str(fd, "name");
     if (!name) return fail("Name the stage.", "name");
@@ -146,14 +148,14 @@ export async function saveStage(_: ActionState, fd: FormData): Promise<ActionSta
 }
 
 export async function toggleStage(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await editProjects();
   const p = await ownProject(viewer, f.str(fd, "projectId"));
   await db.update(projectStages).set({ done: fd.get("done") === "true" }).where(and(eq(projectStages.id, String(fd.get("id"))), eq(projectStages.projectId, p.id)));
   revalidateHome();
 }
 
 export async function deleteStage(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await editProjects();
   const p = await ownProject(viewer, f.str(fd, "projectId"));
   await db.delete(projectStages).where(and(eq(projectStages.id, String(fd.get("id"))), eq(projectStages.projectId, p.id)));
   revalidateHome();
@@ -161,7 +163,7 @@ export async function deleteStage(fd: FormData) {
 
 export async function saveMaterial(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await editProjects();
     const p = await ownProject(viewer, f.str(fd, "projectId"));
     const { values, errors } = parseFields(fd, MATERIAL_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
@@ -175,14 +177,14 @@ export async function saveMaterial(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function toggleMaterial(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await editProjects();
   const p = await ownProject(viewer, f.str(fd, "projectId"));
   await db.update(projectMaterials).set({ purchased: fd.get("done") === "true" }).where(and(eq(projectMaterials.id, String(fd.get("id"))), eq(projectMaterials.projectId, p.id)));
   revalidateHome();
 }
 
 export async function deleteMaterial(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await editProjects();
   const p = await ownProject(viewer, f.str(fd, "projectId"));
   await db.delete(projectMaterials).where(and(eq(projectMaterials.id, String(fd.get("id"))), eq(projectMaterials.projectId, p.id)));
   revalidateHome();
@@ -190,7 +192,7 @@ export async function deleteMaterial(fd: FormData) {
 
 /** Unpurchased materials → the project's own shopping list (created once). */
 export async function materialsToShopping(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await editProjects();
   if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit shopping lists.");
   const p = await ownProject(viewer, f.str(fd, "projectId"));
   let listId = p.shoppingListId;
@@ -209,7 +211,7 @@ export async function materialsToShopping(fd: FormData) {
 
 export async function recordProjectExpense(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await editProjects();
     if (!viewer.can("budget", "edit")) return fail("You can't edit the budget.");
     const p = await ownProject(viewer, f.str(fd, "projectId"));
     const cents = f.cents(fd, "amount");

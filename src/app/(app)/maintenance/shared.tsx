@@ -18,6 +18,13 @@ export async function maintViewer() {
   return viewer;
 }
 
+/** House (remodeling) projects have their own permission area. */
+export async function projectsViewer() {
+  const viewer = await getViewer();
+  if (!viewer.can("projects")) redirect("/");
+  return viewer;
+}
+
 type Opt = { value: string; label: string };
 const withOptions = (fields: FieldDef[], o: Record<string, Opt[]>) => fields.map((f) => (o[f.name] ? { ...f, options: o[f.name] } : f));
 const pick = (fields: FieldDef[], r: Record<string, unknown>) => Object.fromEntries(fields.map((f) => [f.name, r[f.name] as FieldValue]));

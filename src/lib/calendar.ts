@@ -156,7 +156,7 @@ export async function getCalendarItems(
     }
   }
 
-  if (want("chores") && (viewer.can("chores") || viewer.can("house") || viewer.can("maintenance"))) {
+  if (want("chores") && (viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"))) {
     const a = alias(familyMembers, "a");
     const rows = await db
       .select({ id: choreOccurrences.id, choreId: chores.id, title: chores.title, date: choreOccurrences.dueDate, status: choreOccurrences.status, assigneeId: choreOccurrences.assigneeId, color: a.color })

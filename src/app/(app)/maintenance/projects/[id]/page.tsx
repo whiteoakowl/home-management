@@ -21,17 +21,17 @@ import { getProject, projectDetail, projectOpts, roomOpts } from "@/lib/maintena
 import { MATERIAL_FIELDS, PROJECT_FIELDS, PROJECT_STATUSES, PROJECT_STATUS_TONE } from "@/lib/maintenance-config";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { DocModal, DocRow, ProjectModal, maintViewer } from "../../shared";
+import { DocModal, DocRow, ProjectModal, projectsViewer } from "../../shared";
 
 export const metadata: Metadata = { title: "Project" };
 
 export default async function ProjectPage({ params }: PageProps<"/maintenance/projects/[id]">) {
   const { id } = await params;
-  const viewer = await maintViewer();
+  const viewer = await projectsViewer();
   const p = await getProject(viewer, id);
   if (!p) notFound();
   const today = todayIn(viewer.family.timezone);
-  const canEdit = viewer.can("maintenance", "edit");
+  const canEdit = viewer.can("projects", "edit");
   const [members, rooms, projects, choreRooms, cats, detail, tasks] = await Promise.all([
     memberOptions(viewer),
     roomOpts(viewer),

@@ -7,7 +7,7 @@ export function FitnessNav({ active, subjectId, members, isParent }: { active: s
   const q = `?member=${subjectId}`;
   return (
     <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      <LinkTabs className="mb-0" active={active} tabs={[{ key: "overview", href: `/fitness${q}`, label: "Workouts" }, { key: "food", href: `/health/food${q}`, label: "Food journal" }]} />
+      <LinkTabs className="mb-0" active={active} tabs={[{ key: "overview", href: `/fitness${q}`, label: "Workouts" }]} />
       {isParent && (
         <div className="flex items-center gap-1.5">
           <span className="mr-1 text-sm text-muted">Viewing</span>

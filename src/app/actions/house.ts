@@ -13,7 +13,7 @@ import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
 export async function saveInfo(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("house", "edit");
+    const viewer = await requireModule("info", "edit");
     const title = f.str(fd, "title");
     const body = f.str(fd, "body");
     if (!title) return fail("Please add a title.", "title");
@@ -41,7 +41,7 @@ export async function saveInfo(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deleteInfo(fd: FormData) {
-  const viewer = await requireModule("house", "edit");
+  const viewer = await requireModule("info", "edit");
   const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, String(fd.get("id"))), eq(householdInfo.familyId, viewer.family.id)));
   if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
   assertCanChange(viewer, old.createdByMemberId, "this info");
