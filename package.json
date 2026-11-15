@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build && node scripts/legacy-css.mjs",
+    "dev": "node scripts/copy-ocr-assets.mjs && next dev",
+    "build": "node scripts/copy-ocr-assets.mjs && next build && node scripts/legacy-css.mjs",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
