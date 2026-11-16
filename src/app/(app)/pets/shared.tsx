@@ -55,7 +55,8 @@ export function PetCard({ pet, today, extra }: { pet: Pet; today: string; extra?
       </div>
       <div className="flex min-w-0 flex-col gap-1 p-3 sm:p-4">
         <p className="truncate font-display text-lg font-semibold group-hover:text-primary-700 sm:text-xl">{pet.name}</p>
-        <p className="text-xs text-muted sm:text-sm">{[SPECIES.find((s) => s.value === pet.species)?.label, pet.breed, age].filter(Boolean).join(" · ")}</p>
+        <p className="truncate text-xs text-muted sm:text-sm">{[SPECIES.find((s) => s.value === pet.species)?.label, pet.breed].filter(Boolean).join(" · ")}</p>
+        {age && <p className="text-xs text-muted sm:text-sm">{age}</p>}
         {extra}
       </div>
     </Link>
