@@ -66,6 +66,8 @@ export type CalendarItem = {
 
 const DEFAULT_CALENDAR_CATEGORIES = [
   ["School", "orchid"],
+  ["Homeschool", "ocean"],
+  ["Family", "rose"],
   ["Work", "slate"],
   ["Appointments", "wine"],
   ["Activities", "lilac"],

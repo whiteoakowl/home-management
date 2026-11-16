@@ -163,7 +163,7 @@ async function main() {
   // ── Calendar ──
   const calCats = await db
     .insert(s.categories)
-    .values([["School", "orchid"], ["Work", "slate"], ["Appointments", "wine"], ["Activities", "lilac"], ["Household", "mauve"], ["Farm", "olive"], ["Garden", "khaki"], ["Fitness", "plum"], ["Meals", "khaki"]].map(([name, color], i) => ({ familyId: fid, domain: "calendar" as const, name: name!, color, sortOrder: i })))
+    .values([["School", "orchid"], ["Homeschool", "ocean"], ["Family", "rose"], ["Work", "slate"], ["Appointments", "wine"], ["Activities", "lilac"], ["Household", "mauve"], ["Farm", "olive"], ["Garden", "khaki"], ["Fitness", "plum"], ["Meals", "khaki"]].map(([name, color], i) => ({ familyId: fid, domain: "calendar" as const, name: name!, color, sortOrder: i })))
     .returning();
   const cal = (n: string) => calCats.find((c) => c.name === n)!.id;
   const [doctor] = await db
