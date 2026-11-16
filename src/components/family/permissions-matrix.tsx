@@ -7,6 +7,7 @@ import { ADD_LEVEL_MODULES } from "@/lib/permissions";
 const LEVELS: { value: AccessLevel; label: string }[] = [
   { value: "none", label: "No access" },
   { value: "view", label: "View only" },
+  { value: "use", label: "Use" },
   { value: "add", label: "Add own" },
   { value: "edit", label: "Add & edit" },
 ];
@@ -18,9 +19,10 @@ export function PermissionLegend() {
   return (
     <dl className="grid gap-1.5 rounded-xl bg-sunken/60 px-3.5 py-3 text-sm text-ink-soft">
       <div><dt className="inline font-semibold text-ink">No access:</dt> <dd className="inline">the area is hidden.</dd></div>
-      <div><dt className="inline font-semibold text-ink">View only:</dt> <dd className="inline">can look, but can&apos;t add or change anything.</dd></div>
-      <div><dt className="inline font-semibold text-ink">Add own</dt> <dd className="inline">(Family Pantry areas): can add new things and change only what they added.</dd></div>
-      <div><dt className="inline font-semibold text-ink">Add &amp; edit:</dt> <dd className="inline">can create new things (lists, events, goals…) and change or delete the things they added. Only parents can change what someone else added, and nobody sees someone else&apos;s &ldquo;Only me&rdquo; items.</dd></div>
+      <div><dt className="inline font-semibold text-ink">View only:</dt> <dd className="inline">can open the tab and see what&apos;s shared with the family, but can&apos;t check anything off, add or change anything.</dd></div>
+      <div><dt className="inline font-semibold text-ink">Use:</dt> <dd className="inline">can check off chores and list items, mark things done and earn and spend points, but can&apos;t add to or edit the lists.</dd></div>
+      <div><dt className="inline font-semibold text-ink">Add own</dt> <dd className="inline">(Family Pantry areas): everything in Use, plus add new things and change only what they added.</dd></div>
+      <div><dt className="inline font-semibold text-ink">Add &amp; edit:</dt> <dd className="inline">everything in Use, plus create new things (lists, events, goals…) and change or delete the things they added. Only parents can change what someone else added, and nobody sees someone else&apos;s &ldquo;Only me&rdquo; items.</dd></div>
     </dl>
   );
 }
@@ -29,17 +31,59 @@ export function PermissionLegend() {
  * One member's module → access selects, named perm:<memberId>:<module> so
  * they post with any server-action form. Shared by onboarding and Family.
  */
+export type PeriodSetting = "hide" | "basic" | "ovulation" | "fertility";
+export const PERIOD_OPTIONS: { value: PeriodSetting; label: string; hint: string }[] = [
+  { value: "hide", label: "No access", hint: "not on their profile at all (records are kept)" },
+  { value: "basic", label: "Basic", hint: "periods, symptoms, feelings and the next period" },
+  { value: "ovulation", label: "Ovulation", hint: "adds the estimated ovulation window and day" },
+  { value: "fertility", label: "Fertility", hint: "the same estimates, labelled as a fertile window" },
+];
+/** Personal areas set in the same list: Period Tracker (its own choices) and Mental Wellness (No access / Use). */
+export type PersonalAreas = { period: PeriodSetting; wellness: boolean };
+
+const selectCls = "h-9 rounded-lg border border-line-strong bg-surface px-2 text-sm focus:border-primary-500 focus:outline-none";
+
 export function PermissionRows({
   memberId,
   access,
   modules,
+  personal,
 }: {
   memberId: string;
   access: Partial<Record<Module, AccessLevel>>;
   modules: Module[];
+  /** Personal areas on this member's profile, shown as rows in the same list. */
+  personal?: PersonalAreas;
 }) {
   return (
     <div className="grid gap-x-6 sm:grid-cols-2">
+      {personal && (
+        <>
+          <div className="flex items-center justify-between gap-3 border-b border-line/70 py-2.5">
+            <label htmlFor={`period-${memberId}`} className="flex items-center gap-2.5 text-[15px]">
+              <Icon name="CalendarHeart" className="size-4 text-muted" />
+              Period Tracker
+            </label>
+            <select id={`period-${memberId}`} name={`period:${memberId}`} defaultValue={personal.period} className={selectCls}>
+              {PERIOD_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center justify-between gap-3 border-b border-line/70 py-2.5">
+            <label htmlFor={`wellness-${memberId}`} className="flex items-center gap-2.5 text-[15px]">
+              <Icon name="Smile" className="size-4 text-muted" />
+              Mental Wellness
+            </label>
+            <select id={`wellness-${memberId}`} name={`area:${memberId}:wellness`} defaultValue={personal.wellness ? "use" : "none"} className={selectCls}>
+              <option value="none">No access</option>
+              <option value="use">Use</option>
+            </select>
+          </div>
+        </>
+      )}
       {modules.map((mod) => {
         const meta = MODULE_META[mod];
         const id = `perm-${memberId}-${mod}`;

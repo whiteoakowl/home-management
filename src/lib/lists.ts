@@ -40,7 +40,13 @@ export async function loadList(viewer: Viewer, id: string, edit = false) {
   return l;
 }
 
-/** May the viewer add items to this list (and tick them off)? */
+/** May the viewer tick items off this list? ("Use" access or better, or their own list.) */
+export function canCheckList(viewer: Viewer, l: { kind: Kind; ownerMemberId: string | null; createdByMemberId: string | null }) {
+  if (l.ownerMemberId) return l.ownerMemberId === viewer.member.id;
+  return viewer.can(listModule(l.kind), "use") || l.createdByMemberId === viewer.member.id;
+}
+
+/** May the viewer add items to this list? */
 export function canAddToList(viewer: Viewer, l: { kind: Kind; ownerMemberId: string | null; createdByMemberId: string | null }) {
   if (l.ownerMemberId) return l.ownerMemberId === viewer.member.id;
   return viewer.can(listModule(l.kind), "add") || l.createdByMemberId === viewer.member.id;

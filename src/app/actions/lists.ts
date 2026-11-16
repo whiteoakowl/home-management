@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { listItems, lists, recurrenceRules, shoppingCategory } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
-import { canAddToList, canSeeItem, itemVisible, listModule, loadList } from "@/lib/lists";
+import { canAddToList, canCheckList, canSeeItem, itemVisible, listModule, loadList } from "@/lib/lists";
 import { ownerForNew } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
 import { guessShoppingCategory } from "@/lib/shopping-category";
@@ -165,6 +165,7 @@ export async function toggleItem(fd: FormData) {
   if (!item || !canSeeItem(viewer, item)) return;
   const l = await loadList(viewer, item.listId);
   if (l.ownerMemberId && l.ownerMemberId !== viewer.member.id) throw new AuthorizationError("This list is read-only for you.");
+  if (!canCheckList(viewer, l) && !(item.personalForMemberId === viewer.member.id || item.addedByMemberId === viewer.member.id)) throw new AuthorizationError("You can view this list but not check items off.");
   const done = fd.get("done") === "true";
 
   if (done && item.recurrenceRuleId) {

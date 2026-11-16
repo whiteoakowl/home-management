@@ -129,7 +129,8 @@ export async function listOccurrences(
         .orderBy(asc(choreOccurrenceItems.position))
     : [];
   const byOcc = Map.groupBy(items, (i) => i.occurrenceId);
-  return rows.map((r) => ({ ...r, items: byOcc.get(r.id) ?? [] }));
+  // canUse: "Use" access or better lets someone tick it off and earn the points.
+  return rows.map((r) => ({ ...r, canUse: viewer.can(kindModule(r.kind), "use"), items: byOcc.get(r.id) ?? [] }));
 }
 
 export type Occurrence = Awaited<ReturnType<typeof listOccurrences>>[number];

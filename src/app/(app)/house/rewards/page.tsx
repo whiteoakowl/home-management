@@ -133,7 +133,7 @@ export default async function RewardsPage() {
         {visible.length ? (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((r) => {
-              const can = r.active && myBalance >= r.cost && (!r.forMemberIds.length || r.forMemberIds.includes(viewer.member.id));
+              const can = r.active && viewer.can("chores", "use") && myBalance >= r.cost && (!r.forMemberIds.length || r.forMemberIds.includes(viewer.member.id));
               return (
                 <article key={r.id} className={cn("flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4", !r.active && "opacity-60")}>
                   <div className="flex items-start gap-3">

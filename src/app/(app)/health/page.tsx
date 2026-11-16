@@ -27,7 +27,7 @@ export default async function PersonalHealthPage() {
     personalSubjects(viewer, "food"),
     personalSubjects(viewer, "wellness"),
   ]);
-  const est = profile.periodEnabled ? estimate(await periodDaysFor(viewer.member.id), today, { cycle: profile.typicalCycleLength, period: profile.typicalPeriodLength }, { ovulation: profile.showOvulation }) : null;
+  const est = profile.periodEnabled ? estimate(await periodDaysFor(viewer.member.id), today, { cycle: profile.typicalCycleLength, period: profile.typicalPeriodLength }, { ovulation: profile.periodMode !== "basic" }) : null;
   const hidden = viewer.member.hiddenAreas;
   const tiles = [
     ...(hidden.includes("period") ? [] : [{ href: "/health/period", icon: CalendarHeart, title: "Period Tracker", cat: "period" as const, status: !profile.periodEnabled ? "Not set up yet" : est?.cycleDay ? `Cycle day ${est.cycleDay} · next period around ${est.nextPeriodStart ? formatShortDate(est.nextPeriodStart) : "—"} (estimate)` : "Log your period to begin" }]),

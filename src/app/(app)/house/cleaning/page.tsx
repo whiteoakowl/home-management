@@ -45,7 +45,7 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
     <>
       <PageHeader eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canManage ? form : undefined} />
       <HouseTabs active="cleaning" viewer={viewer} />
-      <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("cleaning")} />
+      <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("cleaning", "use")} />
       {thisWeek.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-xl font-semibold">Due this week</h2>

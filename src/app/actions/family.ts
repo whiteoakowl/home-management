@@ -14,12 +14,14 @@ import {
   familyMembers,
   goals,
   MODULES,
+  personalHealthProfiles,
   rooms,
   type AccessLevel,
   type Module,
 } from "@/db/schema";
 import { fieldErrors, guard, type ActionState } from "@/lib/action-state";
 import { MEMBER_COLOR_KEYS } from "@/lib/colors";
+import { healthProfile } from "@/lib/personal-health";
 import { getFamilyMember, getMembership, getViewer, requireParent } from "@/lib/dal";
 import {
   addMember,
@@ -178,7 +180,7 @@ export async function createMemberLogin(_: ActionState, formData: FormData): Pro
   return { ok: true, message: "Login created. Share the email and password with them." };
 }
 
-/** Form fields: perm:<memberId>:<module> = none|view|edit */
+/** Form fields: perm:<memberId>:<module> = none|view|use|add|edit */
 function parsePermissionForm(formData: FormData) {
   const byMember = new Map<string, Partial<Record<Module, AccessLevel>>>();
   for (const [key, value] of formData.entries()) {
@@ -187,7 +189,7 @@ function parsePermissionForm(formData: FormData) {
     if (!MODULES.includes(mod as Module) || !ACCESS_LEVELS.includes(value as AccessLevel)) continue;
     const entry = byMember.get(memberId) ?? {};
     // "Add" only exists for the Family Pantry areas.
-    entry[mod as Module] = value === "add" && !ADD_LEVEL_MODULES.includes(mod as Module) ? "view" : (value as AccessLevel);
+    entry[mod as Module] = value === "add" && !ADD_LEVEL_MODULES.includes(mod as Module) ? "use" : (value as AccessLevel);
     byMember.set(memberId, entry);
   }
   return byMember;
@@ -199,6 +201,29 @@ async function savePermissionsFromForm(formData: FormData) {
     const target = await getFamilyMember(viewer, memberId);
     if (!target || target.role === "parent") continue; // parents always have full access
     await setMemberPermissions(target.id, perms);
+  }
+  // area:<memberId>:wellness = none | use  (Mental Wellness on their profile)
+  for (const [key, value] of formData.entries()) {
+    const [prefix, memberId, area] = key.split(":");
+    if (prefix !== "area" || !memberId || area !== "wellness") continue;
+    const target = await getFamilyMember(viewer, memberId);
+    if (!target) continue;
+    const hiddenAreas = value === "none" ? [...new Set([...target.hiddenAreas, area])] : target.hiddenAreas.filter((a) => a !== area);
+    await db.update(familyMembers).set({ hiddenAreas }).where(eq(familyMembers.id, target.id));
+  }
+  // period:<memberId> = hide | basic | ovulation | fertility
+  for (const [key, value] of formData.entries()) {
+    const [prefix, memberId] = key.split(":");
+    if (prefix !== "period" || !memberId || !["hide", "basic", "ovulation", "fertility"].includes(String(value))) continue;
+    const target = await getFamilyMember(viewer, memberId);
+    if (!target) continue;
+    const hide = value === "hide";
+    const hiddenAreas = hide ? [...new Set([...target.hiddenAreas, "period"])] : target.hiddenAreas.filter((a) => a !== "period");
+    await db.update(familyMembers).set({ hiddenAreas }).where(eq(familyMembers.id, target.id));
+    if (!hide) {
+      await healthProfile(viewer.family.id, target.id);
+      await db.update(personalHealthProfiles).set({ periodMode: value as "basic" | "ovulation" | "fertility" }).where(eq(personalHealthProfiles.memberId, target.id));
+    }
   }
 }
 

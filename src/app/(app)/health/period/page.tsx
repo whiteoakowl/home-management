@@ -6,7 +6,7 @@ import { PeriodSettingsForm } from "@/components/health/period-settings";
 import { PersonalSwitcher } from "@/components/health/personal-switcher";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader, ProgressRing } from "@/components/ui/display";
-import { CYCLE_FEELINGS, cycleStats, estimate, PHASE_LABEL, PHYSICAL_SYMPTOMS, periodsFrom, predictedMarks } from "@/lib/cycle";
+import { CYCLE_FEELINGS, cycleStats, estimate, phaseLabel, PHYSICAL_SYMPTOMS, periodsFrom, predictedMarks } from "@/lib/cycle";
 import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
 import { addDays, addMonths, daysBetween, formatShortDate, monthLabel, startOfMonth, todayIn } from "@/lib/dates";
@@ -49,7 +49,9 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
   }
 
   const [all, privacy] = await Promise.all([periodDaysFor(subject.id), privacyFor(viewer.member.id, "period")]);
-  const showOvulation = profile.showOvulation;
+  const mode = profile.periodMode;
+  const showOvulation = mode !== "basic";
+  const windowWord = mode === "fertility" ? "Fertile" : "Ovulation";
   const est = estimate(all, today, { cycle: profile.typicalCycleLength, period: profile.typicalPeriodLength }, { ovulation: showOvulation });
   const minor = isMinor(subject, today);
   const periods = periodsFrom(all);
@@ -76,7 +78,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
             </ProgressRing>
             <div className="min-w-0">
               <p className="text-sm text-muted">Current cycle day {est.cycleDay ?? "—"} of about {est.cycleLength}</p>
-              <p className="font-display text-2xl font-semibold">{est.phase ? PHASE_LABEL[est.phase] : "Log your period to begin"}</p>
+              <p className="font-display text-2xl font-semibold">{est.phase ? phaseLabel(est.phase, mode) : "Log your period to begin"}</p>
               {est.phase && est.phase !== "period" && <Badge tone="mist">Estimate</Badge>}
             </div>
           </div>
@@ -88,7 +90,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
             {showOvulation ? (
               <>
                 <div className="rounded-xl bg-olive-50 p-3 text-olive-700">
-                  <dt className="text-xs font-semibold tracking-wider uppercase">Ovulation window (estimate)</dt>
+                  <dt className="text-xs font-semibold tracking-wider uppercase">{windowWord} window (estimate)</dt>
                   <dd className="mt-1 text-lg font-semibold">{est.fertileStart ? `${fmt(est.fertileStart)} – ${fmt(est.fertileEnd)}` : "—"}</dd>
                 </div>
                 <div className="rounded-xl bg-olive-50 p-3 text-olive-700">
@@ -131,6 +133,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
             memberId={subject.id}
             canEdit={canManage}
             showOvulation={showOvulation}
+            windowWord={windowWord}
             symptoms={[...PHYSICAL_SYMPTOMS, ...profile.customSymptoms]}
             feelings={[...CYCLE_FEELINGS, ...profile.customFeelings]}
           />
@@ -197,7 +200,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
         <details className="rounded-[var(--radius-card)] border border-line bg-surface p-4">
           <summary className="cursor-pointer font-medium">Tracker settings</summary>
           <div className="mt-4">
-            <PeriodSettingsForm memberId={subject.id} cycle={profile.typicalCycleLength} period={profile.typicalPeriodLength} customSymptoms={profile.customSymptoms} customFeelings={profile.customFeelings} showOvulation={showOvulation} canChooseOvulation={!minor} />
+            <PeriodSettingsForm memberId={subject.id} cycle={profile.typicalCycleLength} period={profile.typicalPeriodLength} customSymptoms={profile.customSymptoms} customFeelings={profile.customFeelings} mode={mode} canChooseMode={!minor} />
           </div>
         </details>
       )}

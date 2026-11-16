@@ -197,6 +197,8 @@ async function occurrenceForViewer(viewer: Viewer, id: string) {
         .limit(1)
     ).length > 0;
   const canEdit = viewer.can(kindModule(row.kind), "edit");
+  // Ticking things off (and earning points) needs "Use" access or better.
+  if (!viewer.can(kindModule(row.kind), "use")) throw new AuthorizationError("You can view this but not check it off.");
   if (!mine && !assignedItem && !canEdit) throw new AuthorizationError("That isn't assigned to you.");
   return { ...row, mine, canEdit };
 }
@@ -281,6 +283,7 @@ export async function cleanNow(fd: FormData) {
     .limit(1);
   const [own] = due ? [] : await db.select().from(choreOccurrences).where(and(eq(choreOccurrences.choreId, c.id), eq(choreOccurrences.dueDate, today)));
   const target = due ?? own;
+  if (!viewer.can(kindModule(c.kind), "use")) throw new AuthorizationError("You can view this but not check it off.");
   if (target && target.assigneeId !== viewer.member.id && !viewer.can(kindModule(c.kind), "edit")) throw new AuthorizationError("That isn't assigned to you.");
   if (!target && !viewer.can(kindModule(c.kind))) throw new AuthorizationError("You can't log this.");
   const done = { status: "done" as const, completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(c.id) };

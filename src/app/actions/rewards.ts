@@ -51,7 +51,7 @@ export async function deleteReward(fd: FormData) {
 
 /** A member asks to redeem a reward; points are held until a parent decides. */
 export async function requestReward(fd: FormData) {
-  const viewer = await requireModule("chores", "view");
+  const viewer = await requireModule("chores", "use");
   const [r] = await db.select().from(rewards).where(and(eq(rewards.id, String(fd.get("id"))), eq(rewards.familyId, viewer.family.id), eq(rewards.active, true)));
   if (!r) throw new AuthorizationError("That reward isn't available.");
   if (r.forMemberIds.length && !r.forMemberIds.includes(viewer.member.id)) throw new AuthorizationError("That reward isn't offered to you.");
@@ -86,7 +86,7 @@ export async function decideRedemption(fd: FormData) {
 
 /** Parents can cancel a pending request on behalf of a member; members can cancel their own. */
 export async function cancelRedemption(fd: FormData) {
-  const viewer = await requireModule("chores", "view");
+  const viewer = await requireModule("chores", "use");
   const [x] = await db.select().from(rewardRedemptions).where(and(eq(rewardRedemptions.id, String(fd.get("id"))), eq(rewardRedemptions.familyId, viewer.family.id), eq(rewardRedemptions.status, "requested")));
   if (!x || (!viewer.isParent && x.memberId !== viewer.member.id)) return;
   await db.delete(rewardRedemptions).where(eq(rewardRedemptions.id, x.id));

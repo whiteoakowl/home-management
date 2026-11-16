@@ -52,7 +52,15 @@ export const personalHealthProfiles = pgTable("personal_health_profiles", {
    * Show ovulation estimates (off = simple period tracking). For a minor only parents can
    * turn this on; adults choose for themselves.
    */
+  /** Deprecated: replaced by periodMode (kept so older data isn't lost). */
   showOvulation: boolean("show_ovulation").notNull().default(false),
+  /**
+   * What the Period Tracker estimates: "basic" (periods and next period only),
+   * "ovulation" (adds the estimated ovulation window and day, gentle wording for
+   * young teens) or "fertility" (the same estimates, labelled as a fertile window).
+   * Parents set it in a member's permissions; adults can also change their own.
+   */
+  periodMode: text("period_mode").$type<"basic" | "ovulation" | "fertility">().notNull().default("basic"),
   /** Used for predictions until enough cycles are recorded. */
   typicalCycleLength: smallint("typical_cycle_length").notNull().default(28),
   typicalPeriodLength: smallint("typical_period_length").notNull().default(5),

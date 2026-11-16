@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
-import { frequentItems, listModule, loadList, canAddToList, loadListItems } from "@/lib/lists";
+import { frequentItems, listModule, loadList, canAddToList, canCheckList, loadListItems } from "@/lib/lists";
 import { categoryOptions, memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import type { ReactNode } from "react";
@@ -117,6 +117,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
           members={members}
           canEdit={canEdit}
           canAdd={canAdd}
+          canCheck={canCheckList(viewer, list)}
           today={todayIn(viewer.family.timezone)}
           personal={list.kind === "shopping" && !list.ownerMemberId ? { isParent: viewer.isParent, viewerId: viewer.member.id, onlyPersonal: !canAdd } : undefined}
         />

@@ -15,7 +15,7 @@ async function runVoid(action: VoidAction, fd: FormData) {
   } catch (e) {
     unstable_rethrow(e);
     console.error(e);
-    window.alert(networkFailureMessage());
+    window.alert(navigator.onLine === false ? networkFailureMessage() : "That didn't save. You may not have permission to do this, or the connection dropped. Please try again.");
   }
 }
 
@@ -92,6 +92,7 @@ export function CheckCircle({
   label,
   extra,
   size = "md",
+  disabled = false,
 }: {
   action: VoidAction;
   id: string;
@@ -99,6 +100,8 @@ export function CheckCircle({
   label: string;
   extra?: Record<string, string>;
   size?: "sm" | "md";
+  /** Shown but not clickable (e.g. "View only" access). */
+  disabled?: boolean;
 }) {
   const [pending, start] = useTransition();
   const shown = pending ? !done : done;
@@ -108,7 +111,9 @@ export function CheckCircle({
       role="checkbox"
       aria-checked={shown}
       aria-label={label}
-      disabled={pending}
+      aria-disabled={disabled || undefined}
+      title={disabled ? "View only: you can't check this off" : undefined}
+      disabled={pending || disabled}
       onClick={() => {
         const fd = new FormData();
         fd.set("id", id);
@@ -120,6 +125,7 @@ export function CheckCircle({
         "flex shrink-0 items-center justify-center rounded-full border-2 transition-all",
         size === "md" ? "size-7" : "size-6",
         shown ? "border-primary-600 bg-primary-600 text-white" : "border-line-strong bg-surface hover:border-primary-400",
+        disabled && "cursor-not-allowed opacity-50 hover:border-line-strong",
       )}
     >
       {shown && <Check className={size === "md" ? "size-4" : "size-3.5"} strokeWidth={3} aria-hidden />}

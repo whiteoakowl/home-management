@@ -294,7 +294,15 @@ export async function getJournal(s: Scope) {
   const [latest] = await db
     .select({ id: journalEntries.id, date: journalEntries.date, title: journalEntries.title })
     .from(journalEntries)
-    .where(and(eq(journalEntries.familyId, fid(s)), eq(journalEntries.authorMemberId, s.subjectId ?? s.viewer.member.id), notInArray(journalEntries.book, ["grimoire", "wellness"])))
+    .where(
+      and(
+        eq(journalEntries.familyId, fid(s)),
+        eq(journalEntries.authorMemberId, s.subjectId ?? s.viewer.member.id),
+        notInArray(journalEntries.book, ["grimoire", "wellness"]),
+        // On someone else's profile, only entries they've shared with the viewer.
+        visibleTo(s.viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry"),
+      ),
+    )
     .orderBy(desc(journalEntries.date))
     .limit(1);
   return latest ?? null;

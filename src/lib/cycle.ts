@@ -91,6 +91,15 @@ export const PHASE_LABEL: Record<Phase, string> = {
   late: "Period expected any day",
 };
 
+/** "fertility" mode words the window as fertile; "ovulation" mode (gentler, for young teens) as an ovulation window. */
+export function phaseLabel(phase: Phase, mode: "basic" | "ovulation" | "fertility") {
+  if (mode === "fertility") {
+    if (phase === "fertile") return "Estimated fertile window";
+    if (phase === "follicular") return "Before the fertile window";
+  }
+  return PHASE_LABEL[phase];
+}
+
 export type CycleEstimate = {
   /** Day 1 = first day of the latest period. Null until a period is recorded. */
   cycleDay: number | null;

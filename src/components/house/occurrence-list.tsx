@@ -11,6 +11,8 @@ import type { MemberOption } from "@/components/forms/fields";
 
 export type OccurrenceView = {
   id: string;
+  /** False for "View only" access: shown, but can't be ticked off. */
+  canUse?: boolean;
   choreId: string;
   title: string;
   instructions: string | null;
@@ -99,7 +101,7 @@ function Row({
         }}
       >
         <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
-          <CheckCircle action={setOccurrenceDone} id={o.id} done={done} label={`Mark "${o.title}" ${done ? "not done" : "done"}`} />
+          <CheckCircle action={setOccurrenceDone} id={o.id} done={done} label={`Mark "${o.title}" ${done ? "not done" : "done"}`} disabled={o.canUse === false} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Link href={`/house/chores/${o.choreId}`} className={cn("truncate text-[15px] font-medium hover:underline", done && "text-muted line-through")}>
               {o.priority === "high" && !done && <span className="mr-1.5 inline-block size-2 rounded-full bg-wine-500 align-middle" title="High priority" />}
@@ -190,7 +192,7 @@ function Row({
             <ul className="flex flex-col gap-2">
               {o.items.map((it) => (
                 <li key={it.id} className="flex items-center gap-3">
-                  <CheckCircle action={setOccurrenceItemDone} id={it.id} done={!!it.completedAt} label={it.text} size="sm" />
+                  <CheckCircle action={setOccurrenceItemDone} id={it.id} done={!!it.completedAt} label={it.text} size="sm" disabled={o.canUse === false} />
                   <span className={cn("flex-1 text-[15px]", it.completedAt && "text-muted line-through")}>{it.text}</span>
                   {it.assigneeName && <Avatar name={it.assigneeName} color={it.assigneeColor} size="xs" />}
                 </li>

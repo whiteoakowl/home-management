@@ -159,7 +159,7 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
             return (
               <li key={c.id}>
                 <Row>
-                  <CheckCircle action={setOccurrenceDone} id={c.id} done={false} label={`Mark "${c.title}" done`} size="sm" />
+                  <CheckCircle action={setOccurrenceDone} id={c.id} done={false} label={`Mark "${c.title}" done`} size="sm" disabled={!scope.viewer.can("chores", "use")} />
                   <Link href={isTask ? "/house/tasks" : "/house/chores"} className="min-w-0 flex-1 truncate text-[15px] hover:underline">
                     {c.title}
                   </Link>

@@ -38,8 +38,11 @@ export function PeriodCalendar({
   symptoms,
   feelings,
   showOvulation = false,
+  windowWord = "Ovulation",
 }: {
   showOvulation?: boolean;
+  /** "Ovulation" (default, gentler wording) or "Fertile". */
+  windowWord?: string;
   month: string;
   today: string;
   days: Record<string, PeriodDayView>;
@@ -71,7 +74,7 @@ export function PeriodCalendar({
           const rec = days[d];
           const mark = marks[d];
           const recorded = isFlow(rec?.flow ?? null);
-          const describe = [recorded ? `Period (${rec!.flow})` : rec?.flow === "spotting" ? "Spotting" : mark === "predicted" ? "Predicted period (estimate)" : mark === "fertile" ? "Estimated ovulation window" : mark === "ovulation" ? "Estimated ovulation day" : null, rec?.symptoms.length ? `${rec.symptoms.length} symptoms` : null, rec?.note ? "note" : null].filter(Boolean).join(", ");
+          const describe = [recorded ? `Period (${rec!.flow})` : rec?.flow === "spotting" ? "Spotting" : mark === "predicted" ? "Predicted period (estimate)" : mark === "fertile" ? `Estimated ${windowWord.toLowerCase()} window` : mark === "ovulation" ? "Estimated ovulation day" : null, rec?.symptoms.length ? `${rec.symptoms.length} symptoms` : null, rec?.note ? "note" : null].filter(Boolean).join(", ");
           return (
             <button
               key={d}
@@ -102,7 +105,7 @@ export function PeriodCalendar({
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft">
         <li className="flex items-center gap-1.5"><span className="size-3 rounded bg-wine-500" /> Period (recorded)</li>
         <li className="flex items-center gap-1.5"><span className="size-3 rounded border-2 border-dashed border-wine-400" /> Predicted period</li>
-        {showOvulation && <li className="flex items-center gap-1.5"><span className="size-3 rounded bg-olive-50 ring-1 ring-olive-400" /> Ovulation window (estimate)</li>}
+        {showOvulation && <li className="flex items-center gap-1.5"><span className="size-3 rounded bg-olive-50 ring-1 ring-olive-400" /> {windowWord} window (estimate)</li>}
         {showOvulation && <li className="flex items-center gap-1.5"><span className="size-3 rounded bg-olive-100 ring-2 ring-olive-500" /> Ovulation day (estimate)</li>}
         <li className="flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-primary-500" /> Symptoms or feelings</li>
       </ul>

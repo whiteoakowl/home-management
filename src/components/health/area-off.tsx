@@ -1,14 +1,10 @@
-import { EyeOff } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/display";
+import { notFound } from "next/navigation";
 
-/** Shown when parents removed an area (Period Tracker / Mental Wellness) from this profile. */
-export function AreaOff({ label }: { label: string }) {
-  return (
-    <div className="mx-auto max-w-2xl">
-      <Card>
-        <EmptyState icon={<EyeOff />} title={`${label} is turned off`} description={`${label} isn't on your profile. A parent can turn it back on in Family → your name → Manage. Nothing you saved was deleted.`} />
-      </Card>
-    </div>
-  );
+/**
+ * An area a parent set to "No access" for this person (Period Tracker / Mental
+ * Wellness) doesn't exist for them at all: no menu entry, no tab, and the page
+ * itself is "not found". Nothing they saved is deleted.
+ */
+export function AreaOff({ label: _label }: { label: string }): never {
+  notFound();
 }

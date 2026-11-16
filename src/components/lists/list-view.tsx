@@ -105,6 +105,7 @@ function Row({
   kind,
   members,
   canEdit,
+  canCheck = true,
   today,
 }: {
   item: ItemView;
@@ -112,6 +113,7 @@ function Row({
   kind: ListKind;
   members: MemberOption[];
   canEdit: boolean;
+  canCheck?: boolean;
   today: string;
 }) {
   const [pending, start] = useTransition();
@@ -131,7 +133,7 @@ function Row({
   return (
     <li className={cn("group flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-sunken/60", pending && "opacity-60")}>
       {checkable ? (
-        <CheckCircle action={toggleItem} id={item.id} done={item.checked} label={`${item.checked ? "Uncheck" : "Check"} ${item.text}`} />
+        <CheckCircle action={toggleItem} id={item.id} done={item.checked} label={`${item.checked ? "Uncheck" : "Check"} ${item.text}`} disabled={!(canCheck || item.mine || item.personalFor)} />
       ) : kind === "numbered" ? (
         <span className="w-7 text-right font-semibold text-muted tabular-nums">{index + 1}.</span>
       ) : (
@@ -298,6 +300,7 @@ export function ListView({
   members,
   canEdit,
   canAdd,
+  canCheck = true,
   today,
   groupBy,
   personal,
@@ -308,6 +311,8 @@ export function ListView({
   members: MemberOption[];
   canEdit: boolean;
   canAdd: boolean;
+  /** "View only" members see the list but can't tick items. */
+  canCheck?: boolean;
   today: string;
   groupBy?: "aisle" | "none";
   personal?: PersonalItems;
@@ -344,7 +349,7 @@ export function ListView({
           {g.label && <h2 className="mb-1 px-2 font-sans text-xs font-semibold tracking-[0.12em] text-muted uppercase">{g.label}</h2>}
           <ul className="flex flex-col">
             {g.items.map((item, i) => (
-              <Row key={item.id} item={item} index={i} kind={kind} members={members} canEdit={canEdit} today={today} />
+              <Row canCheck={canCheck} key={item.id} item={item} index={i} kind={kind} members={members} canEdit={canEdit} today={today} />
             ))}
           </ul>
         </section>
@@ -357,7 +362,7 @@ export function ListView({
           </summary>
           <ul className="mt-2 flex flex-col">
             {done.map((item, i) => (
-              <Row key={item.id} item={item} index={i} kind={kind} members={members} canEdit={canEdit} today={today} />
+              <Row canCheck={canCheck} key={item.id} item={item} index={i} kind={kind} members={members} canEdit={canEdit} today={today} />
             ))}
           </ul>
         </details>

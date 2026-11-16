@@ -54,7 +54,9 @@ export async function saveHiddenAreas(_: ActionState, fd: FormData): Promise<Act
     const target = await getFamilyMember(viewer, String(fd.get("memberId") ?? ""));
     if (!target) return fail("Family member not found.");
     const shown = new Set(fd.getAll("shown").map(String));
-    const hidden = HIDEABLE_AREAS.map((a) => a.key).filter((k) => !shown.has(k));
+    // Only the areas on this form change (the Period Tracker may be set in the permissions list instead).
+    const onForm = new Set(fd.getAll("area").map(String).filter((k) => HIDEABLE_AREAS.some((a) => a.key === k)));
+    const hidden = [...target.hiddenAreas.filter((k) => !onForm.has(k)), ...[...onForm].filter((k) => !shown.has(k))];
     await db.update(familyMembers).set({ hiddenAreas: hidden }).where(and(eq(familyMembers.id, target.id), eq(familyMembers.familyId, viewer.family.id)));
     revalidatePath("/", "layout");
     const off = HIDEABLE_AREAS.filter((a) => hidden.includes(a.key)).map((a) => a.label);

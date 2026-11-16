@@ -219,7 +219,7 @@ export async function deleteBook(fd: FormData) {
 }
 
 export async function toggleBookFavorite(fd: FormData) {
-  const viewer = await requireModule("library", "view");
+  const viewer = await requireModule("library", "use");
   const b = await getBook(viewer, String(fd.get("id")));
   if (!b || !canChangeBook(viewer, b)) throw new AuthorizationError("Book not found.");
   await db.update(books).set({ isFavorite: !b.isFavorite }).where(eq(books.id, b.id));
@@ -229,7 +229,7 @@ export async function toggleBookFavorite(fd: FormData) {
 /** Reading progress: current page, start, pause, finish, or give up. */
 export async function updateReading(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("library", "view");
+    const viewer = await requireModule("library", "use");
     const b = await getBook(viewer, String(fd.get("id")));
     if (!b || !canChangeBook(viewer, b)) throw new AuthorizationError("Book not found.");
     const today = todayIn(viewer.family.timezone);
