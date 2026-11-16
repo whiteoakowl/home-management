@@ -1,15 +1,32 @@
 "use client";
 
-import { createContext, use, useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  startTransition,
+  use,
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Pencil, Plus } from "lucide-react";
 import type { ActionState } from "@/lib/action-state";
 import { Button } from "@/components/ui/button";
-import { FormMessage, SubmitButton } from "@/components/ui/form";
+import {
+  FormMessage,
+  FormPendingContext,
+  SubmitButton,
+} from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
 import { safeAction } from "@/lib/safe-submit";
 import { cn } from "@/lib/utils";
 
-export type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
+export type FormAction = (
+  prev: ActionState,
+  formData: FormData,
+) => Promise<ActionState>;
 
 const ErrorsContext = createContext<Record<string, string[] | undefined>>({});
 export const useFieldError = (name: string) => use(ErrorsContext)[name];
@@ -41,7 +58,7 @@ export function ActionForm({
 }) {
   // Photos are shrunk before sending; a dropped or rejected request shows a message here.
   const safe = useMemo(() => safeAction(action), [action]);
-  const [state, formAction] = useActionState(safe, undefined);
+  const [state, formAction, pending] = useActionState(safe, undefined);
   const ref = useRef<HTMLFormElement>(null);
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
@@ -56,16 +73,47 @@ export function ActionForm({
 
   return (
     <ErrorsContext value={state?.errors ?? {}}>
-      <form ref={ref} action={formAction} className={cn("flex flex-col gap-4", className)} noValidate>
-        {(!state?.ok || showSuccess) && <FormMessage message={state?.message ?? (state?.errors && Object.keys(state.errors).length ? "Please check the fields marked below." : undefined)} tone={state?.ok ? "success" : "error"} />}
-        {children}
-        {(submitLabel || footer) && (
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-            {footer}
-            {submitLabel && <SubmitButton pendingLabel={pendingLabel}>{submitLabel}</SubmitButton>}
-          </div>
-        )}
-      </form>
+      {/* Submitted via onSubmit, not the action prop: React resets an action-prop form after every
+          submit, which wiped typed text and chosen photos when a save failed. Here the form only
+          clears after a successful save (resetOnSuccess). */}
+      <FormPendingContext value={pending}>
+        <form
+          ref={ref}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (pending) return;
+            const submitter = (e.nativeEvent as SubmitEvent)
+              .submitter as HTMLElement | null;
+            const fd = new FormData(e.currentTarget, submitter);
+            startTransition(() => formAction(fd));
+          }}
+          className={cn("flex flex-col gap-4", className)}
+          noValidate
+        >
+          {(!state?.ok || showSuccess) && (
+            <FormMessage
+              message={
+                state?.message ??
+                (state?.errors && Object.keys(state.errors).length
+                  ? "Please check the fields marked below."
+                  : undefined)
+              }
+              tone={state?.ok ? "success" : "error"}
+            />
+          )}
+          {children}
+          {(submitLabel || footer) && (
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+              {footer}
+              {submitLabel && (
+                <SubmitButton pendingLabel={pendingLabel}>
+                  {submitLabel}
+                </SubmitButton>
+              )}
+            </div>
+          )}
+        </form>
+      </FormPendingContext>
     </ErrorsContext>
   );
 }
@@ -106,7 +154,13 @@ export function FormModal({
   size?: "sm" | "md" | "lg";
   defaultOpen?: boolean;
 }) {
-  const triggerIcon = triggerIconProp ?? (triggerLabel === "Edit" ? <Pencil className="size-4" /> : <Plus className="size-4" />);
+  const triggerIcon =
+    triggerIconProp ??
+    (triggerLabel === "Edit" ? (
+      <Pencil className="size-4" />
+    ) : (
+      <Plus className="size-4" />
+    ));
   const [open, setOpen] = useState(defaultOpen);
   // Remount the form each time the modal opens so it starts clean.
   const [key, setKey] = useState(0);
@@ -119,15 +173,31 @@ export function FormModal({
       {trigger ? (
         trigger(show)
       ) : triggerContent ? (
-        <button type="button" onClick={show} aria-label={triggerAriaLabel} className={triggerClassName}>
+        <button
+          type="button"
+          onClick={show}
+          aria-label={triggerAriaLabel}
+          className={triggerClassName}
+        >
           {triggerContent}
         </button>
       ) : (
-        <Button variant={triggerVariant} size={triggerSize} icon={triggerIcon} onClick={show}>
+        <Button
+          variant={triggerVariant}
+          size={triggerSize}
+          icon={triggerIcon}
+          onClick={show}
+        >
           {triggerLabel ?? title}
         </Button>
       )}
-      <Modal open={open} onClose={() => setOpen(false)} title={title} description={description} size={size}>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={title}
+        description={description}
+        size={size}
+      >
         <ActionForm
           key={key}
           action={action}

@@ -22,8 +22,33 @@ export interface StorageDriver {
 
 // ─── Supabase Storage (REST API) ────────────────────────────────────────────
 
+/**
+ * The project's base address from whatever was pasted into SUPABASE_URL:
+ * "https://abc.supabase.co/rest/v1/", ".../storage/v1", "abc.supabase.co", or a
+ * dashboard link "https://supabase.com/dashboard/project/abc" all become
+ * "https://abc.supabase.co". (A path left on the end sends uploads to the
+ * database API instead, which answers 404 PGRST125.)
+ */
+export function supabaseBaseUrl(raw: string) {
+  const t = raw.trim().replace(/^["']|["']$/g, "");
+  let u: URL;
+  try {
+    u = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(t) ? t : `https://${t}`);
+  } catch {
+    return t.replace(/\/+$/, "");
+  }
+  const dash = u.hostname.endsWith("supabase.com") && u.pathname.match(/\/project\/([a-z0-9]+)/i);
+  if (dash) return `https://${dash[1]}.supabase.co`;
+  // A database connection string: postgres.<ref>@…pooler.supabase.com or db.<ref>.supabase.co
+  const pooler = u.username.match(/^postgres\.([a-z0-9]+)$/i);
+  if (pooler) return `https://${pooler[1]}.supabase.co`;
+  const direct = u.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+  if (direct) return `https://${direct[1]}.supabase.co`;
+  return u.origin === "null" ? `https://${u.host}` : u.origin;
+}
+
 export function supabaseDriver(opts: { url: string; key: string; bucket?: string; fetch?: typeof fetch }): StorageDriver {
-  const base = `${opts.url.replace(/\/+$/, "")}/storage/v1`;
+  const base = `${supabaseBaseUrl(opts.url)}/storage/v1`;
   const bucket = opts.bucket ?? "uploads";
   const f = opts.fetch ?? fetch;
   const headers = (extra: Record<string, string> = {}) => ({ apikey: opts.key, Authorization: `Bearer ${opts.key}`, ...extra });

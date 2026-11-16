@@ -1,7 +1,7 @@
 import { pool } from "@/db";
 import { databaseUrl } from "@/db/url";
 import { explainDbError } from "@/lib/health";
-import { storage } from "@/lib/storage";
+import { storage, supabaseBaseUrl } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,7 @@ export async function GET() {
     ok: false,
     database: { configured: !!url, variable: via, kind },
     storage: process.env.SUPABASE_URL && (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? "Supabase Storage" : process.env.NETLIFY ? "Netlify Blobs" : "local disk",
+    ...(process.env.SUPABASE_URL ? { storageAddress: supabaseBaseUrl(process.env.SUPABASE_URL), storageAddressAsEntered: process.env.SUPABASE_URL.trim() === supabaseBaseUrl(process.env.SUPABASE_URL) ? "ok" : "had extra parts; the app now ignores them" } : {}),
     version: process.env.COMMIT_REF?.slice(0, 7) ?? null,
   };
   // Photo storage: write, read back and delete a tiny test file.

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { supabaseDriver } from "../src/lib/storage";
+import { supabaseBaseUrl, supabaseDriver } from "../src/lib/storage";
 
 /** Minimal fake of Supabase Storage's REST API. */
 function fakeSupabase() {
@@ -59,4 +59,20 @@ test("supabase driver: wrong key surfaces an error", async () => {
   const fake = fakeSupabase();
   const d = supabaseDriver({ url: "https://abc.supabase.co", key: "wrong", fetch: fake.fetch });
   await assert.rejects(() => d.put("k", Buffer.from("x"), "text/plain"), /401/);
+});
+
+test("SUPABASE_URL is reduced to the project address however it was pasted", () => {
+  for (const raw of [
+    "https://abc.supabase.co",
+    "https://abc.supabase.co/",
+    "https://abc.supabase.co/rest/v1/",
+    "https://abc.supabase.co/storage/v1",
+    " abc.supabase.co ",
+    '"https://abc.supabase.co"',
+    "https://supabase.com/dashboard/project/abc/settings/api",
+    "postgresql://postgres.abc:secret@aws-0-us-east-1.pooler.supabase.com:6543/postgres",
+    "postgresql://postgres:secret@db.abc.supabase.co:5432/postgres",
+  ]) {
+    assert.equal(supabaseBaseUrl(raw), "https://abc.supabase.co", raw);
+  }
 });
