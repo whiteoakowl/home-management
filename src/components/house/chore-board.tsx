@@ -72,7 +72,13 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
           done: { from: addDays(today, -30), to: today, statuses: ["done"] as const, order: "desc" as const },
         }[tab];
   const occurrences = rangeOpts ? (tab === "today" ? todays : await listOccurrences(viewer, { kinds: [...kinds], ...rangeOpts, statuses: [...rangeOpts.statuses], assigneeId })) : [];
-  const templates = tab === "all" || tab === "archived" ? await listChoreTemplates(viewer, [...kinds], today, { archived: tab === "archived" }) : [];
+  // Archived also lists deleted ones (labelled), so they can still be restored.
+  const templates =
+    tab === "all"
+      ? await listChoreTemplates(viewer, [...kinds], today)
+      : tab === "archived"
+        ? [...(await listChoreTemplates(viewer, [...kinds], today, { state: "archived" })), ...(await listChoreTemplates(viewer, [...kinds], today, { state: "deleted" }))]
+        : [];
   const overdueCount = (await listOccurrences(viewer, { kinds: [...kinds], to: addDays(today, -1), statuses: ["pending"], assigneeId, limit: 99 })).length;
 
   const doneToday = todays.filter((o) => o.status === "done").length;
@@ -121,9 +127,11 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
             {templates.map((t) => (
               <li key={t.chore.id} className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4">
                 <Link href={`/house/chores/${t.chore.id}`} className="min-w-0 flex-1">
-                  <p className="font-semibold">{t.chore.title}</p>
+                  <p className="font-semibold">
+                    {t.chore.title} {t.chore.deletedAt && <Badge tone="wine">Deleted</Badge>}
+                  </p>
                   <p className="text-sm text-muted">
-                    Archived {t.chore.archivedAt ? formatShortDate(t.chore.archivedAt.toISOString().slice(0, 10)) : ""}
+                    {t.chore.deletedAt ? "Deleted" : "Archived"} {formatShortDate(((t.chore.deletedAt ?? t.chore.archivedAt) as Date).toISOString().slice(0, 10))}
                     {t.assigneeName ? ` · ${t.assigneeName}` : ""}
                   </p>
                 </Link>

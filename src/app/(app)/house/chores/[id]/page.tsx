@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Archive } from "lucide-react";
-import { archiveChore } from "@/app/actions/chores";
+import { ArrowLeft, Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { archiveChore, deleteChore, restoreChore } from "@/app/actions/chores";
 import { ActionButton } from "@/components/forms/inline";
 import { ChoreFormModal } from "@/components/house/chore-form";
 import { MaintenanceCostModal } from "@/components/maintenance/cost-modal";
@@ -26,8 +26,13 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await getViewer();
   const today = todayIn(viewer.family.timezone);
-  const [t] = await listChoreTemplates(viewer, ["chore", "cleaning", "maintenance", "task"], today, { choreId: id });
+  const ALL = ["chore", "cleaning", "maintenance", "task"] as const;
+  const t =
+    (await listChoreTemplates(viewer, [...ALL], today, { choreId: id }))[0] ??
+    (await listChoreTemplates(viewer, [...ALL], today, { choreId: id, state: "archived" }))[0] ??
+    (await listChoreTemplates(viewer, [...ALL], today, { choreId: id, state: "deleted" }))[0];
   if (!t) notFound();
+  const state = t.chore.deletedAt ? "deleted" : t.chore.archivedAt ? "archived" : "active";
   const kind = t.chore.kind;
   const mod = kindModule(kind);
   const canManage = viewer.can(mod, "edit");
@@ -55,7 +60,18 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
         title={t.chore.title}
         description={[t.rule ? describeRule(t.rule) : t.chore.dueDate ? `Due ${formatShortDate(t.chore.dueDate)}` : null, t.roomName, t.categoryName].filter(Boolean).join(" · ")}
         actions={
-          canManage ? (
+          canManage && state !== "active" ? (
+            <>
+              <ActionButton action={restoreChore} fields={{ id }} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary-600 px-3 text-sm font-medium text-white hover:bg-primary-700">
+                <ArchiveRestore className="size-4" /> Restore
+              </ActionButton>
+              {state === "archived" && (
+                <ActionButton action={deleteChore} fields={{ id }} confirm="Delete this? It stays in Archived, where you can still view or restore it." className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-wine-500 hover:bg-wine-50">
+                  <Trash2 className="size-4" /> Delete
+                </ActionButton>
+              )}
+            </>
+          ) : canManage ? (
             <>
               <ChoreFormModal kind={kind} members={members} rooms={rooms} categories={cats} defaults={toChoreDefaults(t)} />
               <ActionButton
@@ -66,11 +82,26 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
               >
                 <Archive className="size-4" /> Archive
               </ActionButton>
+              <ActionButton
+                action={deleteChore}
+                fields={{ id, redirectTo: back }}
+                confirm="Delete this? It stays in Archived, where you can still view or restore it. Its history and points are kept."
+                className="h-9 rounded-lg px-3 text-sm font-medium text-wine-500 hover:bg-wine-50"
+              >
+                <Trash2 className="size-4" /> Delete
+              </ActionButton>
             </>
           ) : undefined
         }
       />
 
+      {state !== "active" && (
+        <p className="flex items-center gap-2 rounded-xl border border-line bg-sunken px-4 py-3 text-[15px] text-ink-soft">
+          {state === "deleted" ? <Trash2 className="size-4" /> : <Archive className="size-4" />}
+          {state === "deleted" ? `Deleted ${formatShortDate(t.chore.deletedAt!.toISOString().slice(0, 10))}.` : `Archived ${formatShortDate(t.chore.archivedAt!.toISOString().slice(0, 10))}.`} It isn&apos;t scheduled anymore; its history is kept.
+          {canManage ? " Restore it to start scheduling it again." : ""}
+        </p>
+      )}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="flex items-center gap-4">
           <ProgressRing value={t.doneCount} max={Math.max(1, finished)} size={64}>

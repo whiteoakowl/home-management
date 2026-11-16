@@ -40,6 +40,7 @@ import {
 import { visibleTo, type Viewer } from "./dal";
 import { utcToZoned } from "./dates";
 import { craftVisible } from "./craft";
+import { notOthersSavings } from "./goals";
 import { bookVisible } from "./library";
 import { statusLabel } from "./library-config";
 import { fitnessVisibleIds } from "./fitness";
@@ -227,7 +228,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       db
         .select({ id: goals.id, title: goals.name, kind: goals.kind })
         .from(goals)
-        .where(and(eq(goals.familyId, fid), visibleTo(viewer, { id: goals.id, visibility: goals.visibility, author: goals.ownerMemberId }, "goal"), or(ilike(goals.name, like), ilike(goals.description, like))))
+        .where(and(eq(goals.familyId, fid), visibleTo(viewer, { id: goals.id, visibility: goals.visibility, author: goals.ownerMemberId }, "goal"), notOthersSavings(viewer), or(ilike(goals.name, like), ilike(goals.description, like))))
         .limit(LIMIT)
         .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${x.kind} goal`, href: `/goals/${x.id}` }))),
     );

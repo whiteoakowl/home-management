@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { budgetLimits, categories, goals, incomeFrequency, incomeSources, transactions } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
@@ -35,7 +35,7 @@ export async function saveTransaction(_: ActionState, fd: FormData): Promise<Act
     const date = f.date(fd, "date") ?? todayIn(viewer.family.timezone);
     let goalId = f.str(fd, "goalId");
     if (goalId) {
-      const [g] = await db.select({ id: goals.id }).from(goals).where(and(eq(goals.id, goalId), eq(goals.familyId, viewer.family.id), eq(goals.kind, "savings")));
+      const [g] = await db.select({ id: goals.id }).from(goals).where(and(eq(goals.id, goalId), eq(goals.familyId, viewer.family.id), eq(goals.kind, "savings"), or(isNull(goals.ownerMemberId), eq(goals.ownerMemberId, viewer.member.id))));
       goalId = g?.id ?? null;
     }
     let incomeSourceId = f.str(fd, "incomeSourceId");

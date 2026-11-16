@@ -98,6 +98,8 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       if (id) {
         const [existing] = await tx.select().from(chores).where(and(eq(chores.id, id), eq(chores.familyId, viewer.family.id)));
         if (!existing) throw new AuthorizationError("Not found.");
+        // Changing the type (e.g. chore → cleaning) needs rights over both areas.
+        if (existing.kind !== kind) requireKindEdit(viewer, existing.kind);
         const ruleId = await upsertRule(tx, viewer.family.id, rule, existing.recurrenceRuleId);
         await tx.update(chores).set({ ...values, recurrenceRuleId: ruleId }).where(eq(chores.id, id));
         await tx.delete(choreChecklistItems).where(eq(choreChecklistItems.choreId, id));
@@ -139,14 +141,40 @@ export async function archiveChore(fd: FormData) {
   if (back.startsWith("/house")) redirect(back);
 }
 
-/** Bring an archived chore or task back; its schedule starts again from today. */
+async function editableChore(viewer: Viewer, id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [c] = await db.select().from(chores).where(and(eq(chores.id, id), eq(chores.familyId, viewer.family.id)));
+  if (!c) return null;
+  requireKindEdit(viewer, c.kind);
+  return c;
+}
+
+/**
+ * Delete a chore. It isn't erased: it moves to the Deleted list with its
+ * completion history (and the points earned from it) intact, and can be
+ * restored. Upcoming occurrences are removed.
+ */
+export async function deleteChore(fd: FormData) {
+  const viewer = await getViewer();
+  const c = await editableChore(viewer, String(fd.get("id")));
+  if (!c) return;
+  const now = new Date();
+  await db.update(chores).set({ archivedAt: c.archivedAt ?? now, deletedAt: now }).where(eq(chores.id, c.id));
+  await db.delete(choreOccurrences).where(and(eq(choreOccurrences.choreId, c.id), eq(choreOccurrences.status, "pending")));
+  await logActivity(db, viewer.family.id, viewer.member.id, "chore.deleted", `deleted "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
+  revalidateHouse();
+  const back = String(fd.get("redirectTo") ?? "");
+  if (back.startsWith("/house") || back.startsWith("/maintenance")) redirect(back);
+}
+
+/** Bring an archived or deleted chore back; its schedule starts again from today. */
 export async function restoreChore(fd: FormData) {
   const viewer = await getViewer();
-  const [c] = await db.select().from(chores).where(and(eq(chores.id, String(fd.get("id"))), eq(chores.familyId, viewer.family.id)));
+  const c = await editableChore(viewer, String(fd.get("id")));
   if (!c) return;
-  requireKindEdit(viewer, c.kind);
-  await db.update(chores).set({ archivedAt: null }).where(eq(chores.id, c.id));
+  await db.update(chores).set({ archivedAt: null, deletedAt: null }).where(eq(chores.id, c.id));
   await materializeChore(c.id, todayIn(viewer.family.timezone));
+  await logActivity(db, viewer.family.id, viewer.member.id, "chore.restored", `restored "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
   revalidateHouse();
 }
 

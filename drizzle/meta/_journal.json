@@ -159,8 +159,15 @@
     {
       "idx": 22,
       "version": "7",
-      "when": 1794801161373,
-      "tag": "0022_entity_photos",
+      "when": 1794797151574,
+      "tag": "0022_chore_deleted",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794801839281,
+      "tag": "0023_entity_photos",
       "breakpoints": true
     }
   ]

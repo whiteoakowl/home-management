@@ -19,12 +19,27 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
   const viewer = await getViewer();
   if (!viewer.can("goals")) notFound();
   const sp = await searchParams;
-  const kind = typeof sp.kind === "string" ? sp.kind : "all";
+  // Family: family-wide goals + everyone else's personal goals. Personal / Savings / Fitness: only your own.
+  const TABS = ["family", "personal", "savings", "fitness", "all"] as const;
+  const kind = TABS.includes(sp.kind as (typeof TABS)[number]) ? (sp.kind as (typeof TABS)[number]) : "family";
   const today = todayIn(viewer.family.timezone);
-  const [members, rows, initialVisibility] = await Promise.all([memberOptions(viewer), listGoals(viewer, { kind: kind === "all" ? undefined : kind }), newEntryVisibility(viewer.member.id, "goals")]);
+  const [members, everything, initialVisibility] = await Promise.all([memberOptions(viewer), listGoals(viewer), newEntryVisibility(viewer.member.id, "goals")]);
+  const rows =
+    kind === "all"
+      ? everything
+      : kind === "family"
+        ? everything.filter((r) => r.g.ownerMemberId !== viewer.member.id)
+        : everything.filter((r) => r.g.ownerMemberId === viewer.member.id && r.g.kind === kind);
   const active = rows.filter((r) => r.g.status === "active" || r.g.status === "paused");
   const done = rows.filter((r) => r.g.status === "achieved");
   const saved = rows.filter((r) => r.g.kind === "savings").reduce((s, r) => s + r.g.currentCents, 0);
+  const emptyCopy = {
+    family: { title: "No family goals yet", description: "Family goals and everyone's shared personal goals show here." },
+    personal: { title: "No personal goals yet", description: "Your personal goals. Others see them in their Family section; only you see this list." },
+    savings: { title: "No savings goals yet", description: "Your savings goals are private to you. Nobody else in the family sees them." },
+    fitness: { title: "No fitness goals yet", description: "Your own fitness goals." },
+    all: { title: "No goals yet", description: "Set savings and family goals with milestones and watch the progress bars fill up." },
+  }[kind];
   const add = <GoalFormModal initialVisibility={initialVisibility} members={members} me={viewer.member.id} isParent={viewer.isParent} defaultOpen={sp.new === "1"} />;
   const canEdit = viewer.can("goals", "edit");
 
@@ -55,17 +70,17 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
         <SegmentLinks
           active={kind}
           items={[
-            { key: "all", href: "/goals", label: "All" },
-            { key: "savings", href: "/goals?kind=savings", label: "Savings" },
-            { key: "family", href: "/goals?kind=family", label: "Family" },
-            { key: "personal", href: "/goals?kind=personal", label: "Personal" },
-            { key: "fitness", href: "/goals?kind=fitness", label: "Fitness" },
+            { key: "family", href: "/goals", label: "Family" },
+            { key: "personal", href: "/goals?kind=personal", label: "My personal" },
+            { key: "savings", href: "/goals?kind=savings", label: "My savings" },
+            { key: "fitness", href: "/goals?kind=fitness", label: "My fitness" },
+            { key: "all", href: "/goals?kind=all", label: "All" },
           ]}
         />
       </div>
       {rows.length === 0 ? (
         <Card>
-          <EmptyState icon={<Target />} title="No goals yet" description="Set savings and family goals with milestones and watch the progress bars fill up." example="Emergency fund · Vacation · Vehicle · Education · Farm equipment · Retirement" action={canEdit ? <GoalFormModal initialVisibility={initialVisibility} members={members} me={viewer.member.id} isParent={viewer.isParent} /> : undefined} />
+          <EmptyState icon={<Target />} title={emptyCopy.title} description={emptyCopy.description} example="Emergency fund · Vacation · Vehicle · Education · Farm equipment · Retirement" action={canEdit ? <GoalFormModal initialVisibility={initialVisibility} members={members} me={viewer.member.id} isParent={viewer.isParent} /> : undefined} />
         </Card>
       ) : (
         <div className="flex flex-col gap-8">

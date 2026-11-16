@@ -266,6 +266,8 @@ export async function getGoals(s: Scope, kind: "savings" | "other") {
         eq(goals.status, "active"),
         kind === "savings" ? eq(goals.kind, "savings") : ne(goals.kind, "savings"),
         visibleTo(s.viewer, { id: goals.id, visibility: goals.visibility, author: goals.ownerMemberId }, "goal"),
+        // Savings: family-wide + the viewer's own only. Never another member's.
+        kind === "savings" ? or(isNull(goals.ownerMemberId), eq(goals.ownerMemberId, s.viewer.member.id)) : undefined,
         s.subjectId ? or(eq(goals.ownerMemberId, s.subjectId), isNull(goals.ownerMemberId)) : undefined,
       ),
     )

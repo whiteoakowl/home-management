@@ -25,7 +25,8 @@ function revalidateGoals() {
 /** Members may edit their own goals; family goals and other people's goals are changed by parents. */
 async function editableGoal(viewer: Viewer, id: string) {
   const [g] = await db.select().from(goals).where(and(eq(goals.id, id), eq(goals.familyId, viewer.family.id)));
-  if (!g || isOthersPrivate(viewer, { visibility: g.visibility, author: g.ownerMemberId })) throw new AuthorizationError("Goal not found.");
+  // Someone else's savings goal is private to them, parents included.
+  if (!g || isOthersPrivate(viewer, { visibility: g.visibility, author: g.ownerMemberId }) || (g.kind === "savings" && g.ownerMemberId && g.ownerMemberId !== viewer.member.id)) throw new AuthorizationError("Goal not found.");
   if (!viewer.isParent && g.ownerMemberId !== viewer.member.id) throw new AuthorizationError(g.ownerMemberId ? "That's someone else's goal." : "Only parents can change family goals.");
   return g;
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { notOthersSavings } from "./goals";
 import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
@@ -196,12 +197,12 @@ export async function fitnessReport(viewer: Viewer, today: string) {
 
 export async function goalsReport(viewer: Viewer) {
   const [all, contributions] = await Promise.all([
-    db.select().from(goals).where(eq(goals.familyId, viewer.family.id)),
+    db.select().from(goals).where(and(eq(goals.familyId, viewer.family.id), notOthersSavings(viewer))),
     db
       .select({ m: sql<string>`to_char(${goalContributions.date}, 'YYYY-MM')`, cents: sql<number>`coalesce(sum(${goalContributions.amountCents}),0)::int` })
       .from(goalContributions)
       .innerJoin(goals, eq(goals.id, goalContributions.goalId))
-      .where(eq(goals.familyId, viewer.family.id))
+      .where(and(eq(goals.familyId, viewer.family.id), notOthersSavings(viewer)))
       .groupBy(sql`1`)
       .orderBy(sql`1`),
   ]);

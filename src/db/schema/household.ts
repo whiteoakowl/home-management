@@ -118,6 +118,8 @@ export const chores = pgTable(
     estimatedCostCents: integer("estimated_cost_cents"),
     imageFileId: uuid("image_file_id"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** Deleted chores are kept (with their history and points) and can be restored. Implies archived. */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
     }),
