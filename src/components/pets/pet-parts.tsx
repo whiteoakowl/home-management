@@ -14,7 +14,7 @@ import {
 } from "@/app/actions/pets";
 import { FormModal } from "@/components/forms/action-form";
 import { RecordModal } from "@/components/forms/config-form";
-import { DateField, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
+import { DateField, PhotosField, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
 import { ActionButton, DeleteButton } from "@/components/forms/inline";
 import { DetailList, fmtDate, fmtMoney } from "@/components/records/detail-list";
 import { Avatar, Badge } from "@/components/ui/display";
@@ -252,10 +252,7 @@ export function MemoryModal({ petId, members, today }: { petId: string; members:
       <DateField name="date" label="Date" defaultValue={today} />
       <TextAreaField name="body" label="What happened" rows={4} required />
       <TextField name="category" label="Milestone (optional)" placeholder="Adoption day, birthday, achievement…" />
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-ink-soft">
-        Photos
-        <input type="file" name="photos" accept="image/*" multiple className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary-700" />
-      </label>
+      <PhotosField name="photos" label="Photos" />
       <VisibilityField members={members} defaultValue="family" />
     </FormModal>
   );

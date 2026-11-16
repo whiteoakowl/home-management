@@ -1,7 +1,7 @@
 import { FileText, X } from "lucide-react";
 import { addHomePhotos, deleteHomePhoto } from "@/app/actions/maintenance";
 import { FormModal } from "@/components/forms/action-form";
-import { SelectField, TextField } from "@/components/forms/fields";
+import { PhotosField, SelectField, TextField } from "@/components/forms/fields";
 import { ActionButton } from "@/components/forms/inline";
 import { fileUrl } from "@/lib/files";
 import { PHOTO_KINDS } from "@/lib/maintenance-config";
@@ -13,10 +13,7 @@ export function AddPhotosModal({ target, kinds = PHOTO_KINDS.map((k) => k.value)
     <FormModal title="Add photos" action={addHomePhotos} triggerLabel="Photos" triggerVariant="soft" triggerSize="sm" size="md" submitLabel="Upload">
       {Object.entries(target).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
       <SelectField name="kind" label="Type" defaultValue={defaultKind} options={PHOTO_KINDS.filter((k) => kinds.includes(k.value))} />
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-ink-soft">
-        Photos (receipts and plans may be PDFs)
-        <input type="file" name="photos" accept="image/*,application/pdf" multiple required className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary-700" />
-      </label>
+      <PhotosField name="photos" label="Photos (receipts and plans may be PDFs)" accept="image/*,application/pdf" required />
       <TextField name="caption" label="Caption" />
     </FormModal>
   );

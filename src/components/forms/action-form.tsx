@@ -1,11 +1,12 @@
 "use client";
 
-import { createContext, use, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, use, useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pencil, Plus } from "lucide-react";
 import type { ActionState } from "@/lib/action-state";
 import { Button } from "@/components/ui/button";
 import { FormMessage, SubmitButton } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
+import { safeAction } from "@/lib/safe-submit";
 import { cn } from "@/lib/utils";
 
 export type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -38,7 +39,9 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   showSuccess?: boolean;
 }) {
-  const [state, formAction] = useActionState(action, undefined);
+  // Photos are shrunk before sending; a dropped or rejected request shows a message here.
+  const safe = useMemo(() => safeAction(action), [action]);
+  const [state, formAction] = useActionState(safe, undefined);
   const ref = useRef<HTMLFormElement>(null);
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => {
@@ -54,7 +57,7 @@ export function ActionForm({
   return (
     <ErrorsContext value={state?.errors ?? {}}>
       <form ref={ref} action={formAction} className={cn("flex flex-col gap-4", className)} noValidate>
-        {(!state?.ok || showSuccess) && <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />}
+        {(!state?.ok || showSuccess) && <FormMessage message={state?.message ?? (state?.errors && Object.keys(state.errors).length ? "Please check the fields marked below." : undefined)} tone={state?.ok ? "success" : "error"} />}
         {children}
         {(submitLabel || footer) && (
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">

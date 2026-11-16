@@ -2,9 +2,22 @@
 
 import { useTransition, type ReactNode } from "react";
 import { Check, LoaderCircle, Trash2 } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
+import { networkFailureMessage } from "@/lib/shrink-image";
 import { cn } from "@/lib/utils";
 
 type VoidAction = (formData: FormData) => Promise<void>;
+
+/** Run a void action; a dropped request shows a short alert instead of an error page. */
+async function runVoid(action: VoidAction, fd: FormData) {
+  try {
+    await action(fd);
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error(e);
+    window.alert(networkFailureMessage());
+  }
+}
 
 /** Submit a tiny form (hidden fields) to a void server action, with optional confirm. */
 export function ActionButton({
@@ -36,7 +49,7 @@ export function ActionButton({
         if (confirm && !window.confirm(confirm)) return;
         const fd = new FormData();
         for (const [k, v] of Object.entries(fields)) if (v !== null && v !== undefined) fd.set(k, String(v));
-        start(() => action(fd));
+        start(() => runVoid(action, fd));
       }}
     >
       {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : children}
@@ -101,7 +114,7 @@ export function CheckCircle({
         fd.set("id", id);
         fd.set("done", String(!done));
         for (const [k, v] of Object.entries(extra ?? {})) fd.set(k, v);
-        start(() => action(fd));
+        start(() => runVoid(action, fd));
       }}
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full border-2 transition-all",

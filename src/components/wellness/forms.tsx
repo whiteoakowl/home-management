@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { saveCheckIn, saveQuoteNote, saveWellnessEntry, saveWellnessGoal, saveWellnessSettings } from "@/app/actions/wellness";
 import { ActionForm, FormModal } from "@/components/forms/action-form";
-import { ChipSelect, DateField, FormRow, NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { ChipSelect, DateField, FormRow, NumberField, PhotosField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { QUOTE_CATEGORIES } from "@/lib/quotes";
 import { cn } from "@/lib/utils";
 import { FEELINGS, GOAL_KINDS, INTENSITIES, MOODS, SELF_CARE } from "@/lib/wellness";
@@ -116,10 +116,7 @@ export function WellnessEntryModal({ today, prompt, defaults, shareWith, trigger
         <ChipSelect name="selfCare" options={[...SELF_CARE.map((s) => ({ value: s.key, label: s.label })), ...customSelfCare.map((x) => ({ value: x, label: x }))]} defaultValue={defaults?.selfCare ?? []} />
       </fieldset>
       <TextField name="tags" label="Tags (optional)" defaultValue={defaults?.tags.join(", ") ?? ""} hint="Comma separated" />
-      <label className="flex flex-col gap-1.5 text-sm font-medium text-ink-soft">
-        Photos (optional)
-        <input type="file" name="photos" accept="image/*" multiple className="text-sm" />
-      </label>
+      <PhotosField name="photos" label="Photos (optional)" />
       {shareWith ? (
         <label className="flex items-start gap-2 text-sm">
           <input type="checkbox" name="share" defaultChecked={defaults?.shared} className="mt-0.5 size-4 accent-[var(--color-primary-600)]" />

@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 import { db } from "@/db";
-import { recipeIngredients, recipes } from "@/db/schema";
-import { fail, guard, type ActionState } from "@/lib/action-state";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { recipeCollectionItems, recipeCollections, recipeIngredients, recipes } from "@/db/schema";
+import { fail, guard } from "@/lib/action-state";
 import { AuthorizationError, getViewer } from "@/lib/dal";
 import { logActivity } from "@/lib/family";
 import { saveUpload } from "@/lib/files";
@@ -51,9 +51,16 @@ const Recipe = z.object({
   imageIndex: z.number().int().min(0).max(200).nullable(),
 });
 
-/** Step 2: save the reviewed recipes to Family Recipes or My Private Recipes. */
-export async function importDocumentRecipes(_: ActionState, fd: FormData): Promise<ActionState> {
-  return guard(async () => {
+export type ImportBatchResult = { ok: true; created: number; collectionId: string | null } | { ok: false; message: string };
+
+/**
+ * Step 2: save the reviewed recipes to Family Recipes or My Private Recipes,
+ * optionally into a collection (an existing one, or a new one by name).
+ * The page sends a few recipes per request so no single request runs long on
+ * the host; the first batch creates a new collection and later batches reuse it.
+ */
+export async function importDocumentRecipes(fd: FormData): Promise<ImportBatchResult> {
+  const res = await guard(async () => {
     const viewer = await getViewer();
     if (!canOpenFood(viewer, "recipes")) throw new AuthorizationError("You can't add recipes.");
     const owner = ownerForNew(viewer, "recipes", fd);
@@ -64,11 +71,34 @@ export async function importDocumentRecipes(_: ActionState, fd: FormData): Promi
       return fail("The recipes couldn't be read. Try again.");
     }
     const parsed = z.array(Recipe).min(1, "Select at least one recipe.").max(100).safeParse(raw);
-    if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the recipes and try again.");
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const which = typeof issue?.path[0] === "number" ? (raw as { name?: string }[])[issue.path[0]]?.name : null;
+      return fail(`${which ? `“${which}”: ` : ""}${issue?.path[1] ? `${String(issue.path[1])} ` : ""}${issue?.message ?? "Check the recipes and try again."}`);
+    }
+
+    // Collection: an existing one in the same space, or create one by name.
+    let collectionId: string | null = null;
+    const wantId = String(fd.get("collectionId") ?? "");
+    const newName = String(fd.get("newCollection") ?? "").trim().slice(0, 120);
+    if (wantId) {
+      const [c] = await db
+        .select({ id: recipeCollections.id })
+        .from(recipeCollections)
+        .where(and(eq(recipeCollections.id, wantId), eq(recipeCollections.familyId, viewer.family.id), owner ? eq(recipeCollections.ownerMemberId, owner) : isNull(recipeCollections.ownerMemberId)));
+      if (!c) return fail("That collection isn't available here. Choose another.");
+      collectionId = c.id;
+    } else if (newName) {
+      const [c] = await db.insert(recipeCollections).values({ familyId: viewer.family.id, name: newName, ownerMemberId: owner }).returning({ id: recipeCollections.id });
+      collectionId = c!.id;
+    }
+    const startPos = collectionId ? ((await db.select({ n: sql<number>`count(*)::int` }).from(recipeCollectionItems).where(eq(recipeCollectionItems.collectionId, collectionId)))[0]?.n ?? 0) : 0;
+
     let created = 0;
     for (const r of parsed.data) {
       const image = r.imageIndex !== null ? await saveUpload(viewer, fd.get(`image-${r.imageIndex}`)) : null;
       const lines = r.ingredients.map(parseIngredientLine).filter((x): x is NonNullable<typeof x> => !!x);
+      const categoryId = await ownedCategoryId(viewer, "recipe", r.categoryId);
       await db.transaction(async (tx) => {
         const [row] = await tx
           .insert(recipes)
@@ -83,7 +113,7 @@ export async function importDocumentRecipes(_: ActionState, fd: FormData): Promi
             servings: r.servings,
             notes: r.notes,
             source: r.source,
-            categoryId: await ownedCategoryId(viewer, "recipe", r.categoryId),
+            categoryId,
             tags: r.tags.map((t) => t.toLowerCase()),
             imageFileId: image,
             ownerMemberId: owner,
@@ -93,11 +123,17 @@ export async function importDocumentRecipes(_: ActionState, fd: FormData): Promi
         if (lines.length) {
           await tx.insert(recipeIngredients).values(lines.map((p, position) => ({ recipeId: row!.id, name: p.name, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })));
         }
+        if (collectionId) await tx.insert(recipeCollectionItems).values({ collectionId, recipeId: row!.id, position: startPos + created });
       });
       created++;
     }
-    if (!owner) await logActivity(db, viewer.family.id, viewer.member.id, "recipe.added", `imported ${created} recipe${created === 1 ? "" : "s"} from a Word document`, { module: "recipes" });
+    if (!owner && fd.get("last") === "1") {
+      const total = Number(fd.get("total")) || created;
+      await logActivity(db, viewer.family.id, viewer.member.id, "recipe.added", `imported ${total} recipe${total === 1 ? "" : "s"} from a Word document`, { module: "recipes" });
+    }
     revalidatePath("/recipes", "layout");
-    redirect(owner ? `/recipes?space=mine&imported=${created}` : `/recipes?imported=${created}`);
+    return { ok: true, message: JSON.stringify({ created, collectionId }) };
   });
+  if (!res?.ok) return { ok: false, message: res?.message ?? "Those recipes couldn't be saved. Try again." };
+  return { ok: true, ...(JSON.parse(res.message!) as { created: number; collectionId: string | null }) };
 }

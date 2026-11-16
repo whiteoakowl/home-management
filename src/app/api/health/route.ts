@@ -1,6 +1,7 @@
 import { pool } from "@/db";
 import { databaseUrl } from "@/db/url";
 import { explainDbError } from "@/lib/health";
+import { storage } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,19 @@ export async function GET() {
     storage: process.env.SUPABASE_URL && (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? "Supabase Storage" : process.env.NETLIFY ? "Netlify Blobs" : "local disk",
     version: process.env.COMMIT_REF?.slice(0, 7) ?? null,
   };
+  // Photo storage: write, read back and delete a tiny test file.
+  try {
+    const drv = storage();
+    const key = `_health/${Date.now()}.txt`;
+    const t0 = Date.now();
+    await drv.put(key, Buffer.from("ok"), "text/plain");
+    const back = await drv.get(key);
+    await drv.remove(key);
+    result.storageCheck = back.toString() === "ok" ? { ok: true, driver: drv.name, ms: Date.now() - t0 } : { ok: false, driver: drv.name, problem: "Read back the wrong data." };
+  } catch (e) {
+    console.error("Storage check failed:", e);
+    result.storageCheck = { ok: false, problem: String((e as Error).message ?? e).slice(0, 300), hint: "Photos can't be saved. In Netlify check SUPABASE_URL (https://<project>.supabase.co) and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY), then redeploy." };
+  }
   if (!url) {
     result.problem = "No database is configured. Add DATABASE_URL in Netlify → Site configuration → Environment variables, then redeploy.";
     return new Response(JSON.stringify(result, null, 2), { status: 503, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -42,6 +56,7 @@ export async function GET() {
       (result.database as Record<string, unknown>).accounts = users?.rows[0]?.n ?? 0;
       if (tables.rows[0]!.n !== 4) result.problem = explainDbError({ code: "42P01" }).hint;
       else if (!users?.rows[0]?.n) result.problem = "The database is set up but has no accounts. Create your family at /signup.";
+      else if ((result.storageCheck as { ok?: boolean })?.ok === false) result.problem = (result.storageCheck as { hint?: string }).hint;
       else result.ok = true;
     } finally {
       client.release();

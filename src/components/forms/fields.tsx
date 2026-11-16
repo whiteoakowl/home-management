@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type ComponentProps, type ReactNode } from "react";
-import { ImagePlus, Lock, ShieldCheck, Users, UsersRound } from "lucide-react";
+import { useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { Camera, ImagePlus, Lock, ShieldCheck, Upload, Users, UsersRound } from "lucide-react";
 import { Avatar } from "@/components/ui/display";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
@@ -279,38 +279,44 @@ export function RecurrenceField({ defaults, label = "Repeats" }: { defaults?: Ru
   );
 }
 
-/** Image picker with preview. Posts the file under `name` (+ `removeImage`). */
+/** Image picker with preview: take a photo or upload one. Posts the file under `name` (+ `removeImage`). */
 export function ImageField({ name = "image", label = "Photo", currentUrl }: { name?: string; label?: string; currentUrl?: string | null }) {
   const [preview, setPreview] = useState<string | null>(currentUrl ?? null);
   const [removed, setRemoved] = useState(false);
+  // Only the input that was used last carries the field name, so one file is posted.
+  const [source, setSource] = useState<"camera" | "upload">("upload");
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
   const error = useFieldError(name);
+  const pick = (from: "camera" | "upload", file: File | undefined) => {
+    if (!file) return;
+    const other = from === "camera" ? uploadRef.current : cameraRef.current;
+    if (other) other.value = "";
+    setSource(from);
+    setPreview(URL.createObjectURL(file));
+    setRemoved(false);
+  };
+  const btn = "inline-flex h-10 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-sunken";
   return (
     <Field label={label} error={error}>
       <div className="flex items-center gap-4">
-        <label className="relative flex size-24 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-line-strong bg-sunken/60 text-muted hover:border-primary-400 hover:text-primary-600">
+        <button type="button" onClick={() => uploadRef.current?.click()} aria-label={preview ? "Change photo" : "Upload a photo"} className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-line-strong bg-sunken/60 text-muted hover:border-primary-400 hover:text-primary-600">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="" className="size-full object-cover" />
           ) : (
             <ImagePlus className="size-7" aria-hidden />
           )}
-          <input
-            type="file"
-            name={name}
-            accept="image/*"
-            capture="environment"
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                setPreview(URL.createObjectURL(file));
-                setRemoved(false);
-              }
-            }}
-          />
-        </label>
-        <div className="flex flex-col gap-1 text-sm text-muted">
-          <span>Tap to {preview ? "change" : "add"} a photo.</span>
+        </button>
+        <div className="flex flex-col gap-2 text-sm text-muted">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={btn} onClick={() => cameraRef.current?.click()}>
+              <Camera className="size-4" aria-hidden /> Take photo
+            </button>
+            <button type="button" className={btn} onClick={() => uploadRef.current?.click()}>
+              <Upload className="size-4" aria-hidden /> Upload photo
+            </button>
+          </div>
           {preview && (
             <button
               type="button"
@@ -318,6 +324,8 @@ export function ImageField({ name = "image", label = "Photo", currentUrl }: { na
               onClick={() => {
                 setPreview(null);
                 setRemoved(true);
+                if (cameraRef.current) cameraRef.current.value = "";
+                if (uploadRef.current) uploadRef.current.value = "";
               }}
             >
               Remove photo
@@ -325,6 +333,76 @@ export function ImageField({ name = "image", label = "Photo", currentUrl }: { na
           )}
           {removed && <input type="hidden" name="removeImage" value="1" />}
         </div>
+        <input ref={cameraRef} type="file" name={source === "camera" ? name : undefined} accept="image/*" capture="environment" className="sr-only" tabIndex={-1} onChange={(e) => pick("camera", e.target.files?.[0])} />
+        <input ref={uploadRef} type="file" name={source === "upload" ? name : undefined} accept="image/*" className="sr-only" tabIndex={-1} onChange={(e) => pick("upload", e.target.files?.[0])} />
+      </div>
+    </Field>
+  );
+}
+
+/**
+ * Several photos at once: "Take photo" (camera, adds one each time) and "Upload photos"
+ * (choose existing ones). All chosen files are posted under `name`.
+ */
+export function PhotosField({ name = "photos", label = "Photos", required, accept = "image/*", max = 12 }: { name?: string; label?: string; required?: boolean; accept?: string; max?: number }) {
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const fieldRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
+  const error = useFieldError(name);
+  const sync = (next: File[]) => {
+    const list = next.slice(0, max);
+    setFiles(list);
+    setPreviews(list.map((f) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : "")));
+    // Put the files on the one named input that the form posts.
+    try {
+      const dt = new DataTransfer();
+      list.forEach((f) => dt.items.add(f));
+      if (fieldRef.current) fieldRef.current.files = dt.files;
+    } catch {
+      /* very old browsers: the upload input below still carries its own files */
+    }
+  };
+  const add = (input: HTMLInputElement | null) => {
+    if (!input?.files?.length) return;
+    sync([...files, ...Array.from(input.files)]);
+    input.value = "";
+  };
+  const btn = "inline-flex h-10 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-sunken";
+  return (
+    <Field label={label} error={error}>
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={btn} onClick={() => cameraRef.current?.click()}>
+            <Camera className="size-4" aria-hidden /> Take photo
+          </button>
+          <button type="button" className={btn} onClick={() => uploadRef.current?.click()}>
+            <Upload className="size-4" aria-hidden /> Upload {accept.includes("pdf") ? "files" : "photos"}
+          </button>
+        </div>
+        {files.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {files.map((f, i) => (
+              <li key={i} className="relative">
+                {previews[i] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previews[i]} alt="" className="size-16 rounded-lg object-cover" />
+                ) : (
+                  <span className="flex size-16 items-center justify-center rounded-lg bg-sunken p-1 text-center text-[10px] break-all text-muted">{f.name}</span>
+                )}
+                <button type="button" onClick={() => sync(files.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`} className="absolute -top-1.5 -right-1.5 inline-flex size-6 items-center justify-center rounded-full bg-ink text-xs text-white">
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted">Nothing chosen yet{max > 1 ? ` (up to ${max})` : ""}.</p>
+        )}
+        <input ref={fieldRef} type="file" name={name} accept={accept} multiple required={required && files.length === 0} className="sr-only" tabIndex={-1} aria-hidden />
+        <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} onChange={(e) => add(e.target)} />
+        <input ref={uploadRef} type="file" accept={accept} multiple className="sr-only" tabIndex={-1} onChange={(e) => add(e.target)} />
       </div>
     </Field>
   );

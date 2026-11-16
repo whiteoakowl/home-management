@@ -1,7 +1,7 @@
 import { Camera, Images, Trash2 } from "lucide-react";
 import { addAlbumPhotos, deleteAlbumPhoto } from "@/app/actions/photos";
 import { FormModal } from "@/components/forms/action-form";
-import { TextField } from "@/components/forms/fields";
+import { PhotosField, TextField } from "@/components/forms/fields";
 import { ActionButton } from "@/components/forms/inline";
 import { Card, CardHeader } from "@/components/ui/card";
 
@@ -19,10 +19,7 @@ export function PhotoAlbum({ kind, entityId, photos, canAdd, canRemoveAll, title
             <FormModal title="Add photos" action={addAlbumPhotos} triggerLabel="Add photos" triggerIcon={<Camera className="size-4" />} triggerVariant="secondary" size="sm" submitLabel="Upload">
               <input type="hidden" name="kind" value={kind} />
               <input type="hidden" name="entityId" value={entityId} />
-              <label className="flex flex-col gap-1.5 text-sm font-medium text-ink-soft">
-                Photos (choose several, or take one with the camera)
-                <input type="file" name="photos" accept="image/*" multiple required className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary-700" />
-              </label>
+              <PhotosField name="photos" label="Photos" required />
               <TextField name="caption" label="Caption (optional)" />
             </FormModal>
           ) : undefined

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Camera, HeartPulse, NotebookPen, PawPrint, ShieldCheck, ShoppingBasket, Sparkles, X } from "lucide-react";
 import { addPetPhotos, deletePet, deletePetPhoto } from "@/app/actions/pets";
 import { FormModal } from "@/components/forms/action-form";
-import { TextField } from "@/components/forms/fields";
+import { PhotosField, TextField } from "@/components/forms/fields";
 import { ActionButton, DeleteButton } from "@/components/forms/inline";
 import { ChoreFormModal } from "@/components/house/chore-form";
 import { OccurrenceList } from "@/components/house/occurrence-list";
@@ -195,10 +195,7 @@ export default async function PetPage({ params }: PageProps<"/pets/[id]">) {
             canEdit && (
               <FormModal title="Add photos" action={addPetPhotos} triggerLabel="Photos" triggerVariant="soft" size="md" submitLabel="Upload">
                 <input type="hidden" name="petId" value={pet.id} />
-                <label className="flex flex-col gap-1.5 text-sm font-medium text-ink-soft">
-                  Photos (up to 12)
-                  <input type="file" name="photos" accept="image/*" multiple required className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary-700" />
-                </label>
+                <PhotosField name="photos" label="Photos (up to 12)" required />
                 <TextField name="caption" label="Caption" />
               </FormModal>
             )

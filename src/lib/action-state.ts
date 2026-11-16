@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import type { z } from "zod";
 
 /** Uniform return shape for Server Actions used with useActionState. */
@@ -38,6 +39,11 @@ export async function guard(fn: () => Promise<ActionState>): Promise<ActionState
   } catch (e) {
     const err = e as { userFacing?: boolean; message: string; field?: string };
     if (err && err.userFacing) return fail(err.message, err.field);
-    throw e;
+    unstable_rethrow(e); // redirect(), notFound() etc.
+    // Anything else: log it (visible in the host's function logs) and say what happened.
+    console.error("Action failed:", e);
+    const code = (e as { code?: unknown })?.code;
+    const detail = String(err?.message ?? e).replace(/\s+/g, " ").slice(0, 220);
+    return fail(`This couldn't be saved. ${typeof code === "string" && /^[0-9A-Z]{5}$/.test(code) ? `Database error ${code}: ` : ""}${detail}`);
   }
 }

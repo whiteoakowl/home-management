@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { saveJournalEntry } from "@/app/actions/journal";
 import { FormModal } from "@/components/forms/action-form";
-import { DateField, FormRow, MemberChips, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
+import { DateField, FormRow, PhotosField, MemberChips, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
 import { Field } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 
@@ -64,9 +64,7 @@ export function JournalFormModal({ members, today, defaults, defaultOpen, trigge
         <MoodPicker defaultValue={defaults?.mood} />
       </Field>
       <TextAreaField name="body" label="Entry" rows={8} required defaultValue={defaults?.body} placeholder="What happened today? What do you want to remember?" />
-      <Field label="Photos" htmlFor="f-photos">
-        <input id="f-photos" name="photos" type="file" accept="image/*" multiple className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary-700" />
-      </Field>
+      <PhotosField name="photos" label="Photos" />
       <TextField name="tags" label="Tags" defaultValue={defaults?.tags.join(", ") ?? ""} placeholder="holidays, garden, firsts" hint="Comma separated" />
       <Field label="Who's in this memory">
         <MemberChips name="people" members={members} defaultValue={defaults?.people} />

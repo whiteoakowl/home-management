@@ -10,7 +10,14 @@ import { storage } from "./storage";
 
 // Uploads are stored via src/lib/storage.ts (Supabase Storage, Netlify Blobs or local disk).
 const store = {
-  put: (key: string, data: Buffer, type = "application/octet-stream") => storage().put(key, data, type),
+  put: async (key: string, data: Buffer, type = "application/octet-stream") => {
+    try {
+      await storage().put(key, data, type);
+    } catch (e) {
+      console.error("Upload storage failed:", e);
+      throw new UploadError(`The photo couldn't be stored (${storage().name}): ${String((e as Error).message ?? e).slice(0, 200)}`);
+    }
+  },
   get: (key: string) => storage().get(key),
   remove: (key: string) => storage().remove(key),
 };
@@ -19,9 +26,9 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "imag
 const DOC_TYPES = ["application/pdf", "text/plain"];
 const MAX_BYTES = 10 * 1024 * 1024;
 
+/** Shown as the form's message (not tied to one field: album and journal forms have no "image" field). */
 export class UploadError extends Error {
   readonly userFacing = true;
-  readonly field = "image";
 }
 
 /**
