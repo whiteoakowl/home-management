@@ -139,6 +139,17 @@ export async function archiveChore(fd: FormData) {
   if (back.startsWith("/house")) redirect(back);
 }
 
+/** Bring an archived chore or task back; its schedule starts again from today. */
+export async function restoreChore(fd: FormData) {
+  const viewer = await getViewer();
+  const [c] = await db.select().from(chores).where(and(eq(chores.id, String(fd.get("id"))), eq(chores.familyId, viewer.family.id)));
+  if (!c) return;
+  requireKindEdit(viewer, c.kind);
+  await db.update(chores).set({ archivedAt: null }).where(eq(chores.id, c.id));
+  await materializeChore(c.id, todayIn(viewer.family.timezone));
+  revalidateHouse();
+}
+
 /** Load an occurrence and check the viewer may act on it. */
 async function occurrenceForViewer(viewer: Viewer, id: string) {
   const [row] = await db

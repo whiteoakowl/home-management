@@ -39,19 +39,22 @@ export function LinkTabs({
 export function SegmentLinks({
   items,
   active,
+  fit,
 }: {
   items: { href: string; label: string; key: string }[];
   active: string;
+  /** Stretch to the full width on phones and shrink the labels so every option fits on one line. */
+  fit?: boolean;
 }) {
   return (
-    <div className="inline-flex rounded-xl bg-sunken p-1" role="group">
+    <div className={cn("rounded-xl bg-sunken p-1", fit ? "flex w-full sm:inline-flex sm:w-auto" : "inline-flex")} role="group">
       {items.map((i) => (
         <Link
           key={i.key}
           href={i.href}
           aria-current={i.key === active ? "page" : undefined}
           className={cn(
-            "rounded-lg px-3 py-1.5 text-sm font-medium",
+            fit ? "min-w-0 flex-1 truncate rounded-lg px-1.5 py-2 text-center text-[13px] font-medium sm:flex-none sm:px-3 sm:py-1.5 sm:text-sm" : "rounded-lg px-3 py-1.5 text-sm font-medium",
             i.key === active ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink",
           )}
         >

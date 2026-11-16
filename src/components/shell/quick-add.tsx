@@ -43,7 +43,7 @@ type Option = {
 
 const OPTIONS: Option[] = [
   { label: "Chore", icon: CheckSquare, href: "/house/chores?new=1", module: "chores", phase: 2 },
-  { label: "Task", icon: ClipboardList, href: "/house/chores?new=task", module: "chores", phase: 2 },
+  { label: "Task", icon: ClipboardList, href: "/house/tasks?new=task", module: "chores", phase: 2 },
   { label: "Event", icon: CalendarPlus, href: "/calendar?new=1", module: "calendar", phase: 2 },
   { label: "List", icon: ListPlus, href: "/lists?new=1", module: "lists", phase: 2 },
   { label: "Family Pantry item", icon: Refrigerator, href: "/kitchen?new=1", module: "kitchen", phase: 3 },

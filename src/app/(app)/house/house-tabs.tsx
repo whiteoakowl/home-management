@@ -5,8 +5,8 @@ import type { Viewer } from "@/lib/dal";
 export function HouseTabs({ active, viewer }: { active: string; viewer: Viewer }) {
   const tabs = [
     viewer.can("house") && { key: "overview", href: "/house", label: "Overview" },
-    viewer.can("chores") && { key: "chores", href: "/house/chores", label: "Chores" },
     viewer.can("chores") && { key: "tasks", href: "/house/tasks", label: "Tasks" },
+    viewer.can("chores") && { key: "chores", href: "/house/chores", label: "Chores" },
     viewer.can("chores") && { key: "rewards", href: "/house/rewards", label: "Rewards" },
     viewer.can("cleaning") && { key: "cleaning", href: "/house/cleaning", label: "Cleaning" },
     viewer.can("maintenance") && { key: "maintenance", href: "/maintenance", label: "Maintenance ↗" },

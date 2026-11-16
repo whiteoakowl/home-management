@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -135,7 +135,7 @@ export async function listOccurrences(
 export type Occurrence = Awaited<ReturnType<typeof listOccurrences>>[number];
 
 /** Chore templates with their schedule, checklist and last/next dates. */
-export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], today: string, opts: { choreId?: string } = {}) {
+export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], today: string, opts: { choreId?: string; archived?: boolean } = {}) {
   const assignee = alias(familyMembers, "assignee");
   const rows = await db
     .select({
@@ -159,7 +159,7 @@ export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], tod
       and(
         eq(chores.familyId, viewer.family.id),
         inArray(chores.kind, kinds),
-        isNull(chores.archivedAt),
+        opts.archived ? isNotNull(chores.archivedAt) : isNull(chores.archivedAt),
         opts.choreId ? eq(chores.id, opts.choreId) : undefined,
       ),
     )
