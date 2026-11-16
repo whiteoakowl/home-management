@@ -117,9 +117,12 @@ export function ChoreFormModal({
 }) {
   const [cadence, setCadence] = useState(defaults?.cleaningCadence ?? "weekly");
   const editing = !!defaults;
+  // While editing, the type can be switched (chore ↔ cleaning ↔ task); the fields follow it.
+  const [type, setType] = useState<keyof typeof KIND_LABEL>(kind);
+  const sameCategories = (type === "chore" || type === "task") === (kind === "chore" || kind === "task");
   return (
     <FormModal
-      title={editing ? `Edit ${KIND_LABEL[kind]}` : `New ${KIND_LABEL[kind]}`}
+      title={editing ? `Edit ${KIND_LABEL[type]}` : `New ${KIND_LABEL[kind]}`}
       triggerLabel={label ?? `Add ${KIND_LABEL[kind]}`}
       action={saveChore}
       submitLabel={editing ? "Save changes" : "Add"}
@@ -136,7 +139,23 @@ export function ChoreFormModal({
           : undefined)
       }
     >
-      <input type="hidden" name="kind" value={kind} />
+      {editing ? (
+        <SelectField
+          name="kind"
+          label="Type"
+          value={type}
+          onChange={(e) => setType(e.target.value as keyof typeof KIND_LABEL)}
+          options={[
+            { value: "chore", label: "Chore" },
+            { value: "cleaning", label: "Cleaning" },
+            { value: "task", label: "Task" },
+            ...(kind === "maintenance" ? [{ value: "maintenance", label: "Maintenance" }] : []),
+          ]}
+          hint={type !== kind ? `Saving moves this from ${KIND_LABEL[kind]} to ${KIND_LABEL[type]}. Its history comes along.` : undefined}
+        />
+      ) : (
+        <input type="hidden" name="kind" value={kind} />
+      )}
       {defaults && <input type="hidden" name="id" value={defaults.id} />}
       {Object.entries(links ?? {}).map(([k, v]) => v && <input key={k} type="hidden" name={k} value={v} />)}
       <TextField
@@ -144,14 +163,14 @@ export function ChoreFormModal({
         label="Name"
         required
         defaultValue={defaults?.title}
-        placeholder={{ chore: "Empty the dishwasher", cleaning: "Kitchen deep clean", maintenance: "Replace HVAC filter", task: "Call the plumber" }[kind]}
+        placeholder={{ chore: "Empty the dishwasher", cleaning: "Kitchen deep clean", maintenance: "Replace HVAC filter", task: "Call the plumber" }[type]}
       />
       <FormRow>
         <MemberSelect name="assigneeId" members={members} defaultValue={defaults?.defaultAssigneeId} />
         {rooms.length > 0 && (
           <SelectField name="roomId" label="Room" defaultValue={defaults?.roomId ?? presetRoomId ?? ""} placeholder="No room" options={rooms.map((r) => ({ value: r.id, label: r.name }))} />
         )}
-        {categories.length > 0 && (
+        {categories.length > 0 && sameCategories && (
           <SelectField name="categoryId" label="Category" defaultValue={defaults?.categoryId ?? ""} placeholder="None" options={categories.map((c) => ({ value: c.id, label: c.name }))} />
         )}
         <SelectField
@@ -166,7 +185,7 @@ export function ChoreFormModal({
         />
       </FormRow>
 
-      {kind === "cleaning" ? (
+      {type === "cleaning" ? (
         <>
           <FormRow>
             <SelectField
@@ -192,7 +211,7 @@ export function ChoreFormModal({
         <>
           <DateField
             name="dueDate"
-            label={kind === "task" ? "Due date" : "Due / starting"}
+            label={type === "task" ? "Due date" : "Due / starting"}
             defaultValue={defaults?.rule?.startsOn ?? defaults?.dueDate ?? ""}
             className="sm:max-w-xs"
           />
@@ -202,15 +221,15 @@ export function ChoreFormModal({
 
       <FormRow>
         <NumberField name="estimatedMinutes" label="Estimated minutes" min={0} defaultValue={defaults?.estimatedMinutes ?? ""} />
-        {(kind === "chore" || kind === "cleaning" || kind === "task") && (
+        {(type === "chore" || type === "cleaning" || type === "task") && (
           <NumberField name="points" label="Reward points" min={0} max={1000} defaultValue={defaults?.points ?? ""} hint="Earned by whoever completes it." />
         )}
-        {(showCost || kind === "maintenance") && (
+        {(showCost || type === "maintenance") && (
           <NumberField name="estimatedCost" label="Estimated cost ($)" min={0} step="0.01" defaultValue={defaults?.estimatedCostCents != null ? defaults.estimatedCostCents / 100 : ""} />
         )}
       </FormRow>
       <TextAreaField name="instructions" label="Instructions" rows={2} defaultValue={defaults?.instructions ?? ""} placeholder="How to do it well…" />
-      {kind !== "task" && (
+      {type !== "task" && (
         <fieldset className="flex flex-col gap-1.5">
           <legend className="mb-1.5 text-sm font-medium text-ink-soft">Take turns (optional)</legend>
           <MemberChips name="rotation" members={members} defaultValue={defaults?.rotationMemberIds ?? []} />

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -135,7 +135,9 @@ export async function listOccurrences(
 export type Occurrence = Awaited<ReturnType<typeof listOccurrences>>[number];
 
 /** Chore templates with their schedule, checklist and last/next dates. */
-export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], today: string, opts: { choreId?: string } = {}) {
+/** state: active (default), archived (not deleted), or deleted. */
+export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], today: string, opts: { choreId?: string; state?: "active" | "archived" | "deleted" } = {}) {
+  const state = opts.state ?? "active";
   const assignee = alias(familyMembers, "assignee");
   const rows = await db
     .select({
@@ -159,11 +161,11 @@ export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], tod
       and(
         eq(chores.familyId, viewer.family.id),
         inArray(chores.kind, kinds),
-        isNull(chores.archivedAt),
+        state === "active" ? isNull(chores.archivedAt) : state === "archived" ? and(isNotNull(chores.archivedAt), isNull(chores.deletedAt)) : isNotNull(chores.deletedAt),
         opts.choreId ? eq(chores.id, opts.choreId) : undefined,
       ),
     )
-    .orderBy(asc(chores.title));
+    .orderBy(state === "active" ? asc(chores.title) : desc(state === "deleted" ? chores.deletedAt : chores.archivedAt));
   const checklist = rows.length
     ? await db
         .select()

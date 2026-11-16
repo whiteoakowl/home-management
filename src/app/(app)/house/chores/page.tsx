@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CheckCircle2, Repeat } from "lucide-react";
+import { Archive, ArchiveRestore, CheckCircle2, Repeat, Trash2 } from "lucide-react";
+import { deleteChore, restoreChore } from "@/app/actions/chores";
+import { ActionButton } from "@/components/forms/inline";
 import { ChoreFormModal } from "@/components/house/chore-form";
 import { OccurrenceList } from "@/components/house/occurrence-list";
 import { Card } from "@/components/ui/card";
 import { Avatar, Badge, EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
-import { listChoreTemplates, listOccurrences } from "@/lib/chores";
+import { kindModule, listChoreTemplates, listOccurrences } from "@/lib/chores";
 import { getViewer } from "@/lib/dal";
 import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
@@ -15,7 +17,7 @@ import { HouseTabs } from "../house-tabs";
 
 export const metadata: Metadata = { title: "Chores" };
 
-const TABS = ["today", "upcoming", "overdue", "done", "all"] as const;
+const TABS = ["today", "upcoming", "overdue", "done", "all", "archived", "deleted"] as const;
 type Tab = (typeof TABS)[number];
 const KINDS = ["chore", "cleaning", "maintenance"] as const;
 
@@ -42,6 +44,8 @@ export default async function ChoresPage({ searchParams }: PageProps<"/house/cho
     overdue: { to: addDays(today, -1), statuses: ["pending", "missed"] as const, order: "desc" as const },
     done: { from: addDays(today, -30), to: today, statuses: ["done"] as const, order: "desc" as const },
     all: null,
+    archived: null,
+    deleted: null,
   }[tab];
   const occurrences = rangeOpts
     ? tab === "today"
@@ -49,6 +53,8 @@ export default async function ChoresPage({ searchParams }: PageProps<"/house/cho
       : await listOccurrences(viewer, { kinds: [...KINDS], ...rangeOpts, statuses: [...rangeOpts.statuses], assigneeId })
     : [];
   const templates = tab === "all" ? await listChoreTemplates(viewer, [...KINDS], today) : [];
+  // Archived & deleted: every kind (chores, tasks, cleaning, maintenance) in one place, newest first.
+  const removed = tab === "archived" || tab === "deleted" ? await listChoreTemplates(viewer, ["chore", "task", "cleaning", "maintenance"], today, { state: tab }) : [];
   const overdueCount = (await listOccurrences(viewer, { kinds: [...KINDS], to: addDays(today, -1), statuses: ["pending"], assigneeId, limit: 99 })).length;
 
   const doneToday = todays.filter((o) => o.status === "done").length;
@@ -120,12 +126,66 @@ export default async function ChoresPage({ searchParams }: PageProps<"/house/cho
           { key: "upcoming", href: href({ tab: "upcoming" }), label: "Upcoming" },
           { key: "overdue", href: href({ tab: "overdue" }), label: "Overdue" },
           { key: "done", href: href({ tab: "done" }), label: "Completed" },
-          ...(viewer.can("chores") ? [{ key: "all", href: href({ tab: "all" }), label: "All chores" }] : []),
+          ...(viewer.can("chores")
+            ? [
+                { key: "all", href: href({ tab: "all" }), label: "All chores" },
+                { key: "archived", href: href({ tab: "archived" }), label: "Archived" },
+                { key: "deleted", href: href({ tab: "deleted" }), label: "Deleted" },
+              ]
+            : []),
         ]}
       />
 
       <div className="mt-5">
-        {tab === "all" ? (
+        {tab === "archived" || tab === "deleted" ? (
+          removed.length === 0 ? (
+            <Card>
+              <EmptyState
+                icon={tab === "deleted" ? <Trash2 /> : <Archive />}
+                title={tab === "deleted" ? "No deleted chores" : "No archived chores"}
+                description={tab === "deleted" ? "Deleted chores, tasks, cleaning and maintenance land here with their history, and can be restored." : "Archived chores, tasks, cleaning and maintenance land here with their history, and can be restored."}
+              />
+            </Card>
+          ) : (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {removed.map((t) => {
+                const when = (tab === "deleted" ? t.chore.deletedAt : t.chore.archivedAt)!.toISOString().slice(0, 10);
+                return (
+                  <li key={t.chore.id} className="flex h-full flex-col gap-2 rounded-2xl border border-line bg-surface p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link href={`/house/chores/${t.chore.id}`} className="font-semibold hover:text-primary-700">
+                        {t.chore.title}
+                      </Link>
+                      <Badge tone={t.chore.kind === "chore" ? "primary" : "mist"}>{t.chore.kind}</Badge>
+                    </div>
+                    <p className="text-sm text-muted">
+                      {tab === "deleted" ? "Deleted" : "Archived"} {formatShortDate(when)} · done {t.doneCount} time{t.doneCount === 1 ? "" : "s"}
+                      {t.assigneeName && ` · ${t.assigneeName}`}
+                      {t.roomName && ` · ${t.roomName}`}
+                    </p>
+                    <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+                      <Link href={`/house/chores/${t.chore.id}`} className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-sunken">
+                        View history
+                      </Link>
+                      {viewer.can(kindModule(t.chore.kind), "edit") && (
+                        <>
+                          <ActionButton action={restoreChore} fields={{ id: t.chore.id }} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary-50 px-3 text-sm font-medium text-primary-700 hover:bg-primary-100">
+                            <ArchiveRestore className="size-4" /> Restore
+                          </ActionButton>
+                          {tab === "archived" && (
+                            <ActionButton action={deleteChore} fields={{ id: t.chore.id }} confirm={`Delete "${t.chore.title}"? It moves to Deleted, where you can still view or restore it.`} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-wine-500 hover:bg-wine-50">
+                              <Trash2 className="size-4" /> Delete
+                            </ActionButton>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : tab === "all" ? (
           templates.length === 0 ? (
             <Card>
               <EmptyState
