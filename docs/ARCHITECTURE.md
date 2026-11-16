@@ -233,7 +233,15 @@ reminders, and from anyone they had shared it with. Records are kept and come ba
   one recipe; fields not in the document are left blank. Review, rename, categorise, tag and add photos,
   then save to Family Recipes or My Private Recipes.
 
-### 3.5 Colours
+### 3.5 Photos
+
+Profile photos (`family_members.avatar_file_id`) can be set by the person or a parent from their home page,
+Family → Manage, or My settings, and show on avatars. Photo albums: pets keep `pet_photos`; farm animals,
+garden plants and family members use `entity_photos(entity_type, entity_id, file_id, caption)` with the
+`PhotoAlbum` component (add several at once, captions, remove). Files are served only through
+`/api/files/[id]` after a family check.
+
+### 3.6 Colours
 
 Members have 26 colours (`src/lib/colors.ts`), used on avatars, the calendar and charts and chosen by
 parents. Each person can also pick their own **app colour theme** (`family_members.app_theme`, Account →

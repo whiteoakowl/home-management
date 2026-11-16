@@ -11,6 +11,8 @@ import { PlantFormModal } from "@/components/garden/garden-forms";
 import { PlantAvatar } from "@/components/garden/plant-avatar";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
+import { PhotoAlbum } from "@/components/photos/photo-album";
+import { albumPhotos } from "@/lib/photos";
 import { getViewer } from "@/lib/dal";
 import { formatShortDate } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
@@ -132,6 +134,7 @@ export default async function PlantPage({ params }: PageProps<"/garden/plants/[i
           </Card>
         </div>
       </div>
+      <PhotoAlbum kind="plant" entityId={id} photos={await albumPhotos(viewer, "plant", id)} canAdd={canEdit} canRemoveAll={viewer.isParent} />
     </div>
   );
 }

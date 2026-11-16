@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { personalSubjects } from "@/lib/privacy";
+import { fileUrl } from "@/lib/files";
+import { albumPhotos } from "@/lib/photos";
+import { PhotoAlbum } from "@/components/photos/photo-album";
+import { ProfilePhotoButton } from "@/components/photos/profile-photo";
 import { Lock, Settings2, ShieldCheck, Users } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Avatar, Badge } from "@/components/ui/display";
@@ -59,7 +63,7 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
         style={{ background: `linear-gradient(120deg, ${c.soft}, var(--color-surface) 70%)` }}
       >
         <div className="flex items-center gap-4">
-          <Avatar name={member.displayName} color={member.color} size="xl" />
+          <Avatar name={member.displayName} color={member.color} size="xl" photoUrl={fileUrl(member.avatarFileId, true)} />
           <div>
             <h1 className="text-[28px] leading-tight font-semibold sm:text-[32px]">{first}&apos;s Home</h1>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -74,16 +78,19 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
             </div>
           </div>
         </div>
-        {isSelf && !viewer.isParent && (
-          <ButtonLink href="/account" variant="secondary" icon={<Settings2 className="size-4" />}>
-            My settings
-          </ButtonLink>
-        )}
-        {viewer.isParent && (
-          <ButtonLink href={`/family/${member.id}/manage`} variant="secondary" icon={<Settings2 className="size-4" />}>
-            Profile & access
-          </ButtonLink>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {(isSelf || viewer.isParent) && <ProfilePhotoButton memberId={member.id} currentUrl={fileUrl(member.avatarFileId)} />}
+          {isSelf && !viewer.isParent && (
+            <ButtonLink href="/account" variant="secondary" icon={<Settings2 className="size-4" />}>
+              My settings
+            </ButtonLink>
+          )}
+          {viewer.isParent && (
+            <ButtonLink href={`/family/${member.id}/manage`} variant="secondary" icon={<Settings2 className="size-4" />}>
+              Profile & access
+            </ButtonLink>
+          )}
+        </div>
       </header>
       <nav aria-label={`${first}'s areas`} className="grid gap-4 md:grid-cols-2">
         <section className="rounded-[var(--radius-card)] border border-dashed border-olive-400 bg-olive-50/60 p-4">
@@ -120,6 +127,7 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
         </section>
       </nav>
       <WidgetGrid widgets={widgets} scope={makeScope(viewer, member.id)} name={first} />
+      <PhotoAlbum kind="member" entityId={member.id} photos={await albumPhotos(viewer, "member", member.id)} canAdd={isSelf || viewer.isParent} canRemoveAll={viewer.isParent || isSelf} title={isSelf ? "My photos" : `${first}'s photos`} />
     </div>
   );
 }

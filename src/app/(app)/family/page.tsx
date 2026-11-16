@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, Badge, PageHeader } from "@/components/ui/display";
 import { getViewer, listFamilyMembers } from "@/lib/dal";
 import { memberColor } from "@/lib/colors";
+import { fileUrl } from "@/lib/files";
 import { AddMemberButton } from "./add-member-button";
 
 export const metadata: Metadata = { title: "Family" };
@@ -32,7 +33,7 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
               <Card className="group relative h-full overflow-hidden p-0 sm:p-0">
                 <div className="h-16" style={{ background: `linear-gradient(120deg, ${c.solid}, ${c.soft})` }} aria-hidden />
                 <div className="-mt-8 flex flex-col gap-3 px-5 pb-5">
-                  <Avatar name={m.displayName} color={m.color} size="lg" className="ring-4" />
+                  <Avatar name={m.displayName} color={m.color} size="lg" className="ring-4" photoUrl={fileUrl(m.avatarFileId, true)} />
                   <div className="flex items-center justify-between gap-2">
                     {canOpen ? (
                       <Link href={`/family/${m.id}`} className="font-display text-xl font-semibold after:absolute after:inset-0">

@@ -11,6 +11,8 @@ import { AnimalAvatar } from "@/components/farm/animal-avatar";
 import { AnimalFormModal, HealthRecordModal, ProductionModal } from "@/components/farm/farm-forms";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
+import { PhotoAlbum } from "@/components/photos/photo-album";
+import { albumPhotos } from "@/lib/photos";
 import { getViewer } from "@/lib/dal";
 import { daysBetween, formatShortDate, todayIn } from "@/lib/dates";
 import { animalOptions } from "@/lib/farm";
@@ -152,6 +154,7 @@ export default async function AnimalPage({ params }: PageProps<"/farm/animals/[i
           )}
         </Card>
       </div>
+      <PhotoAlbum kind="animal" entityId={id} photos={await albumPhotos(viewer, "animal", id)} canAdd={canEdit} canRemoveAll={viewer.isParent} />
     </div>
   );
 }

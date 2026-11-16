@@ -314,3 +314,27 @@ export const notificationPreferences = pgTable(
   },
   (t) => [primaryKey({ columns: [t.memberId, t.kind] })],
 );
+
+/**
+ * Photo albums for things that don't have their own gallery table: farm animals,
+ * garden plants and family member profiles. (Pets keep pet_photos.)
+ */
+export const entityPhotos = pgTable(
+  "entity_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** animal | plant | member */
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    fileId: uuid("file_id")
+      .notNull()
+      .references(() => files.id, { onDelete: "cascade" }),
+    caption: text("caption"),
+    createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("entity_photos_entity_idx").on(t.entityType, t.entityId)],
+);

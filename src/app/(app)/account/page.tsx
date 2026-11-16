@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { KeyRound, Mail, Palette } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/display";
+import { Avatar, PageHeader } from "@/components/ui/display";
+import { ProfilePhotoButton } from "@/components/photos/profile-photo";
+import { fileUrl } from "@/lib/files";
 import { getViewer } from "@/lib/dal";
 import { AppThemeForm, ChangeEmailForm, ChangePasswordForm } from "./forms";
 
@@ -12,6 +14,14 @@ export default async function AccountPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <PageHeader eyebrow="Account" title="My settings" description={`Signed in as ${viewer.user.email}.`} />
+      <Card className="flex flex-wrap items-center gap-4">
+        <Avatar name={viewer.member.displayName} color={viewer.member.color} size="xl" photoUrl={fileUrl(viewer.member.avatarFileId, true)} />
+        <div className="flex-1">
+          <p className="font-semibold">Profile photo</p>
+          <p className="text-sm text-muted">Shown on your avatar around the app.</p>
+        </div>
+        <ProfilePhotoButton memberId={viewer.member.id} currentUrl={fileUrl(viewer.member.avatarFileId)} label={viewer.member.avatarFileId ? "Change photo" : "Add photo"} />
+      </Card>
       <Card>
         <CardHeader title="My app colors" icon={<Palette className="size-4" />} />
         <AppThemeForm current={viewer.member.appTheme} />

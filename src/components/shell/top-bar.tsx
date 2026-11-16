@@ -7,7 +7,7 @@ import type { Module } from "@/db/schema/_shared";
 import { Menu, MenuItem } from "./menu";
 import { QuickAdd } from "./quick-add";
 
-type M = { id: string; displayName: string; color: string };
+type M = { id: string; displayName: string; color: string; photoUrl?: string | null };
 
 export function TopBar({
   me,
@@ -34,7 +34,7 @@ export function TopBar({
           <span className="mr-1 text-sm text-muted">View as</span>
           {members.map((m) => (
             <Link key={m.id} href={`/family/${m.id}`} title={`${m.displayName}'s portal`} className="rounded-full transition-transform hover:-translate-y-0.5">
-              <Avatar name={m.displayName} color={m.color} size="sm" />
+              <Avatar name={m.displayName} color={m.color} size="sm" photoUrl={m.photoUrl} />
               <span className="sr-only">{m.displayName}&apos;s portal</span>
             </Link>
           ))}
@@ -69,7 +69,7 @@ export function TopBar({
         </Link>
         <Menu
           label="Account"
-          trigger={<Avatar name={me.displayName} color={me.color} size="md" />}
+          trigger={<Avatar name={me.displayName} color={me.color} size="md" photoUrl={me.photoUrl} />}
         >
           <div className="border-b border-line px-3 pt-2 pb-3">
             <p className="font-semibold">{me.displayName}</p>
