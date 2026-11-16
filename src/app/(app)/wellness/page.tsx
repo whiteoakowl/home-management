@@ -11,10 +11,11 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader, ProgressBar } from "@/components/ui/display";
 import { CheckInForm, WellnessEntryModal, WellnessGoalModal } from "@/components/wellness/forms";
 import { SupportPanel, WellnessFooter, WellnessTabs } from "@/components/wellness/shared";
+import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
 import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { healthProfile } from "@/lib/personal-health";
-import { audienceNames, personalSubject, privacyFor } from "@/lib/privacy";
+import { audienceNames, personalSubject, privacyFor, areaHidden } from "@/lib/privacy";
 import { quoteFor } from "@/lib/quotes";
 import { checkInsFor, goalsWithProgress, wellnessEntriesFor, type WellnessAccess } from "@/lib/wellness-data";
 import { currentStreak, moodInfo, promptFor, selfCareLabel, thisWeekCount } from "@/lib/wellness";
@@ -26,6 +27,7 @@ export default async function WellnessPage({ searchParams }: PageProps<"/wellnes
   const viewer = await getViewer();
   const sp = await searchParams;
   const { subject, subjects, own, canManage } = await personalSubject(viewer, "wellness", sp.member);
+  if (own && areaHidden(viewer.member, "wellness")) return <AreaOff label="Mental Wellness" />;
   const access = (subject.access ?? "self") as WellnessAccess;
   const today = todayIn(viewer.family.timezone);
   const [profile, checkIns, entries, goals, privacy, favs] = await Promise.all([

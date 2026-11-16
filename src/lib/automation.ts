@@ -322,9 +322,10 @@ export async function runDailyAutomation(family: Family, force = false) {
   // Personal wellness reminders: only the ones each person turned on, always gentle (no streak guilt).
   {
     const profiles = await db
-      .select({ memberId: personalHealthProfiles.memberId, reminders: personalHealthProfiles.reminders })
+      .select({ memberId: personalHealthProfiles.memberId, reminders: personalHealthProfiles.reminders, hiddenAreas: familyMembers.hiddenAreas })
       .from(personalHealthProfiles)
-      .where(eq(personalHealthProfiles.familyId, fid));
+      .innerJoin(familyMembers, eq(familyMembers.id, personalHealthProfiles.memberId))
+      .where(and(eq(personalHealthProfiles.familyId, fid), eq(familyMembers.isActive, true)));
     const dow = new Date(`${today}T12:00:00Z`).getUTCDay();
     const due = (f: string | undefined) => f === "daily" || (f === "weekdays" && dow >= 1 && dow <= 5) || (f === "weekly" && dow === 1);
     const TEXT = {
@@ -335,6 +336,7 @@ export async function runDailyAutomation(family: Family, force = false) {
       goals: "A gentle look at your wellness goals this week",
     } as const;
     for (const p of profiles) {
+      if (p.hiddenAreas.includes("wellness")) continue; // Mental Wellness removed from this profile
       for (const [k, title] of Object.entries(TEXT) as [keyof typeof TEXT, string][]) {
         if (due(p.reminders?.[k])) await notify(fid, [p.memberId], { kind: "wellness_reminder", title, href: k === "journal" || k === "gratitude" ? "/wellness/journal" : "/wellness" }, today);
       }

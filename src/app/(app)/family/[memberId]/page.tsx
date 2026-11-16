@@ -34,7 +34,7 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
   // Personal areas: everything for yourself; for someone else, only what they share with you.
   const q = isSelf ? "" : `?member=${member.id}`;
   const sharedWithMe = isSelf ? null : await Promise.all((["period", "food", "wellness", "fitness"] as const).map(async (c) => [c, (await personalSubjects(viewer, c)).some((x) => x.id === member.id)] as const));
-  const can = (c: "period" | "food" | "wellness" | "fitness") => isSelf || !!sharedWithMe?.find(([k, v]) => k === c && v);
+  const can = (c: "period" | "food" | "wellness" | "fitness") => !member.hiddenAreas.includes(c) && (isSelf || !!sharedWithMe?.find(([k, v]) => k === c && v));
   const personalLinks = [
     can("period") && { href: `/health/period${q}`, label: "Period Tracker" },
     can("food") && { href: `/health/food${q}`, label: "Food Journal" },

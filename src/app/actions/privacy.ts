@@ -7,7 +7,7 @@ import { familyMembers, PRIVACY_CATEGORIES, privacySettings, type PrivacyAudienc
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { getFamilyMember, getViewer, requireParent } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
-import { isMinor, PRIVACY_META } from "@/lib/privacy";
+import { HIDEABLE_AREAS, isMinor, PRIVACY_META } from "@/lib/privacy";
 import { familyMemberIds } from "@/lib/records";
 
 const AUDIENCES: PrivacyAudience[] = ["private", "parents", "selected"];
@@ -44,5 +44,20 @@ export async function saveParentAccess(_: ActionState, fd: FormData): Promise<Ac
     await db.update(familyMembers).set({ parentAccess: areas }).where(and(eq(familyMembers.id, target.id), eq(familyMembers.familyId, viewer.family.id)));
     revalidatePath("/", "layout");
     return ok(areas.length ? `Parents can view ${target.displayName}'s ${areas.map((a) => PRIVACY_META[a].label).join(", ")}. ${target.displayName} will see this in their Privacy Center.` : `Parent oversight is off for ${target.displayName}.`);
+  });
+}
+
+/** Parents: remove (or bring back) the Period Tracker / Mental Wellness on a family member's profile. Records are kept. */
+export async function saveHiddenAreas(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireParent();
+    const target = await getFamilyMember(viewer, String(fd.get("memberId") ?? ""));
+    if (!target) return fail("Family member not found.");
+    const shown = new Set(fd.getAll("shown").map(String));
+    const hidden = HIDEABLE_AREAS.map((a) => a.key).filter((k) => !shown.has(k));
+    await db.update(familyMembers).set({ hiddenAreas: hidden }).where(and(eq(familyMembers.id, target.id), eq(familyMembers.familyId, viewer.family.id)));
+    revalidatePath("/", "layout");
+    const off = HIDEABLE_AREAS.filter((a) => hidden.includes(a.key)).map((a) => a.label);
+    return ok(off.length ? `${off.join(" and ")} removed from ${target.displayName}'s profile. Nothing was deleted; turn it back on any time.` : `${target.displayName}'s profile shows all personal areas.`);
   });
 }

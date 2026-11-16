@@ -10,10 +10,10 @@ import { PageHeader } from "@/components/ui/display";
 import { MODULES } from "@/db/schema/_shared";
 import { getFamilyMember, requireParent } from "@/lib/dal";
 import { getStoredPermissions } from "@/lib/family";
-import { LoginForm, OvulationForm, ParentAccessForm, PermissionsForm, PrivateFoodForm } from "./forms";
+import { HiddenAreasForm, LoginForm, OvulationForm, ParentAccessForm, PermissionsForm, PrivateFoodForm } from "./forms";
 import { healthProfile } from "@/lib/personal-health";
 import { todayIn } from "@/lib/dates";
-import { isMinor, PRIVACY_META } from "@/lib/privacy";
+import { HIDEABLE_AREAS, isMinor, PRIVACY_META } from "@/lib/privacy";
 import { PRIVACY_CATEGORIES } from "@/db/schema";
 import { MemberEmailForm, ResetPasswordForm } from "../../../account/forms";
 import { db } from "@/db";
@@ -60,6 +60,11 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
         )}
       </Card>
 
+      <Card>
+        <CardHeader title="Personal areas on this profile" />
+        <HiddenAreasForm memberId={member.id} name={member.displayName} hidden={member.hiddenAreas} areas={HIDEABLE_AREAS.map((a) => ({ key: a.key, label: a.label }))} />
+      </Card>
+
       {member.role !== "parent" && isMinor(member, todayIn(viewer.family.timezone)) && (
         <Card>
           <CardHeader title="Personal areas: parent oversight" />
@@ -68,9 +73,9 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
             name={member.displayName}
             hasLogin={!!member.userId}
             selected={member.parentAccess}
-            areas={PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry).map((c) => ({ key: c, label: PRIVACY_META[c].label }))}
+            areas={PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry && !member.hiddenAreas.includes(c)).map((c) => ({ key: c, label: PRIVACY_META[c].label }))}
           />
-          <OvulationForm memberId={member.id} name={member.displayName} on={(await healthProfile(viewer.family.id, member.id)).showOvulation} />
+          {!member.hiddenAreas.includes("period") && <OvulationForm memberId={member.id} name={member.displayName} on={(await healthProfile(viewer.family.id, member.id)).showOvulation} />}
         </Card>
       )}
 

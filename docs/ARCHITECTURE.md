@@ -196,6 +196,11 @@ calendar only if the person turns on "Show on the calendar" (layer `cycle`, owne
 
 ### 3.3 Personal areas
 
+Parents can **remove** the Period Tracker and/or Mental Wellness from any family member's profile
+(Family → Manage → "Personal areas on this profile"; `family_members.hidden_areas`). A removed area
+disappears from that person's menu, Personal Health page, profile, Privacy Center, calendar, search and
+reminders, and from anyone they had shared it with. Records are kept and come back when it's turned on.
+
 * **Period Tracker** (`/health/period`, `period_days`, `src/lib/cycle.ts`): one row per recorded day (flow,
   symptoms, feelings, intensity, note). Periods/cycles are derived from light/medium/heavy flow days.
   Statistics and estimates come from the person's records (or typical lengths until two periods are

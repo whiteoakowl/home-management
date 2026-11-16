@@ -4,13 +4,16 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
 import { WellnessSettingsForm } from "@/components/wellness/forms";
 import { WellnessFooter, WellnessTabs } from "@/components/wellness/shared";
+import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
+import { areaHidden } from "@/lib/privacy";
 import { healthProfile } from "@/lib/personal-health";
 
 export const metadata: Metadata = { title: "Wellness settings" };
 
 export default async function WellnessSettingsPage() {
   const viewer = await getViewer();
+  if (areaHidden(viewer.member, "wellness")) return <AreaOff label="Mental Wellness" />;
   const profile = await healthProfile(viewer.family.id, viewer.member.id);
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-5">

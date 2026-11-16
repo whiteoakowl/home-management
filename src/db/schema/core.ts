@@ -129,6 +129,8 @@ export const familyMembers = pgTable(
     parentAccess: text("parent_access").array().notNull().default([]),
     /** My own app colour theme (a palette key; null = the family default). Only changes my app. */
     appTheme: text("app_theme"),
+    /** Personal areas parents turned off for this profile ("period", "wellness"). Data is kept. */
+    hiddenAreas: text("hidden_areas").array().notNull().default([]),
     birthday: date("birthday"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,

@@ -28,10 +28,11 @@ export default async function PersonalHealthPage() {
     personalSubjects(viewer, "wellness"),
   ]);
   const est = profile.periodEnabled ? estimate(await periodDaysFor(viewer.member.id), today, { cycle: profile.typicalCycleLength, period: profile.typicalPeriodLength }, { ovulation: profile.showOvulation }) : null;
+  const hidden = viewer.member.hiddenAreas;
   const tiles = [
-    { href: "/health/period", icon: CalendarHeart, title: "Period Tracker", cat: "period" as const, status: !profile.periodEnabled ? "Not set up yet" : est?.cycleDay ? `Cycle day ${est.cycleDay} · next period around ${est.nextPeriodStart ? formatShortDate(est.nextPeriodStart) : "—"} (estimate)` : "Log your period to begin" },
+    ...(hidden.includes("period") ? [] : [{ href: "/health/period", icon: CalendarHeart, title: "Period Tracker", cat: "period" as const, status: !profile.periodEnabled ? "Not set up yet" : est?.cycleDay ? `Cycle day ${est.cycleDay} · next period around ${est.nextPeriodStart ? formatShortDate(est.nextPeriodStart) : "—"} (estimate)` : "Log your period to begin" }]),
     { href: "/health/food", icon: Utensils, title: "Food Journal", cat: "food" as const, status: food[0]?.n ? `${food[0].n} entr${food[0].n === 1 ? "y" : "ies"} today` : "Nothing recorded today" },
-    { href: "/wellness", icon: Smile, title: "Mental Wellness", cat: "wellness" as const, status: checkIn[0] ? "Checked in today" : "Ready for today's check-in?" },
+    ...(hidden.includes("wellness") ? [] : [{ href: "/wellness", icon: Smile, title: "Mental Wellness", cat: "wellness" as const, status: checkIn[0] ? "Checked in today" : "Ready for today's check-in?" }]),
     ...(viewer.can("fitness") ? [{ href: "/fitness", icon: Dumbbell, title: "Fitness", cat: "fitness" as const, status: "Workouts, measurements and records" }] : []),
     ...(viewer.can("medical") ? [{ href: `/medical/members/${viewer.member.id}`, icon: HeartPulse, title: "My Medical Information", cat: "medical" as const, status: "Allergies, conditions, medications, documents" }] : []),
   ];

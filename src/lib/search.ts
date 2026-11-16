@@ -413,7 +413,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       .limit(LIMIT)
       .then((r) => r.map((x) => ({ id: x.id, title: x.food, subtitle: x.date, href: `/health/food?view=day&date=${x.date}` }))),
   );
-  group(
+  if (!viewer.member.hiddenAreas.includes("wellness")) group(
     "wellness",
     "My wellness journal",
     "Smile",

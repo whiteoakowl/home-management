@@ -7,10 +7,11 @@ import { PersonalSwitcher } from "@/components/health/personal-switcher";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader, ProgressRing } from "@/components/ui/display";
 import { CYCLE_FEELINGS, cycleStats, estimate, PHASE_LABEL, PHYSICAL_SYMPTOMS, periodsFrom, predictedMarks } from "@/lib/cycle";
+import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
 import { addDays, addMonths, daysBetween, formatShortDate, monthLabel, startOfMonth, todayIn } from "@/lib/dates";
 import { healthProfile, periodDaysFor } from "@/lib/personal-health";
-import { AUDIENCE_LABEL, isMinor, personalSubject, privacyFor } from "@/lib/privacy";
+import { AUDIENCE_LABEL, isMinor, personalSubject, privacyFor, areaHidden } from "@/lib/privacy";
 
 export const metadata: Metadata = { title: "Period Tracker" };
 
@@ -21,6 +22,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
   const viewer = await getViewer();
   const sp = await searchParams;
   const { subject, subjects, canManage, own } = await personalSubject(viewer, "period", sp.member);
+  if (own && areaHidden(viewer.member, "period")) return <AreaOff label="Period Tracker" />;
   const today = todayIn(viewer.family.timezone);
   const month = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? `${sp.month}-01` : startOfMonth(today);
   const profile = await healthProfile(viewer.family.id, subject.id);

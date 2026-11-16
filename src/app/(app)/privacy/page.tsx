@@ -21,7 +21,7 @@ export default async function PrivacyCenterPage() {
   const [settings, members] = await Promise.all([allPrivacy(viewer.member.id), listFamilyMembers(viewer.family.id)]);
   const others = members.filter((m) => m.id !== viewer.member.id).map((m) => ({ id: m.id, displayName: m.displayName, color: m.color }));
   const oversight = isMinor(viewer.member, todayIn(viewer.family.timezone)) ? viewer.member.parentAccess : [];
-  const areas = PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry);
+  const areas = PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry && !viewer.member.hiddenAreas.includes(c));
   const defaults = PRIVACY_CATEGORIES.filter((c) => PRIVACY_META[c].perEntry);
   const row = (c: (typeof PRIVACY_CATEGORIES)[number]) => (
     <Card key={c} className="flex flex-col gap-3">

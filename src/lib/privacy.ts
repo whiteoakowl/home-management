@@ -65,7 +65,15 @@ export function personalAccess(viewer: Viewer, owner: PersonalOwner, category: P
 /** Only the owner (or parents for a member without a login) may change personal records. */
 export const canManagePersonal = (viewer: Viewer, owner: PersonalOwner) => owner.id === viewer.member.id || (viewer.isParent && owner.role !== "parent" && owner.userId === null);
 
-const ownerCols = { id: familyMembers.id, userId: familyMembers.userId, role: familyMembers.role, birthday: familyMembers.birthday, parentAccess: familyMembers.parentAccess, displayName: familyMembers.displayName, color: familyMembers.color };
+const ownerCols = { id: familyMembers.id, userId: familyMembers.userId, role: familyMembers.role, birthday: familyMembers.birthday, parentAccess: familyMembers.parentAccess, hiddenAreas: familyMembers.hiddenAreas, displayName: familyMembers.displayName, color: familyMembers.color };
+
+/** Personal areas parents can remove from a profile (Family → Manage). Records are kept. */
+export const HIDEABLE_AREAS = [
+  { key: "period", label: "Period Tracker" },
+  { key: "wellness", label: "Mental Wellness" },
+] as const;
+export type HideableArea = (typeof HIDEABLE_AREAS)[number]["key"];
+export const areaHidden = (m: { hiddenAreas: string[] }, area: string) => m.hiddenAreas.includes(area);
 
 /** Family members whose `category` area the viewer may open (always includes the viewer). */
 export async function personalSubjects(viewer: Viewer, category: PrivacyCategory) {
@@ -74,7 +82,8 @@ export async function personalSubjects(viewer: Viewer, category: PrivacyCategory
   const byMember = new Map(settings.map((s) => [s.memberId, { category, audience: s.audience, memberIds: s.memberIds, options: s.options ?? {} } as PrivacySetting]));
   return members
     .map((m) => ({ ...m, access: personalAccess(viewer, m, category, byMember.get(m.id) ?? PRIVATE(category)), setting: byMember.get(m.id) ?? PRIVATE(category) }))
-    .filter((m) => m.access)
+    // An area removed from someone's profile isn't shown to anyone else either.
+    .filter((m) => m.access && (m.id === viewer.member.id || !m.hiddenAreas.includes(category)))
     .sort((a, b) => (a.id === viewer.member.id ? -1 : b.id === viewer.member.id ? 1 : a.displayName.localeCompare(b.displayName)));
 }
 

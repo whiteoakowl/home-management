@@ -1,0 +1,1 @@
+ALTER TABLE "family_members" ADD COLUMN "hidden_areas" text[] DEFAULT '{}' NOT NULL;

@@ -10,7 +10,9 @@ import { PageHeader } from "@/components/ui/display";
 import { QuoteNoteForm } from "@/components/wellness/forms";
 import { WellnessFooter, WellnessTabs } from "@/components/wellness/shared";
 import { CopyQuote } from "@/components/wellness/copy-quote";
+import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
+import { areaHidden } from "@/lib/privacy";
 import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { healthProfile } from "@/lib/personal-health";
 import { quoteById, quoteFor } from "@/lib/quotes";
@@ -20,6 +22,7 @@ export const metadata: Metadata = { title: "Quotes" };
 
 export default async function QuotesPage({ searchParams }: PageProps<"/wellness/quotes">) {
   const viewer = await getViewer();
+  if (areaHidden(viewer.member, "wellness")) return <AreaOff label="Mental Wellness" />;
   const sp = await searchParams;
   const today = todayIn(viewer.family.timezone);
   const [profile, favs] = await Promise.all([healthProfile(viewer.family.id, viewer.member.id), db.select().from(quoteFavorites).where(eq(quoteFavorites.memberId, viewer.member.id))]);

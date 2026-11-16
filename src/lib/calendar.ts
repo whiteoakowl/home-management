@@ -275,7 +275,7 @@ export async function getCalendarItems(
 
   // Period days: only for people who chose "Show on the calendar", and only to them and the people they share with.
   if (want("cycle")) {
-    const owners = (await personalSubjects(viewer, "period")).filter((s) => s.setting.options.showOnCalendar && (!subject || s.id === subject));
+    const owners = (await personalSubjects(viewer, "period")).filter((s) => s.setting.options.showOnCalendar && !s.hiddenAreas.includes("period") && (!subject || s.id === subject));
     if (owners.length) {
       const rows = await db
         .select({ memberId: periodDays.memberId, date: periodDays.date, flow: periodDays.flow })

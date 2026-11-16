@@ -6,10 +6,11 @@ import { PersonalSwitcher } from "@/components/health/personal-switcher";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { cycleStats, periodsFrom } from "@/lib/cycle";
+import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
 import { addDays, daysBetween, formatShortDate } from "@/lib/dates";
 import { periodDaysFor } from "@/lib/personal-health";
-import { personalSubject } from "@/lib/privacy";
+import { personalSubject, areaHidden } from "@/lib/privacy";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Cycle history" };
@@ -21,6 +22,7 @@ export default async function CycleHistoryPage({ searchParams }: PageProps<"/hea
   const viewer = await getViewer();
   const sp = await searchParams;
   const { subject, subjects, own } = await personalSubject(viewer, "period", sp.member);
+  if (own && areaHidden(viewer.member, "period")) return <AreaOff label="Period Tracker" />;
   const all = await periodDaysFor(subject.id);
   const periods = periodsFrom(all);
   const stats = cycleStats(periods);

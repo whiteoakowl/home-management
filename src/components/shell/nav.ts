@@ -77,10 +77,16 @@ export function buildNav(viewer: Viewer): NavSection[] {
   sections[0]!.items.unshift({ href: "/", label: "Home", icon: "LayoutDashboard" });
   // Personal spaces belong to each person (private unless shared), so everyone has them.
   const personal = sections.find((s) => s.group === "Personal");
+  const hidden = viewer.member.hiddenAreas;
   const mine: NavItem[] = [
-    { href: "/health", label: "Personal Health", icon: "HeartPulse", children: [{ href: "/health", label: "Overview" }, { href: "/health/period", label: "Period Tracker" }, { href: "/privacy", label: "Privacy Center" }] },
+    {
+      href: "/health",
+      label: "Personal Health",
+      icon: "HeartPulse",
+      children: [{ href: "/health", label: "Overview" }, ...(hidden.includes("period") ? [] : [{ href: "/health/period", label: "Period Tracker" }]), { href: "/privacy", label: "Privacy Center" }],
+    },
     { href: "/health/food", label: "Food Journal", icon: "Utensils" },
-    { href: "/wellness", label: "Mental Wellness", icon: "Smile" },
+    ...(hidden.includes("wellness") ? [] : [{ href: "/wellness", label: "Mental Wellness", icon: "Smile" }]),
   ];
   if (personal) personal.items.unshift(...mine);
   sections[1]!.items.unshift({ href: "/family", label: "Family", icon: "Users" });

@@ -7,10 +7,11 @@ import { Card } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { WellnessEntryModal } from "@/components/wellness/forms";
 import { SupportPanel, WellnessFooter, WellnessTabs } from "@/components/wellness/shared";
+import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
 import { formatLongDate, todayIn } from "@/lib/dates";
 import { healthProfile } from "@/lib/personal-health";
-import { audienceNames, personalSubject, privacyFor } from "@/lib/privacy";
+import { audienceNames, personalSubject, privacyFor, areaHidden } from "@/lib/privacy";
 import { wellnessEntriesFor } from "@/lib/wellness-data";
 import { INTENSITIES, moodInfo, promptFor, selfCareLabel } from "@/lib/wellness";
 
@@ -20,6 +21,7 @@ export default async function WellnessJournalPage({ searchParams }: PageProps<"/
   const viewer = await getViewer();
   const sp = await searchParams;
   const { subject, subjects, own } = await personalSubject(viewer, "wellness", sp.member);
+  if (own && areaHidden(viewer.member, "wellness")) return <AreaOff label="Mental Wellness" />;
   const gratitudeView = sp.view === "gratitude";
   const today = todayIn(viewer.family.timezone);
   const q = typeof sp.q === "string" ? sp.q.trim().toLowerCase() : "";
