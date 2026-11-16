@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { goals } from "@/db/schema";
 import type { Viewer } from "./dal";
@@ -13,7 +13,7 @@ export async function budgetContext(viewer: Viewer, monthParam: unknown) {
   const month = typeof monthParam === "string" && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : today.slice(0, 7);
   const [cats, savingsGoals, sources, members] = await Promise.all([
     budgetCategories(viewer),
-    db.select({ id: goals.id, name: goals.name }).from(goals).where(and(eq(goals.familyId, viewer.family.id), eq(goals.kind, "savings"), eq(goals.status, "active"))).orderBy(asc(goals.name)),
+    db.select({ id: goals.id, name: goals.name }).from(goals).where(and(eq(goals.familyId, viewer.family.id), eq(goals.kind, "savings"), eq(goals.status, "active"), or(isNull(goals.ownerMemberId), eq(goals.ownerMemberId, viewer.member.id)))).orderBy(asc(goals.name)),
     incomeSourceList(viewer),
     memberOptions(viewer),
   ]);

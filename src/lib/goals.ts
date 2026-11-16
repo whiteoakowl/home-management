@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { familyMembers, goalContributions, goalMilestones, goals } from "@/db/schema";
 import { notify } from "./automation";
@@ -16,7 +16,24 @@ export const HORIZONS = [
   { key: "custom", label: "Other", months: null },
 ] as const;
 
-export async function listGoals(viewer: Viewer, opts: { kind?: string; ownerId?: string; includeDone?: boolean } = {}) {
+/**
+ * Goal privacy: a member's own savings goals are theirs alone. Nobody else
+ * (parents included) sees them in lists, detail pages, dashboards, search or
+ * reports. Family-wide goals (no owner) and other members' personal and
+ * fitness goals stay visible to the family, subject to their visibility.
+ */
+export const notOthersSavings = (viewer: Viewer) =>
+  sql`not (${goals.kind} = 'savings' and ${goals.ownerMemberId} is not null and ${goals.ownerMemberId} <> ${viewer.member.id})`;
+
+/**
+ * Which goals a list shows:
+ *  family: family-wide goals + other members' (non-savings) goals, i.e. the
+ *          family section where everyone's personal goals appear;
+ *  mine:   only the viewer's own goals (Personal / Savings / Fitness tabs).
+ */
+export type GoalScope = "family" | "mine";
+
+export async function listGoals(viewer: Viewer, opts: { kind?: string; ownerId?: string; includeDone?: boolean; scope?: GoalScope } = {}) {
   return db
     .select({ g: goals, owner: familyMembers.displayName, ownerColor: familyMembers.color })
     .from(goals)
@@ -25,6 +42,9 @@ export async function listGoals(viewer: Viewer, opts: { kind?: string; ownerId?:
       and(
         eq(goals.familyId, viewer.family.id),
         visibleTo(viewer, { id: goals.id, visibility: goals.visibility, author: goals.ownerMemberId }, "goal"),
+        notOthersSavings(viewer),
+        opts.scope === "mine" ? eq(goals.ownerMemberId, viewer.member.id) : undefined,
+        opts.scope === "family" ? or(isNull(goals.ownerMemberId), ne(goals.ownerMemberId, viewer.member.id)) : undefined,
         opts.kind ? eq(goals.kind, opts.kind as "savings") : undefined,
         opts.ownerId ? eq(goals.ownerMemberId, opts.ownerId) : undefined,
       ),

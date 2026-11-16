@@ -149,6 +149,11 @@ edit it. Members without a login (young kids) can't choose, so parents see and m
 the fitness pages, server actions, portal widget, calendar workouts layer, search, reports and the
 activity feed.
 
+**Goals privacy** (`src/lib/goals.ts`). The Goals page's *Family* tab shows family-wide goals plus other
+members' personal and fitness goals; *My personal*, *My savings* and *My fitness* show only the viewer's
+own. A member's own savings goals are private to them, parents included (`notOthersSavings`): hidden from
+lists, goal pages, dashboards and profiles, search, reports and the budget's goal picker.
+
 **Family Pantry spaces** (`src/lib/food-space.ts`). Pantry items, recipes, recipe collections, meal
 plans and shopping lists have `owner_member_id`: `NULL` = the family's (governed by module access),
 set = that member's **private food space** (My Pantry / My Recipes / My Meal Plans / My Shopping
