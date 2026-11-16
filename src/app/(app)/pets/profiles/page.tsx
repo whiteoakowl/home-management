@@ -18,7 +18,7 @@ export default async function PetProfilesPage() {
     <>
       <PageHeader eyebrow="Pets" title="Pet profiles" actions={viewer.can("pets", "edit") && <PetModal members={members} />} />
       <PetsTabs active="profiles" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {active.map((p) => (
           <PetCard key={p.id} pet={p} today={today} />
         ))}
@@ -27,7 +27,7 @@ export default async function PetProfilesPage() {
       {past.length > 0 && (
         <>
           <h2 className="mt-8 mb-3 text-lg font-semibold">In loving memory &amp; rehomed</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {past.map((p) => (
               <PetCard key={p.id} pet={p} today={today} />
             ))}

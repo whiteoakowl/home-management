@@ -40,7 +40,7 @@ export default async function PetsDashboard({ searchParams }: PageProps<"/pets">
         </Card>
       ) : (
         <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {list.map((p) => {
               const next = prevs.filter((x) => x.petId === p.id && x.nextDueOn).sort((a, b) => a.nextDueOn!.localeCompare(b.nextDueOn!))[0];
               return (

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
-import { animals, entityPhotos, familyMembers, plants } from "@/db/schema";
+import { animals, entityPhotos, familyMembers, pets, plants } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getFamilyMember, getViewer, type Viewer } from "@/lib/dal";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
@@ -77,5 +77,27 @@ export async function saveProfilePhoto(_: ActionState, fd: FormData): Promise<Ac
     if (m.avatarFileId) await deleteFamilyFile(viewer.family.id, m.avatarFileId);
     revalidatePath("/", "layout");
     return ok(fileId ? "Profile photo updated." : "Profile photo removed.");
+  });
+}
+
+/** Profile photo for a pet or farm animal (replaces the stock picture). */
+export async function saveMainPhoto(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await getViewer();
+    const kind = String(fd.get("kind"));
+    const id = String(fd.get("entityId") ?? "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("Not found.");
+    const table = kind === "pet" ? pets : kind === "animal" ? animals : null;
+    if (!table) return fail("Unknown kind.");
+    if (!viewer.can(kind === "pet" ? "pets" : "farm", "edit")) throw new AuthorizationError("You can't change this photo.");
+    const [row] = await db.select({ id: table.id, old: table.imageFileId }).from(table).where(and(eq(table.id, id), eq(table.familyId, viewer.family.id)));
+    if (!row) return fail("Not found.");
+    const remove = fd.get("removeImage") === "1";
+    const fileId = await saveUpload(viewer, fd.get("image"));
+    if (!fileId && !remove) return fail("Choose a photo.", "image");
+    await db.update(table).set({ imageFileId: fileId }).where(eq(table.id, row.id));
+    if (row.old) await deleteFamilyFile(viewer.family.id, row.old);
+    revalidatePath(kind === "pet" ? "/pets" : "/farm", "layout");
+    return ok(fileId ? "Photo updated." : "Photo removed.");
   });
 }

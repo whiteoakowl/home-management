@@ -11,6 +11,7 @@ import { OccurrenceList } from "@/components/house/occurrence-list";
 import { CareNoteCard, CareNoteModal, MemoryItem, MemoryModal, PetRecordModal, PetRecordRow, PreventativeModal, PreventativeRow, SupplyCard, SupplyModal } from "@/components/pets/pet-parts";
 import { PetsTabs } from "@/components/pets/pet-tabs";
 import { DetailList } from "@/components/records/detail-list";
+import { MainPhotoButton } from "@/components/photos/profile-photo";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Avatar, Badge } from "@/components/ui/display";
 import { db } from "@/db";
@@ -62,15 +63,18 @@ export default async function PetPage({ params }: PageProps<"/pets/[id]">) {
       <PetsTabs active="profiles" />
 
       <section className="grid gap-6 md:grid-cols-[minmax(0,320px)_1fr]">
-        <div className="overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br from-primary-50 to-olive-50">
-          {img ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={img} alt={pet.name} className="aspect-square w-full object-cover" />
-          ) : (
-            <span className="flex aspect-square items-center justify-center text-8xl" aria-hidden>
-              {speciesEmoji(pet.species)}
-            </span>
-          )}
+        <div className="flex flex-col gap-2">
+          <div className="overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br from-primary-50 to-olive-50">
+            {img ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img} alt={pet.name} className="aspect-square w-full object-cover" />
+            ) : (
+              <span className="flex aspect-square items-center justify-center text-8xl" aria-hidden>
+                {speciesEmoji(pet.species)}
+              </span>
+            )}
+          </div>
+          {canEdit && <MainPhotoButton kind="pet" entityId={pet.id} currentUrl={img} name={pet.name} />}
         </div>
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">

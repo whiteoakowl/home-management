@@ -41,12 +41,12 @@ export default async function AnimalsPage({ searchParams }: PageProps<"/farm/ani
           <EmptyState icon={<PawPrint />} title="No animals yet" description="Add individual animals or whole groups (a flock of 12 hens is one record)." action={canEdit ? cloneElement(add, { defaultOpen: false }) : undefined} />
         </Card>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {shown.map((a) => (
             <li key={a.id}>
-              <Link href={`/farm/animals/${a.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 hover:border-primary-300">
-                <AnimalAvatar species={a.species} photoUrl={fileUrl(a.imageFileId, true)} />
-                <div className="min-w-0 flex-1">
+              <Link href={`/farm/animals/${a.id}`} className="flex h-full flex-col items-center gap-2 rounded-2xl border border-line bg-surface p-3 text-center hover:border-primary-300 sm:flex-row sm:items-center sm:gap-3 sm:text-left">
+                <AnimalAvatar species={a.species} photoUrl={fileUrl(a.imageFileId, true)} size="lg" />
+                <div className="w-full min-w-0 flex-1">
                   <p className="truncate font-semibold">{a.name}</p>
                   <p className="truncate text-sm text-muted">{[a.headCount > 1 ? `${a.headCount} ${a.species.toLowerCase()}s` : a.species, a.breed, a.groupName].filter(Boolean).join(" · ")}</p>
                 </div>

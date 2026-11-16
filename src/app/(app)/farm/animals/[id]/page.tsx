@@ -11,6 +11,7 @@ import { AnimalAvatar } from "@/components/farm/animal-avatar";
 import { AnimalFormModal, HealthRecordModal, ProductionModal } from "@/components/farm/farm-forms";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
+import { MainPhotoButton } from "@/components/photos/profile-photo";
 import { PhotoAlbum } from "@/components/photos/photo-album";
 import { albumPhotos } from "@/lib/photos";
 import { getViewer } from "@/lib/dal";
@@ -58,7 +59,10 @@ export default async function AnimalPage({ params }: PageProps<"/farm/animals/[i
         <ArrowLeft className="size-4" /> Animals
       </Link>
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-        <AnimalAvatar species={a.species} photoUrl={photo} size="xl" />
+        <div className="flex flex-col items-start gap-2">
+          <AnimalAvatar species={a.species} photoUrl={photo} size="xl" />
+          {canEdit && <MainPhotoButton kind="animal" entityId={id} currentUrl={fileUrl(a.imageFileId)} name={a.name} />}
+        </div>
         <div className="flex-1">
           <PageHeader
             eyebrow={a.species}

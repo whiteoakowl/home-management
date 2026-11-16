@@ -53,9 +53,9 @@ export function PetCard({ pet, today, extra }: { pet: Pet; today: string; extra?
         )}
         {pet.status !== "active" && <span className="absolute top-3 left-3"><Badge tone="neutral">{pet.status === "passed" ? "In loving memory" : "Rehomed"}</Badge></span>}
       </div>
-      <div className="flex flex-col gap-1 p-4">
-        <p className="font-display text-xl font-semibold group-hover:text-primary-700">{pet.name}</p>
-        <p className="text-sm text-muted">{[SPECIES.find((s) => s.value === pet.species)?.label, pet.breed, age].filter(Boolean).join(" · ")}</p>
+      <div className="flex min-w-0 flex-col gap-1 p-3 sm:p-4">
+        <p className="truncate font-display text-lg font-semibold group-hover:text-primary-700 sm:text-xl">{pet.name}</p>
+        <p className="text-xs text-muted sm:text-sm">{[SPECIES.find((s) => s.value === pet.species)?.label, pet.breed, age].filter(Boolean).join(" · ")}</p>
         {extra}
       </div>
     </Link>
