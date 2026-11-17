@@ -12,13 +12,15 @@ export type WidgetDef = {
   personal?: boolean;
   /** Where a widget added in a later release goes in a layout someone already saved. */
   after?: string;
+  /** Only parents see it (family members never do). */
+  parentOnly?: boolean;
 };
 
 export const WIDGETS: WidgetDef[] = [
   { id: "today", title: "Today at a glance", module: null, defaultSize: "lg", defaultVisible: true, personal: true },
   { id: "chores", title: "Today's chores", module: "chores", defaultSize: "md", defaultVisible: true, personal: true },
   { id: "cleaning", title: "Today's cleaning", module: "cleaning", defaultSize: "md", defaultVisible: true, personal: true, after: "chores" },
-  { id: "events", title: "Events", module: "calendar", defaultSize: "sm", defaultVisible: true, personal: true },
+  { id: "events", title: "Today's events", module: "calendar", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "weather", title: "Weather", module: null, defaultSize: "sm", defaultVisible: true },
   { id: "announcements", title: "Announcements", module: null, defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "tasks", title: "Today's tasks", module: "chores", defaultSize: "sm", defaultVisible: true, personal: true },
@@ -39,7 +41,7 @@ export const WIDGETS: WidgetDef[] = [
   { id: "home", title: "Home upkeep", module: "maintenance", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "moon", title: "Moon & Wheel", module: "witchcraft", defaultSize: "sm", defaultVisible: true },
   { id: "reading", title: "Reading", module: "library", defaultSize: "sm", defaultVisible: true, personal: true },
-  { id: "activity", title: "Family activity", module: null, defaultSize: "md", defaultVisible: true },
+  { id: "activity", title: "Family activity", module: null, defaultSize: "md", defaultVisible: true, parentOnly: true },
 ];
 
 export const WIDGET_IDS = WIDGETS.map((w) => w.id);

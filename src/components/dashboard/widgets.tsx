@@ -190,14 +190,14 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
 // ─── Events ──────────────────────────────────────────────────────────────────
 
 export async function EventsWidget({ scope }: { scope: Scope }) {
-  const { today, upcoming } = await data.getEvents(scope);
+  // Today only; the calendar has the rest.
+  const { today: all } = await data.getEvents(scope);
   const tz = scope.viewer.family.timezone;
-  const all = [...today, ...upcoming].slice(0, 6);
   return (
     <Card>
-      <CardHeader title="Events" icon={<CalendarDays className={ic} />} href="/calendar" hrefLabel="Calendar" />
+      <CardHeader title="Today's events" icon={<CalendarDays className={ic} />} href="/calendar" hrefLabel="Calendar" />
       {all.length === 0 ? (
-        <EmptyState compact icon={<CalendarDays />} title="Nothing scheduled" description="No events in the next 7 days." />
+        <EmptyState compact icon={<CalendarDays />} title="Nothing scheduled today" description="Upcoming events are on the calendar." />
       ) : (
         <ul className="flex flex-col">
           {all.map((e) => (
@@ -207,8 +207,7 @@ export async function EventsWidget({ scope }: { scope: Scope }) {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-[15px] font-medium">{e.title}</span>
                   <span className="truncate text-sm text-muted">
-                    {e.localDate === scope.today ? "Today" : formatShortDate(e.localDate)}
-                    {!e.allDay && ` · ${formatTime(e.startsAt, tz)}`}
+                    {e.allDay ? "All day" : formatTime(e.startsAt, tz)}
                     {e.location && ` · ${e.location}`}
                   </span>
                 </span>
@@ -555,6 +554,8 @@ export async function JournalWidget({ scope }: { scope: Scope }) {
 }
 
 export async function ActivityWidget({ scope }: { scope: Scope }) {
+  // Family activity is for parents only.
+  if (!scope.viewer.isParent) return null;
   const rows = await data.getActivity(scope);
   return (
     <Card>

@@ -16,7 +16,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
   // Only widgets this member may see (module enabled + permitted).
   const allowed = (id: string) => {
     const def = widgetDef(id);
-    return !!def && (def.module === null || viewer.can(def.module));
+    return !!def && (!def.parentOnly || viewer.isParent) && (def.module === null || viewer.can(def.module));
   };
   const layout = resolveLayout(saved?.widgets).filter((w) => allowed(w.id));
   const titles = Object.fromEntries(WIDGETS.map((w) => [w.id, w.title]));
