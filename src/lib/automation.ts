@@ -114,10 +114,11 @@ export async function materializeChore(choreId: string, today: string) {
 }
 
 /** Remove future, untouched occurrences (after a schedule edit) then re-expand. */
-export async function rematerializeChore(choreId: string, today: string) {
+export async function rematerializeChore(choreId: string, today: string, opts: { includeOverdue?: boolean } = {}) {
+  // A new schedule or due date replaces the old open days; overdue ones too, so a moved date doesn't linger as "Yesterday".
   await db
     .delete(choreOccurrences)
-    .where(and(eq(choreOccurrences.choreId, choreId), gte(choreOccurrences.dueDate, today), eq(choreOccurrences.status, "pending")));
+    .where(and(eq(choreOccurrences.choreId, choreId), opts.includeOverdue ? undefined : gte(choreOccurrences.dueDate, today), eq(choreOccurrences.status, "pending")));
   await materializeChore(choreId, today);
 }
 

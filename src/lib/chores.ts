@@ -98,6 +98,8 @@ export async function listOccurrences(
         opts.assigneeId
           ? or(
               eq(choreOccurrences.assigneeId, opts.assigneeId),
+              // Open to anyone (nobody assigned): it's on everyone's list.
+              isNull(choreOccurrences.assigneeId),
               inArray(
                 choreOccurrences.id,
                 db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, opts.assigneeId)),

@@ -28,7 +28,7 @@ import * as data from "@/lib/dashboard-data";
 import type { Scope } from "@/lib/dashboard-data";
 import { daysBetween, formatLongDate, formatShortDate, formatTime, greeting, relativeTime } from "@/lib/dates";
 import { memberColor } from "@/lib/colors";
-import { formatCents, plural } from "@/lib/utils";
+import { cn, formatCents, plural } from "@/lib/utils";
 import { getWeather } from "@/lib/weather";
 import { AnnouncementComposer } from "./announcement-composer";
 import { setOccurrenceDone } from "@/app/actions/chores";
@@ -132,7 +132,8 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
   const s = await data.getChoreSummary(scope, kind);
   const isTask = kind === "task";
   const k = KIND_WIDGET[kind];
-  const items = [...s.overdue, ...s.today.filter((r) => r.status === "pending")].slice(0, 6);
+  // Overdue and today's open ones first, then today's finished ones (ticked, with who did them).
+  const items = [...[...s.overdue, ...s.today.filter((r) => r.status === "pending")].slice(0, 8), ...s.today.filter((r) => r.status === "done").slice(0, 6)];
   return (
     <Card>
       <CardHeader
@@ -163,11 +164,18 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
             return (
               <li key={c.id}>
                 <Row>
-                  <CheckCircle action={setOccurrenceDone} id={c.id} done={false} label={`Mark "${c.title}" done`} size="sm" disabled={!scope.viewer.can(k.module, "use")} />
-                  <Link href={k.href} className="min-w-0 flex-1 text-[15px] leading-snug break-words hover:underline">
-                    {c.title}
-                  </Link>
-                  {due && due.tone !== "olive" && <Badge tone={due.tone}>{due.text}</Badge>}
+                  <CheckCircle action={setOccurrenceDone} id={c.id} done={c.status === "done"} label={`Mark "${c.title}" ${c.status === "done" ? "not done" : "done"}`} size="sm" disabled={!scope.viewer.can(k.module, "use")} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <Link href={k.href} className={cn("text-[15px] leading-snug break-words hover:underline", c.status === "done" && "text-muted line-through")}>
+                      {c.title}
+                    </Link>
+                    {(c.roomName || c.status === "done" || !c.assigneeName) && (
+                      <span className="text-xs text-muted">
+                        {[c.roomName, c.status === "done" ? `Done${c.completedByName ? ` by ${c.completedByName.split(" ")[0]}` : ""}` : !c.assigneeName ? "Anyone" : null].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  {c.status !== "done" && due && due.tone !== "olive" && <Badge tone={due.tone}>{due.text}</Badge>}
                   {c.assigneeName && !scope.subjectId && <Avatar name={c.assigneeName} color={c.assigneeColor} size="xs" />}
                 </Row>
               </li>

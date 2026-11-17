@@ -23,6 +23,7 @@ import {
   plants,
   productionLogs,
   recipes,
+  rooms,
   transactions,
   workoutLogs,
 } from "@/db/schema";
@@ -45,6 +46,7 @@ const fid = (s: Scope) => s.viewer.family.id;
 /** Today's (and overdue) work of one kind; "all" = everything but tasks (for the at-a-glance count). */
 export async function getChoreSummary(s: Scope, kind: "all" | "chore" | "cleaning" | "task" | "farm" = "all") {
   const assignee = alias(familyMembers, "assignee");
+  const completer = alias(familyMembers, "completer");
   const kindFilter = kind === "all" ? ne(chores.kind, "task") : eq(chores.kind, kind);
   const rows = await db
     .select({
@@ -56,17 +58,21 @@ export async function getChoreSummary(s: Scope, kind: "all" | "chore" | "cleanin
       estimatedMinutes: chores.estimatedMinutes,
       assigneeName: assignee.displayName,
       assigneeColor: assignee.color,
+      roomName: rooms.name,
+      completedByName: completer.displayName,
     })
     .from(choreOccurrences)
     .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
     .leftJoin(assignee, eq(assignee.id, choreOccurrences.assigneeId))
+    .leftJoin(completer, eq(completer.id, choreOccurrences.completedByMemberId))
+    .leftJoin(rooms, eq(rooms.id, chores.roomId))
     .where(
       and(
         eq(choreOccurrences.familyId, fid(s)),
         kindFilter,
         lte(choreOccurrences.dueDate, addDays(s.today, kind === "task" ? 7 : 0)),
         or(eq(choreOccurrences.status, "pending"), eq(choreOccurrences.dueDate, s.today)),
-        s.subjectId ? eq(choreOccurrences.assigneeId, s.subjectId) : undefined,
+        s.subjectId ? or(eq(choreOccurrences.assigneeId, s.subjectId), isNull(choreOccurrences.assigneeId)) : undefined,
       ),
     )
     .orderBy(asc(choreOccurrences.dueDate), desc(chores.priority))

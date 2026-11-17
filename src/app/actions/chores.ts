@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { choreChecklistItems, choreOccurrenceItems, choreOccurrences, chores, pets } from "@/db/schema";
+import { choreChecklistItems, choreOccurrenceItems, choreOccurrences, chores, pets, recurrenceRules } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { materializeChore, rematerializeChore } from "@/lib/automation";
 import { rebalanceRotations } from "@/lib/rotation-db";
@@ -21,10 +21,8 @@ const CADENCES = ["daily", "weekly", "monthly", "seasonal", "biannual", "annual"
 type Cadence = (typeof CADENCES)[number];
 
 function revalidateHouse() {
-  revalidatePath("/farm", "layout");
-  revalidatePath("/house", "layout");
-  revalidatePath("/");
-  revalidatePath("/calendar");
+  // Everywhere a chore shows: boards, the homepage, every member's own page, the calendar.
+  revalidatePath("/", "layout");
 }
 
 /** The chore's current points, captured at completion so later edits don't rewrite history. */
@@ -104,6 +102,7 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
     }
 
     let choreId = id;
+    let scheduleChanged = false;
     await db.transaction(async (tx) => {
       if (id) {
         const [existing] = await tx.select().from(chores).where(and(eq(chores.id, id), eq(chores.familyId, viewer.family.id)));
@@ -111,6 +110,9 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
         requireChoreChange(viewer, existing.kind, existing.createdByMemberId);
         // Changing the type (e.g. chore → cleaning) needs rights over both areas.
         if (existing.kind !== kind) requireChoreChange(viewer, existing.kind, existing.createdByMemberId);
+        const [oldRule] = existing.recurrenceRuleId ? await tx.select().from(recurrenceRules).where(eq(recurrenceRules.id, existing.recurrenceRuleId)) : [];
+        const sig = (r: Partial<Rule> | null | undefined) => (r ? JSON.stringify([r.freq, r.interval, r.byWeekday ?? null, r.byMonthDay ?? null, r.startsOn, r.until ?? null, r.count ?? null]) : "");
+        scheduleChanged = existing.dueDate !== values.dueDate || sig(oldRule as Partial<Rule> | undefined) !== sig(rule);
         const ruleId = await upsertRule(tx, viewer.family.id, rule, existing.recurrenceRuleId);
         await tx.update(chores).set({ ...values, recurrenceRuleId: ruleId }).where(eq(chores.id, id));
         await tx.delete(choreChecklistItems).where(eq(choreChecklistItems.choreId, id));
@@ -127,7 +129,7 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       }
     });
 
-    if (id) await rematerializeChore(choreId!, today);
+    if (id) await rematerializeChore(choreId!, today, { includeOverdue: scheduleChanged });
     else await materializeChore(choreId!, today);
     await rebalanceRotations(viewer.family.id, today);
     if (!id) {
@@ -214,8 +216,9 @@ async function occurrenceForViewer(viewer: Viewer, id: string) {
   const canEdit = viewer.can(kindModule(row.kind), "edit");
   // Ticking things off (and earning points) needs "Use" access or better.
   if (!viewer.can(kindModule(row.kind), "use")) throw new AuthorizationError("You can view this but not check it off.");
-  // Cleaning is shared work: anyone with Use access may finish any cleaning task.
-  const shared = !mine && !assignedItem && !canEdit && row.kind === "cleaning";
+  // Cleaning is shared work, and anything assigned to nobody is open to anyone:
+  // either may be finished by anyone with Use access.
+  const shared = !mine && !assignedItem && !canEdit && (row.kind === "cleaning" || !row.occ.assigneeId);
   if (!mine && !assignedItem && !canEdit && !shared) throw new AuthorizationError("That isn't assigned to you.");
   return { ...row, mine, canEdit, shared };
 }
