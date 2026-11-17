@@ -55,7 +55,7 @@ function Bar({ item, members, showTime = true }: { item: CalendarItem; members?:
       href={item.href}
       title={tip(item, members)}
       className={cn(
-        "flex min-w-0 items-center gap-1 rounded-[2px] border-l-2 pr-0 pl-[2px] text-[8px] leading-[11px] font-medium tracking-[-0.02em] hover:brightness-95 sm:rounded-[5px] sm:border-l-[3px] sm:px-1.5 sm:py-0.5 sm:text-xs sm:leading-4 sm:tracking-normal",
+        "flex min-w-0 items-center gap-1 rounded-[2px] border-l-[1.5px] pr-0 pl-px text-[7.5px] leading-[9px] font-medium tracking-[-0.03em] hover:brightness-95 sm:rounded-[5px] sm:border-l-[3px] sm:px-1.5 sm:py-0.5 sm:text-xs sm:leading-4 sm:tracking-normal",
         item.done && "line-through opacity-60",
       )}
       style={{ background: c.soft, color: c.ink, borderColor: c.solid }}
@@ -92,22 +92,22 @@ export function MonthView({ month, items, today, weekStartsOn, dayHref, members 
               <Link
                 href={dayHref(d)}
                 className={cn(
-                  "mb-0.5 ml-0.5 inline-flex size-5 items-center justify-center rounded-full text-xs sm:mb-1 sm:ml-0 sm:size-7 sm:text-sm",
+                  "mb-px ml-0.5 inline-flex size-[18px] items-center justify-center rounded-full text-[11px] sm:mb-1 sm:ml-0 sm:size-7 sm:text-sm",
                   d === today ? "bg-primary-600 font-semibold text-white" : inMonth ? "text-ink hover:bg-sunken" : "text-muted",
                 )}
               >
                 {Number(d.slice(8))}
               </Link>
               <div className="flex flex-col gap-px sm:gap-0.5">
-                {/* Phone: up to 6 slim bars; larger screens: 3. */}
-                {list.slice(0, 6).map((i, k) => (
-                  <div key={i.key} className={cn(k >= 3 && "sm:hidden", list.length > 6 && k === 5 && "hidden")}>
+                {/* Phone: up to 7 slim bars; larger screens: 3. */}
+                {list.slice(0, 7).map((i, k) => (
+                  <div key={i.key} className={cn(k >= 3 && "sm:hidden", list.length > 7 && k === 6 && "hidden")}>
                     <Bar item={i} members={members} />
                   </div>
                 ))}
-                {list.length > 6 && (
-                  <Link href={dayHref(d)} className="px-0.5 text-[8px] leading-3 font-medium text-muted hover:text-ink sm:hidden">
-                    +{list.length - 5} more
+                {list.length > 7 && (
+                  <Link href={dayHref(d)} className="px-0.5 text-[8px] leading-[10px] font-medium text-muted hover:text-ink sm:hidden">
+                    +{list.length - 6} more
                   </Link>
                 )}
                 {list.length > 3 && (
