@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BookOpen, FileText, Heart, Library, Search } from "lucide-react";
-import { RecipeCard } from "@/components/recipes/recipe-card";
+import { RecipeGrid } from "@/components/recipes/recipe-grid";
 import { RecipeFormModal } from "@/components/recipes/recipe-form";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { ImportRecipeModal } from "@/components/recipes/import-modal";
 import { getViewer } from "@/lib/dal";
 import { redirect } from "next/navigation";
 import { FoodSpaceNav, PrivateSpaceNote } from "@/components/food/food-space-nav";
-import { canAddIn, canOpenFood, privateSpaceMembers, resolveSpace, withSpace } from "@/lib/food-space";
+import { canAddIn, canChange, canOpenFood, privateSpaceMembers, resolveSpace, withSpace } from "@/lib/food-space";
 import { collectionOptions, ensureRecipeDefaults, listRecipes } from "@/lib/recipes";
 
 export const metadata: Metadata = { title: "Family Recipes" };
@@ -89,13 +89,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
           />
         </Card>
       ) : (
-        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {items.map((r) => (
-            <li key={r.id}>
-              <RecipeCard r={r} />
-            </li>
-          ))}
-        </ul>
+        <RecipeGrid items={items} deletable={items.filter((r) => canChange(viewer, "recipes", r)).map((r) => r.id)} />
       )}
     </>
   );

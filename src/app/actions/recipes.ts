@@ -119,6 +119,30 @@ export async function deleteRecipe(fd: FormData) {
   redirect(r.ownerMemberId ? "/recipes?space=mine" : "/recipes");
 }
 
+/** Delete several recipes at once (Select → Delete selected). Each is checked like a single delete. */
+export async function deleteRecipes(ids: string[]): Promise<{ deleted: number; skipped: number }> {
+  const viewer = await getViewer();
+  let deleted = 0;
+  let skipped = 0;
+  let family = 0;
+  for (const id of [...new Set(ids)].slice(0, 500)) {
+    try {
+      const r = await ownRecipe(viewer, id);
+      assertChange(viewer, "recipes", r);
+      await db.delete(recipes).where(eq(recipes.id, r.id));
+      await deleteFamilyFile(viewer.family.id, r.imageFileId);
+      deleted++;
+      if (!r.ownerMemberId) family++;
+    } catch {
+      skipped++; // not found, or not theirs to delete
+    }
+  }
+  if (deleted) revalidateRecipes();
+  // Only family recipes go in the family activity feed (private ones stay private).
+  if (family) await logActivity(db, viewer.family.id, viewer.member.id, "recipe.deleted", `deleted ${family} recipe${family === 1 ? "" : "s"}`, { module: "recipes" });
+  return { deleted, skipped };
+}
+
 export async function toggleFavorite(fd: FormData) {
   const viewer = await getViewer();
   const r = await ownRecipe(viewer, String(fd.get("id")));

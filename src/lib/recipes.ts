@@ -10,7 +10,7 @@ import type { RecipeCardData } from "@/components/recipes/recipe-card";
 export async function listRecipes(
   viewer: Viewer,
   opts: { q?: string; categoryId?: string; favorites?: boolean; collectionId?: string; ids?: string[]; owner?: string | null } = {},
-): Promise<(RecipeCardData & { description: string | null })[]> {
+): Promise<(RecipeCardData & { description: string | null; ownerMemberId: string | null; createdByMemberId: string | null })[]> {
   const rows = await db
     .select({
       r: recipes,
@@ -49,6 +49,8 @@ export async function listRecipes(
     isFavorite: r.isFavorite,
     rating,
     categoryName,
+    ownerMemberId: r.ownerMemberId,
+    createdByMemberId: r.createdByMemberId,
   }));
 }
 
