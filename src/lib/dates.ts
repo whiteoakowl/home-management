@@ -104,7 +104,7 @@ export function weekday(isoDate: string) {
   return new Date(`${isoDate}T12:00:00Z`).getUTCDay();
 }
 
-export function startOfWeek(isoDate: string, weekStartsOn: 0 | 1 = 0) {
+export function startOfWeek(isoDate: string, weekStartsOn: number = 0) {
   const wd = weekday(isoDate);
   return addDays(isoDate, -((wd - weekStartsOn + 7) % 7));
 }

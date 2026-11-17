@@ -16,6 +16,8 @@ import { getViewer } from "@/lib/dal";
 import { FoodSpaceNav, PrivateSpaceNote } from "@/components/food/food-space-nav";
 import { canAddIn, canChange, canOpenFood, inSpace, privateSpaceMembers, resolveSpace, withSpace } from "@/lib/food-space";
 import { addDays, startOfWeek, todayIn } from "@/lib/dates";
+import { mealWeekStartsOn } from "@/lib/meal-week";
+import { PrintPdfButtons, WeekStartPicker } from "@/components/meals/week-controls";
 import { fileUrl } from "@/lib/files";
 import { dietChecker } from "@/lib/medical";
 import { checkIngredients } from "@/lib/ingredients";
@@ -33,7 +35,8 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
   const own = space.kind === "private" && space.own;
   const today = todayIn(viewer.family.timezone);
   const anchor = typeof sp.week === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.week) ? sp.week : today;
-  const start = startOfWeek(anchor, 1); // Monday → Sunday
+  const weekStart = mealWeekStartsOn(viewer, space);
+  const start = startOfWeek(anchor, weekStart);
   const end = addDays(start, 6);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
 
@@ -71,12 +74,14 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
   const weekNeeds = showPantry && recipeIds.length
     ? await missingFor(viewer.family.id, rows.filter((r) => r.e.recipeId).map((r) => ({ recipeId: r.e.recipeId!, scale: r.base && r.e.servings ? r.e.servings / r.base : 1 })), owner)
     : [];
-  const fmt = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   const canEdit = canAddIn(viewer, "meals", space);
   const canCopy = owner ? own : viewer.can("meals", "edit");
   const canShop = owner ? own : viewer.can("shopping", "add");
   const spaceField = own ? { space: "mine" } : {};
   const others = await privateSpaceMembers(viewer);
+  const canSetStart = owner ? own : viewer.isParent || viewer.can("meals", "edit");
+  const fmtLong = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+  const pill = "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface text-sm font-medium hover:bg-sunken";
 
   return (
     <>
@@ -84,35 +89,41 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
         eyebrow={owner ? "My private food" : "Family Pantry"}
         title={owner ? (own ? "My Meal Plans" : `${space.kind === "private" ? space.memberName : ""}'s Meal Plans`) : "Family Meal Plans"}
         description={owner ? "Your own meal plan, private to you." : "Plan the week. We'll check your pantry and build the shopping list."}
+        actions={
+          <div className="flex items-center gap-2">
+            <PrintPdfButtons href={withSpace(`/meals/print?week=${start}`, space)} />
+            {canSetStart && <WeekStartPicker key={`${weekStart}`} value={weekStart} privateSpace={own} />}
+          </div>
+        }
       />
       <FoodSpaceNav viewer={viewer} active="meals" space={space} others={others} />
       <PrivateSpaceNote space={space} viewer={viewer} />
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
-          <Link href={withSpace(`/meals?week=${addDays(start, -7)}`, space)} aria-label="Previous week" className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface hover:bg-sunken">
-            <ChevronLeft className="size-5" />
+      <div className="mb-5 flex flex-col gap-3">
+        <h2 className="text-xl font-semibold">
+          {fmtLong(start)} – {fmtLong(end)}
+        </h2>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Link href={withSpace(`/meals?week=${addDays(start, -7)}`, space)} aria-label="Previous week" className={`${pill} size-9`}>
+            <ChevronLeft className="size-4" />
           </Link>
-          <Link href={withSpace(`/meals?week=${addDays(start, 7)}`, space)} aria-label="Next week" className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface hover:bg-sunken">
-            <ChevronRight className="size-5" />
+          <Link href={withSpace(`/meals?week=${addDays(start, 7)}`, space)} aria-label="Next week" className={`${pill} size-9`}>
+            <ChevronRight className="size-4" />
           </Link>
-          <Link href={withSpace("/meals", space)} className="inline-flex h-10 items-center rounded-full border border-line bg-surface px-4 text-sm font-medium hover:bg-sunken">
+          <Link href={withSpace("/meals", space)} className={`${pill} px-3`}>
             This week
           </Link>
           {canCopy && (
-            <ActionButton action={copyMealWeek} fields={{ to: start, weeksBack: 1, ...spaceField }} confirm="Copy last week's meals into this week? Slots that already have a meal are kept." className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-4 text-sm font-medium hover:bg-sunken">
-              <Copy className="size-4" /> Copy last week
+            <ActionButton action={copyMealWeek} fields={{ to: start, weeksBack: 1, ...spaceField }} confirm="Copy last week's meals into this week? Slots that already have a meal are kept." className={`${pill} px-3`}>
+              <Copy className="size-4 shrink-0" /> Copy last week
             </ActionButton>
           )}
-          <h2 className="ml-2 text-xl font-semibold">
-            {fmt(start)} – {fmt(end)}
-          </h2>
         </div>
         {showPantry && recipeIds.length > 0 && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-muted">{weekNeeds.length ? `${weekNeeds.length} ingredient${weekNeeds.length === 1 ? "" : "s"} to buy this week` : "Everything's in stock ✓"}</span>
             {weekNeeds.length > 0 && canShop && (
-              <ActionButton action={shopForWeek} fields={{ week: start, ...spaceField }} className="h-10 rounded-[var(--radius-control)] bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700">
-                <ShoppingBasket className="size-4" /> Add to {owner ? "My Shopping List" : "shopping list"}
+              <ActionButton action={shopForWeek} fields={{ week: start, ...spaceField }} className="h-10 rounded-[var(--radius-control)] bg-primary-600 px-4 text-sm font-semibold whitespace-nowrap text-white hover:bg-primary-700">
+                <ShoppingBasket className="size-4 shrink-0" /> Add to {owner ? "My Shopping List" : "shopping list"}
               </ActionButton>
             )}
           </div>

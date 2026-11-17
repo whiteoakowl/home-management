@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, isNotNull, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
-import { mealPlanEntries, mealSlot, recipes } from "@/db/schema";
+import { families, mealPlanEntries, mealSlot, recipes } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
 import { addDays } from "@/lib/dates";
@@ -11,6 +11,7 @@ import { logActivity } from "@/lib/family";
 import { assertChange, ownerForNew } from "@/lib/food-space";
 import { addNeedsToShopping, missingFor } from "@/lib/kitchen";
 import { f } from "@/lib/records";
+import { readRecipeUrl, saveImportedRecipe } from "@/lib/recipe-url";
 
 const SLOTS = mealSlot.enumValues;
 type Slot = (typeof SLOTS)[number];
@@ -51,6 +52,19 @@ export async function setMeal(_: ActionState, fd: FormData): Promise<ActionState
         .where(and(eq(recipes.id, recipeId), eq(recipes.familyId, viewer.family.id), owner ? or(isNull(recipes.ownerMemberId), eq(recipes.ownerMemberId, owner)) : isNull(recipes.ownerMemberId)));
       if (!recipe) return fail("Recipe not found.", "recipeId");
     }
+    const recipeUrl = f.str(fd, "recipeUrl");
+    let imported = false;
+    if (!recipe && recipeUrl) {
+      // A link to a new recipe: read the website, save it to the recipes (same space), then plan it.
+      if (!owner && !viewer.can("recipes", "add")) return fail("You can't add family recipes yet. Ask a parent for Add access to Recipes, or leave the link blank.", "recipeUrl");
+      const read = await readRecipeUrl(recipeUrl);
+      if ("error" in read) return fail(`${read.error} Check the link, or leave it blank and just type the meal.`, "recipeUrl");
+      if (title) read.recipe.name = title;
+      const saved = await saveImportedRecipe(viewer, read.recipe, owner);
+      if (!owner) await logActivity(db, viewer.family.id, viewer.member.id, "recipe.added", `imported the recipe "${saved.name}"`, { module: "recipes", entityId: saved.id });
+      recipe = { id: saved.id, name: saved.name, servings: saved.servings };
+      imported = true;
+    }
     if (!recipe && !title) return fail("Choose a recipe or type a meal.", "title");
     const servings = f.int(fd, "servings") ?? recipe?.servings ?? null;
     await db.insert(mealPlanEntries).values({
@@ -73,7 +87,9 @@ export async function setMeal(_: ActionState, fd: FormData): Promise<ActionState
     const day = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
     if (!owner) await logActivity(db, viewer.family.id, viewer.member.id, "meal.planned", `added ${recipe?.name ?? title} to ${day} ${slot}`, { module: "meals" });
     revalidateMeals();
-    return ok(added ? `${added} missing ingredient${added === 1 ? "" : "s"} added to ${owner ? "My Shopping List" : "the shopping list"}.` : undefined);
+    if (imported) revalidatePath("/recipes", "layout");
+    const parts = [imported ? `Saved "${recipe!.name}" to ${owner ? "My Recipes" : "Recipes"} with its ingredients.` : "", added ? `${added} missing ingredient${added === 1 ? "" : "s"} added to ${owner ? "My Shopping List" : "the shopping list"}.` : ""].filter(Boolean);
+    return ok(parts.length ? parts.join(" ") : undefined);
   });
 }
 
@@ -127,4 +143,22 @@ export async function copyMealWeek(fd: FormData) {
   if (rows.length) await db.insert(mealPlanEntries).values(rows);
   revalidatePath("/meals");
   revalidatePath("/calendar", "layout");
+}
+
+/** Which day the meal planner's week starts on (family plan, or the viewer's own private plan). */
+export async function setMealWeekStart(fd: FormData) {
+  const viewer = await getViewer();
+  const day = Number(fd.get("day"));
+  if (!Number.isInteger(day) || day < 0 || day > 6) return;
+  const own = fd.get("space") === "mine";
+  if (own) ownerForNew(viewer, "meals", fd);
+  else if (!viewer.isParent && !viewer.can("meals", "edit")) throw new AuthorizationError("You don't have access to that.");
+  await db.transaction(async (tx) => {
+    const [fam] = await tx.select({ settings: families.settings }).from(families).where(eq(families.id, viewer.family.id)).for("update");
+    const settings = { ...(fam?.settings ?? {}) };
+    if (own) settings.privateMealWeekStartsOn = { ...settings.privateMealWeekStartsOn, [viewer.member.id]: day };
+    else settings.mealWeekStartsOn = day;
+    await tx.update(families).set({ settings }).where(eq(families.id, viewer.family.id));
+  });
+  revalidatePath("/meals", "layout");
 }

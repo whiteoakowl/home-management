@@ -51,7 +51,11 @@ function AddMeal({ date, slot, recipes, canShop, privateSpace }: { date: string;
           {canShop && <CheckboxField name="addMissing" label="Check the pantry and add missing ingredients to the shopping list" defaultChecked />}
         </>
       ) : (
-        <TextField name="title" label="Meal" required placeholder="Leftovers, pizza night, eat out…" />
+        <>
+          <TextField name="title" label="Meal" placeholder="Leftovers, pizza night, eat out…" hint="Leave blank to use the recipe's name from the link." />
+          <TextField name="recipeUrl" type="url" inputMode="url" label="Recipe link (optional)" placeholder="https://…" hint="Paste a recipe website. We'll save it to recipes with its ingredient list." />
+          {canShop && <CheckboxField name="addMissing" label="Check the pantry and add missing ingredients to the shopping list" defaultChecked />}
+        </>
       )}
     </FormModal>
   );

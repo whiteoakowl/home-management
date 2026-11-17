@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 type VoidAction = (formData: FormData) => Promise<void>;
 
 /** Run a void action; a dropped request shows a short alert instead of an error page. */
-async function runVoid(action: VoidAction, fd: FormData) {
+export async function runVoid(action: VoidAction, fd: FormData) {
   try {
     await action(fd);
   } catch (e) {

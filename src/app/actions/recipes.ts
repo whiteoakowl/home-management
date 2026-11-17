@@ -1,7 +1,7 @@
 "use server";
 
-import { parseRecipeHtml, parseRecipeText, type ImportedRecipe } from "@/lib/recipe-import";
-import { safeFetch } from "@/lib/safe-fetch";
+import { parseRecipeText, type ImportedRecipe } from "@/lib/recipe-import";
+import { readRecipeUrl, saveImportedRecipe } from "@/lib/recipe-url";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
@@ -248,54 +248,16 @@ export async function importRecipe(_: ActionState, fd: FormData): Promise<Action
     const text = f.str(fd, "text");
     let parsed: ImportedRecipe | null = null;
     if (url) {
-      if (!/^https?:\/\//i.test(url)) return fail("Paste a full link starting with https://", "url");
-      try {
-        const page = await safeFetch(url);
-        parsed = parseRecipeHtml(page.body.toString("utf8"), page.url);
-      } catch (e) {
-        return fail(`Couldn't open that page (${(e as Error).message}). You can paste the recipe text instead.`, "url");
-      }
-      if (!parsed) return fail("No recipe found on that page. Try pasting the recipe text instead.", "url");
+      const read = await readRecipeUrl(url);
+      if ("error" in read) return fail(`${read.error} You can paste the recipe text instead.`, "url");
+      parsed = read.recipe;
     } else if (text) {
       parsed = parseRecipeText(text);
       if (!parsed) return fail("Couldn't find ingredients or steps. Put each on its own line.", "text");
     } else return fail("Paste a link or the recipe text.", "url");
 
-    let imageFileId: string | null = null;
-    if (parsed.imageUrl) {
-      try {
-        const img = await safeFetch(parsed.imageUrl, { maxBytes: 8_000_000, accept: "image/*" });
-        const type = img.contentType.split(";")[0]!.trim();
-        if (type.startsWith("image/")) imageFileId = await saveUpload(viewer, new File([new Uint8Array(img.body)], "recipe", { type }));
-      } catch {
-        // The recipe still imports without its photo.
-      }
-    }
-    const lines = parseIngredientBlock(parsed.ingredients);
-    let recipeId = "";
-    await db.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(recipes)
-        .values({
-          familyId: viewer.family.id,
-          name: parsed.name,
-          description: parsed.description,
-          instructions: parsed.instructions,
-          prepMinutes: parsed.prepMinutes,
-          cookMinutes: parsed.cookMinutes,
-          servings: parsed.servings,
-          tags: parsed.tags,
-          source: parsed.source,
-          imageFileId,
-          ownerMemberId: owner,
-          createdByMemberId: viewer.member.id,
-        })
-        .returning({ id: recipes.id });
-      recipeId = row!.id;
-      if (lines.length) {
-        await tx.insert(recipeIngredients).values(lines.map((p, position) => ({ recipeId, name: p.name, section: p.section, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })));
-      }
-    });
+    const saved = await saveImportedRecipe(viewer, parsed, owner);
+    const recipeId = saved.id;
     if (!owner) await logActivity(db, viewer.family.id, viewer.member.id, "recipe.added", `imported the recipe "${parsed.name}"`, { module: "recipes", entityId: recipeId });
     revalidateRecipes();
     redirect(`/recipes/${recipeId}?imported=1`);

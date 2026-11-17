@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, Users } from "lucide-react";
+import { Lock } from "lucide-react";
 import { setShareFood } from "@/app/actions/family";
 import { ActionButton } from "@/components/forms/inline";
 import type { Viewer } from "@/lib/dal";
@@ -31,9 +31,6 @@ export function FoodSpaceNav({ viewer, active, space, others = [] }: { viewer: V
     <nav aria-label="Family Pantry" className="mb-6 flex flex-col gap-2">
       {family.length > 0 && (
         <div className={cn("flex min-w-0 items-center gap-2 self-start rounded-2xl border px-2 py-1.5 max-w-full", space.kind === "family" ? "border-primary-200 bg-primary-50/60" : "border-line bg-surface")}>
-          <span className="flex shrink-0 items-center gap-1.5 pl-1.5 text-[11px] font-semibold tracking-[0.12em] text-primary-700 uppercase">
-            <Users className="size-3.5" aria-hidden /> Family
-          </span>
           <div className="flex min-w-0 gap-1 overflow-x-auto">{family.map((m) => link(m, "", FOOD_LABELS[m].family, space.kind === "family" && active === m))}</div>
         </div>
       )}

@@ -76,6 +76,10 @@ export type FamilySettings = {
   /** Automation switches (see src/lib/automation.ts AUTOMATIONS). Missing = on. */
   automations?: Record<string, boolean>;
   weekStartsOn?: 0 | 1;
+  /** First day of the family meal planner's week (0 = Sunday … 6 = Saturday). */
+  mealWeekStartsOn?: number;
+  /** Members' own meal-plan week starts, by member id. */
+  privateMealWeekStartsOn?: Record<string, number>;
   /** ISO date the daily automation last ran for this family. */
   lastAutomationOn?: string;
   /** Parents may open members' private food spaces. Off unless a parent turns it on. */
