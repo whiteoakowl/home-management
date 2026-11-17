@@ -17,3 +17,4 @@ export * from "./extras";
 export * from "./library";
 export * from "./health";
 export * from "./pool";
+export * from "./activities";

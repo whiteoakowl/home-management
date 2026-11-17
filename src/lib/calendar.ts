@@ -27,6 +27,10 @@ import {
   recipes,
   recurrenceRules,
   workouts,
+  danceClasses,
+  danceDaysOff,
+  danceEvents,
+  workShifts,
 } from "@/db/schema";
 import { automationOn } from "./automation";
 import { fitnessVisibleIds } from "./fitness";
@@ -34,10 +38,11 @@ import { personalSubjects } from "./privacy";
 import { visibleTo, type Viewer } from "./dal";
 import { addDays, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
+import { classDates, fmtTime, minutesOf } from "./dance";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 
-export const LAYERS = ["events", "chores", "workouts", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
+export const LAYERS = ["events", "chores", "workouts", "dance", "work", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -192,6 +197,45 @@ export async function getCalendarItems(
       for (const date of occurrencesBetween(r.rule as unknown as Rule, from, to)) {
         out.push({ key: `w:${r.w.id}:${date}`, id: r.w.id, layer: "workouts", title: `${r.name.split(" ")[0]}: ${r.w.name}`, date, startMin: null, endMin: null, color: r.color, href: "/fitness", recurring: true, people: [r.memberId] });
       }
+    }
+  }
+
+  // Dance: weekly classes (skipping days off) and performances.
+  if (want("dance") && viewer.can("dance")) {
+    const [classes, offs, evs] = await Promise.all([
+      db.select().from(danceClasses).where(and(eq(danceClasses.familyId, fid), subject ? eq(danceClasses.memberId, subject) : undefined)),
+      db.select().from(danceDaysOff).where(and(eq(danceDaysOff.familyId, fid), gte(danceDaysOff.endDate, from), lte(danceDaysOff.startDate, to))),
+      db.select().from(danceEvents).where(and(eq(danceEvents.familyId, fid), lte(danceEvents.date, to), or(gte(danceEvents.date, from), gte(danceEvents.endDate, from)))),
+    ]);
+    const colorOf = await memberColorMap(fid);
+    const offRules = offs.map((o) => ({ memberId: o.memberId, startDate: o.startDate, endDate: o.endDate, title: o.title }));
+    for (const c of classes) {
+      for (const date of classDates({ memberId: c.memberId, weekday: c.weekday, startsOn: c.startsOn, endsOn: c.endsOn }, from, to, offRules)) {
+        const start = minutesOf(c.startTime)!;
+        out.push({ key: `dc:${c.id}:${date}`, id: c.id, layer: "dance", title: `${c.title}`, date, startMin: start, endMin: minutesOf(c.endTime) ?? start + 60, color: colorOf.get(c.memberId) ?? "plum", location: c.location, href: `/dance?member=${c.memberId}&week=${date}`, recurring: true, people: [c.memberId], type: "dance" });
+      }
+    }
+    for (const e of evs) {
+      if (subject && !e.memberIds.includes(subject)) continue;
+      const last = e.endDate && e.endDate > e.date ? e.endDate : e.date;
+      for (let d = e.date; d <= last; d = addDays(d, 1)) {
+        if (d < from || d > to) continue;
+        const start = minutesOf(e.callTime ?? e.startTime);
+        out.push({ key: `de:${e.id}:${d}`, id: e.id, layer: "dance", title: `🏆 ${e.title}${e.callTime ? ` (call ${fmtTime(e.callTime)})` : ""}`, date: d, startMin: start, endMin: minutesOf(e.endTime) ?? (start !== null ? start + 120 : null), color: colorOf.get(e.memberIds[0] ?? "") ?? "plum", location: e.location, href: "/dance", people: e.memberIds, type: "dance", description: e.details });
+      }
+    }
+    if (!subject) for (const o of offs.filter((x) => x.memberId === null)) for (let d = o.startDate; d <= o.endDate; d = addDays(d, 1)) if (d >= from && d <= to) out.push({ key: `do:${o.id}:${d}`, id: o.id, layer: "dance", title: `No dance: ${o.title}`, date: d, startMin: null, endMin: null, color: "cornflower", href: "/dance", people: [], type: "dance" });
+  }
+
+  // Work shifts.
+  if (want("work") && viewer.can("work")) {
+    const shifts = await db.select().from(workShifts).where(and(eq(workShifts.familyId, fid), gte(workShifts.date, from), lte(workShifts.date, to), subject ? eq(workShifts.memberId, subject) : undefined));
+    const colorOf = await memberColorMap(fid);
+    const names = new Map((await db.select({ id: familyMembers.id, name: familyMembers.displayName }).from(familyMembers).where(eq(familyMembers.familyId, fid))).map((m) => [m.id, m.name.split(" ")[0]!]));
+    for (const s of shifts) {
+      const start = minutesOf(s.startTime)!;
+      const end = minutesOf(s.endTime)!;
+      out.push({ key: `ws:${s.id}`, id: s.id, layer: "work", title: `${names.get(s.memberId) ?? ""} works${s.job ? `: ${s.job}` : ""}`, date: s.date, startMin: start, endMin: end > start ? end : 24 * 60, color: colorOf.get(s.memberId) ?? "slate", href: `/work?week=${s.date}`, people: [s.memberId], type: "work", description: s.notes });
     }
   }
 
