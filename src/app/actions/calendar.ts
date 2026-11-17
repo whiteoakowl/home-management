@@ -123,5 +123,8 @@ export async function saveCalendarLayers(fd: FormData) {
   const layers = String(fd.get("layers") ?? "")
     .split(",")
     .filter((l) => (LAYERS as readonly string[]).includes(l));
-  await db.update(familyMembers).set({ calendarLayers: layers }).where(eq(familyMembers.id, viewer.member.id));
+  const hidden = String(fd.get("hide") ?? "")
+    .split(",")
+    .filter((x) => x === "none" || /^[0-9a-f-]{36}$/i.test(x));
+  await db.update(familyMembers).set({ calendarLayers: layers, calendarHiddenCategories: hidden }).where(eq(familyMembers.id, viewer.member.id));
 }

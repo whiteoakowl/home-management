@@ -136,6 +136,8 @@ export const familyMembers = pgTable(
     privateVehicles: boolean("private_vehicles").notNull().default(false),
     /** Calendar categories this member chose to show (null = the default set). Kept until they change it. */
     calendarLayers: text("calendar_layers").array(),
+    /** Event categories this member hid on the calendar ("none" = events without a category). */
+    calendarHiddenCategories: text("calendar_hidden_categories").array(),
     /**
      * Parent oversight for a minor: personal areas (privacy categories) parents may view
      * even if the member keeps them private. Set by parents; always shown to the member.

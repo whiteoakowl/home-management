@@ -11,11 +11,11 @@ import { memberColor, isMemberColor } from "@/lib/colors";
 import { Avatar, EmptyState, PageHeader } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
 import { RememberLayers } from "@/components/calendar/remember-layers";
+import { CalendarFilterMenu } from "@/components/calendar/filter-menu";
 import { ensureCalendarCategories, getCalendarItems, LAYERS, type Layer } from "@/lib/calendar";
 import { getViewer } from "@/lib/dal";
 import { addDays, addMonths, daysBetween, monthLabel, startOfMonth, startOfWeek, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions } from "@/lib/queries";
-import { CalendarCategoriesButton } from "@/components/calendar/category-panel";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Calendar" };
@@ -46,7 +46,9 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   // Categories shown: the link's choice, else what this member last picked (kept until they change it), else the default set.
   const saved = viewer.member.calendarLayers;
   const layers = (typeof sp.layers === "string" ? sp.layers.split(",") : (saved ?? ["events", "chores", "workouts", "dance", "work", "vehicles"])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
-  const layersChanged = typeof sp.layers === "string" && layers.join(",") !== (saved ?? []).join(",");
+  const savedHide = viewer.member.calendarHiddenCategories ?? [];
+  const hidden = typeof sp.hide === "string" ? sp.hide.split(",").filter((x) => x === "none" || /^[0-9a-f-]{36}$/i.test(x)) : savedHide;
+  const layersChanged = (typeof sp.layers === "string" && layers.join(",") !== (saved ?? []).join(",")) || (typeof sp.hide === "string" && hidden.join(",") !== savedHide.join(","));
   const ws = viewer.family.settings?.weekStartsOn ?? 0;
 
   // List view: a preset or custom range (max one year) plus filters.
@@ -82,12 +84,15 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
     getCalendarItems(viewer, range.from, range.to, { layers, memberId: member || null }),
   ]);
 
+  // Event categories the member unticked in the Categories menu.
+  const hiddenSet = new Set(hidden);
+  const visibleItems = hiddenSet.size ? allItems.filter((i) => i.layer !== "events" || !hiddenSet.has(i.categoryId ?? "none")) : allItems;
   const typeOf = (i: (typeof allItems)[number]) => (i.layer === "events" ? (i.type ?? "event") : i.layer);
   const needle = f.q.toLowerCase();
   const items =
     view !== "list"
-      ? allItems
-      : allItems.filter(
+      ? visibleItems
+      : visibleItems.filter(
           (i) =>
             (!f.category || i.categoryId === f.category) &&
             (!f.type || typeOf(i) === f.type) &&
@@ -100,7 +105,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   const filtered = Object.values(f).some(Boolean);
 
   const q = (p: Record<string, string>) => {
-    const params = new URLSearchParams({ view, date, ...(member ? { member } : {}), layers: layers.join(","), ...p });
+    const params = new URLSearchParams({ view, date, ...(member ? { member } : {}), layers: layers.join(","), hide: hidden.join(","), ...p });
     if (!params.get("member")) params.delete("member");
     return `/calendar?${params}`;
   };
@@ -116,20 +121,18 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
       : view === "day"
         ? new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })
         : `${new Date(`${range.from}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${new Date(`${range.to}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
-  const toggleLayer = (l: Layer) => (layers.includes(l) ? layers.filter((x) => x !== l) : [...layers, l]).join(",");
   const availableLayers = LAYERS.filter((l) => ({ events: true, chores: viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"), workouts: viewer.can("fitness"), dance: viewer.can("dance"), work: viewer.can("work"), vehicles: viewer.can("vehicles") || (!viewer.isParent && viewer.member.privateVehicles), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft"), cycle: true })[l]);
   const canEdit = viewer.can("calendar", "edit");
 
   return (
     <>
-      {layersChanged && <RememberLayers layers={layers.join(",")} />}
+      {layersChanged && <RememberLayers layers={layers.join(",")} hide={hidden.join(",")} />}
       <PageHeader
         title="Calendar"
         description="Everyone's schedule in one place, with privacy per event."
         actions={
-          canEdit || viewer.isParent ? (
+          canEdit ? (
             <>
-              {viewer.isParent && <CalendarCategoriesButton items={cats.map((c) => ({ id: c.id, name: c.name, color: c.color }))} />}
               {canEdit && <EventFormModal members={members} categories={cats} defaultDate={view === "month" ? today : date} defaultOpen={sp.new === "1"} me={viewer.member.id} />}
             </>
           ) : undefined
@@ -168,18 +171,15 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
             </Link>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5" aria-label="Show on calendar">
-          {availableLayers.map((l) => (
-            <Link
-              key={l}
-              href={q({ layers: toggleLayer(l) })}
-              aria-pressed={layers.includes(l)}
-              className={cn("h-8 rounded-full border px-3 text-xs leading-7 font-medium", layers.includes(l) ? "border-primary-300 bg-primary-50 text-primary-700" : "border-line text-muted hover:bg-sunken")}
-            >
-              {LAYER_LABEL[l]}
-            </Link>
-          ))}
-        </div>
+        <CalendarFilterMenu
+          baseHref={`/calendar?${new URLSearchParams({ view, date, ...(member ? { member } : {}) })}`}
+          layers={availableLayers.map((l) => ({ key: l, label: LAYER_LABEL[l] }))}
+          shown={layers.filter((l) => availableLayers.includes(l))}
+          categories={[...cats.map((c) => ({ key: c.id, label: c.name, color: c.color })), { key: "none", label: "No category", color: null }]}
+          hidden={hidden}
+          canManage={viewer.isParent}
+          manageItems={cats.map((c) => ({ id: c.id, name: c.name, color: c.color }))}
+        />
       </div>
 
       {view === "list" && (
@@ -187,6 +187,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
           <form action="/calendar" className="flex flex-col gap-3">
             <input type="hidden" name="view" value="list" />
             <input type="hidden" name="layers" value={layers.join(",")} />
+            <input type="hidden" name="hide" value={hidden.join(",")} />
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Date range">
               {PRESETS.map((p) => (
                 <button
@@ -252,7 +253,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
                   Apply
                 </Button>
                 {(filtered || member) && (
-                  <Link href={`/calendar?view=list&range=${preset}&layers=${layers.join(",")}`} className="inline-flex h-11 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-muted hover:bg-sunken">
+                  <Link href={`/calendar?view=list&range=${preset}&layers=${layers.join(",")}&hide=${hidden.join(",")}`} className="inline-flex h-11 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-muted hover:bg-sunken">
                     Clear
                   </Link>
                 )}
