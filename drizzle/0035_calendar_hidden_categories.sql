@@ -1,1 +1,1 @@
-ALTER TABLE "family_members" ADD COLUMN "calendar_hidden_categories" text[];
+ALTER TABLE "family_members" ADD COLUMN IF NOT EXISTS "calendar_hidden_categories" text[];
