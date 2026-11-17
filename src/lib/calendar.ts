@@ -252,7 +252,7 @@ export async function getCalendarItems(
         .select({ s: projectStages, title: homeProjects.title })
         .from(projectStages)
         .innerJoin(homeProjects, eq(homeProjects.id, projectStages.projectId))
-        .where(and(eq(homeProjects.familyId, fid), gte(projectStages.dueOn, from), lte(projectStages.dueOn, to))),
+        .where(and(eq(homeProjects.familyId, fid), isNull(homeProjects.privateOwnerId), gte(projectStages.dueOn, from), lte(projectStages.dueOn, to))),
       db.select().from(homeDocuments).where(and(eq(homeDocuments.familyId, fid), gte(homeDocuments.expiresOn, from), lte(homeDocuments.expiresOn, to))),
     ]);
     for (const r of reps) out.push({ key: `hr:${r.id}`, id: r.id, layer: "home", title: `Repair: ${r.title}`, date: r.scheduledOn!, startMin: null, endMin: null, color: "wine", href: `/maintenance/repairs/${r.id}`, people: [], done: r.status === "completed" });

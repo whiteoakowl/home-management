@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, isNull } from "drizzle-orm";
 import { ClipboardList, FileText, Hammer, Wrench } from "lucide-react";
 import { db } from "@/db";
 import { homeDocuments, homeProjects, homeRepairs, projectStages } from "@/db/schema";
@@ -26,8 +26,8 @@ export default async function MaintenanceCalendarPage() {
   const [occ, repairs, projects, stages, docs] = await Promise.all([
     listChoreTemplates(viewer, ["maintenance"], today),
     db.select().from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), gte(homeRepairs.scheduledOn, today), inArray(homeRepairs.status, ["open", "scheduled"]))),
-    db.select().from(homeProjects).where(eq(homeProjects.familyId, fid)),
-    db.select({ s: projectStages, title: homeProjects.title }).from(projectStages).innerJoin(homeProjects, eq(homeProjects.id, projectStages.projectId)).where(and(eq(homeProjects.familyId, fid), eq(projectStages.done, false), gte(projectStages.dueOn, today))),
+    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, fid), isNull(homeProjects.privateOwnerId))),
+    db.select({ s: projectStages, title: homeProjects.title }).from(projectStages).innerJoin(homeProjects, eq(homeProjects.id, projectStages.projectId)).where(and(eq(homeProjects.familyId, fid), isNull(homeProjects.privateOwnerId), eq(projectStages.done, false), gte(projectStages.dueOn, today))),
     db.select().from(homeDocuments).where(and(eq(homeDocuments.familyId, fid), gte(homeDocuments.expiresOn, today), lte(homeDocuments.expiresOn, end))),
   ]);
   const items: Item[] = [

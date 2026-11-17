@@ -6,21 +6,28 @@ import { and, asc, eq, max } from "drizzle-orm";
 import { db } from "@/db";
 import { choreOccurrences, chores, homeDocuments, homeItems, homePhotos, homeProjects, homeRepairs, listItems, lists, projectMaterials, projectStages, rooms, vendors } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { assertCanChange, AuthorizationError, isOthersPrivate, requireModule } from "@/lib/dal";
+import { assertCanChange, AuthorizationError, getViewer, isOthersPrivate, requireModule } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { recordExpense } from "@/lib/expenses";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { getProject, getRepair } from "@/lib/maintenance";
 import { DOC_FIELDS, ITEM_FIELDS, MATERIAL_FIELDS, PHOTO_KINDS, PROJECT_FIELDS, REPAIR_FIELDS, ROOM_FIELDS, VENDOR_FIELDS } from "@/lib/maintenance-config";
-import { ownedId, ownedRoomId } from "@/lib/queries";
+import { familyProjectId, ownedId, ownedRoomId } from "@/lib/queries";
 import { parseFields } from "@/lib/record-fields";
 import { f, familyMemberIdOrNull, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
 type V = Awaited<ReturnType<typeof requireModule>>;
 const edit = () => requireModule("maintenance", "edit");
-/** House (remodeling) projects have their own permission area. */
-const editProjects = () => requireModule("projects", "edit");
+/**
+ * House (remodeling) projects have their own permission area. A family member may also
+ * have "My Home Projects" (private_projects): their own projects that only they ever see.
+ */
+async function editProjects() {
+  const viewer = await getViewer();
+  if (!viewer.can("projects", "edit") && !(viewer.member.privateProjects && !viewer.isParent)) throw new AuthorizationError("You can't change house projects.");
+  return viewer;
+}
 function revalidateHome() {
   revalidatePath("/maintenance", "layout");
   revalidatePath("/house", "layout");
@@ -72,26 +79,29 @@ export async function saveHomeProject(_: ActionState, fd: FormData): Promise<Act
     const { values, errors } = parseFields(fd, PROJECT_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
-    const old = id ? await getProject(viewer, id) : null;
-    if (id && !old) throw new AuthorizationError("Not found.");
+    const old = id ? await ownProject(viewer, id) : null;
+    // New: in My Home Projects (space=mine) or the family's.
+    const privateOwnerId = old ? old.privateOwnerId : fd.get("space") === "mine" && viewer.member.privateProjects && !viewer.isParent ? viewer.member.id : null;
+    if (!old && !privateOwnerId && !viewer.can("projects", "edit")) throw new AuthorizationError("You can't add family projects.");
     const image = await saveUpload(viewer, fd.get("image"));
     const status = values.status as string;
     const row = {
       ...(values as Record<string, unknown>),
       familyId: viewer.family.id,
-      roomId: await ownedRoomId(viewer, values.roomId as string | null),
-      ownerMemberId: await familyMemberIdOrNull(viewer.family.id, values.ownerMemberId as string | null),
+      roomId: privateOwnerId ? null : await ownedRoomId(viewer, values.roomId as string | null),
+      ownerMemberId: privateOwnerId ?? (await familyMemberIdOrNull(viewer.family.id, values.ownerMemberId as string | null)),
+      privateOwnerId,
       completedOn: status === "completed" ? ((values.completedOn as string | null) ?? todayIn(viewer.family.timezone)) : (values.completedOn as string | null),
       ...(image ? { coverFileId: image } : fd.get("removeImage") === "1" ? { coverFileId: null } : {}),
     } as typeof homeProjects.$inferInsert;
     let pid = id;
     if (old) {
       await db.update(homeProjects).set(row).where(eq(homeProjects.id, old.id));
-      if (old.status !== "completed" && status === "completed") await logActivity(db, viewer.family.id, viewer.member.id, "project.completed", `finished the "${row.title}" project 🎉`, { module: "maintenance", entityId: old.id });
+      if (!privateOwnerId && old.status !== "completed" && status === "completed") await logActivity(db, viewer.family.id, viewer.member.id, "project.completed", `finished the "${row.title}" project 🎉`, { module: "maintenance", entityId: old.id });
     } else {
       const [p] = await db.insert(homeProjects).values(row).returning({ id: homeProjects.id });
       pid = p!.id;
-      await logActivity(db, viewer.family.id, viewer.member.id, "project.created", `started a home project: "${row.title}"`, { module: "maintenance", entityId: pid });
+      if (!privateOwnerId) await logActivity(db, viewer.family.id, viewer.member.id, "project.created", `started a home project: "${row.title}"`, { module: "maintenance", entityId: pid });
     }
     if (old?.coverFileId && (image || fd.get("removeImage") === "1")) await deleteFamilyFile(viewer.family.id, old.coverFileId);
     revalidateHome();
@@ -102,7 +112,7 @@ export async function saveHomeProject(_: ActionState, fd: FormData): Promise<Act
 
 export async function setProjectStatus(fd: FormData) {
   const viewer = await editProjects();
-  const p = await getProject(viewer, String(fd.get("id")));
+  const p = await ownProject(viewer, String(fd.get("id")));
   const status = String(fd.get("status"));
   if (!p || !["idea", "planning", "budgeting", "ready", "in_progress", "on_hold", "completed"].includes(status)) return;
   await db
@@ -114,19 +124,20 @@ export async function setProjectStatus(fd: FormData) {
 
 export async function deleteHomeProject(fd: FormData) {
   const viewer = await editProjects();
-  const p = await getProject(viewer, String(fd.get("id")));
-  if (!p) return;
+  const p = await ownProject(viewer, String(fd.get("id")));
   const photos = await db.select().from(homePhotos).where(eq(homePhotos.projectId, p.id));
   await db.delete(homeProjects).where(eq(homeProjects.id, p.id));
   for (const ph of photos) await deleteFamilyFile(viewer.family.id, ph.fileId);
   if (p.coverFileId) await deleteFamilyFile(viewer.family.id, p.coverFileId);
   revalidateHome();
-  redirect("/maintenance/projects");
+  redirect(p.privateOwnerId ? "/maintenance/projects?space=mine" : "/maintenance/projects");
 }
 
+/** A project the viewer may change: their own private one, or a family one with House Projects edit. */
 async function ownProject(viewer: V, id: string | null) {
   const p = id ? await getProject(viewer, id) : null;
   if (!p) throw new AuthorizationError("Project not found.");
+  if (!p.privateOwnerId && !viewer.can("projects", "edit")) throw new AuthorizationError("You can't change family projects.");
   return p;
 }
 
@@ -195,6 +206,7 @@ export async function materialsToShopping(fd: FormData) {
   const viewer = await editProjects();
   if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit shopping lists.");
   const p = await ownProject(viewer, f.str(fd, "projectId"));
+  if (p.privateOwnerId) throw new AuthorizationError("Private projects don't use the family shopping list.");
   let listId = p.shoppingListId;
   if (!listId) {
     const [l] = await db.insert(lists).values({ familyId: viewer.family.id, title: `${p.title} materials`, kind: "shopping", projectId: p.id, createdByMemberId: viewer.member.id }).returning({ id: lists.id });
@@ -212,11 +224,13 @@ export async function materialsToShopping(fd: FormData) {
 export async function recordProjectExpense(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await editProjects();
-    if (!viewer.can("budget", "edit")) return fail("You can't edit the budget.");
     const p = await ownProject(viewer, f.str(fd, "projectId"));
+    // Private projects record into the owner's own My Budget, never the family budget.
+    const mine = !!p.privateOwnerId;
+    if (mine ? !viewer.member.privateFinance : !viewer.can("budget", "edit")) return fail(mine ? "Turn on My Budget (ask a parent) to track costs." : "You can't edit the budget.");
     const cents = f.cents(fd, "amount");
     if (!cents || cents <= 0) return fail("Enter an amount.", "amount");
-    await recordExpense(viewer, { name: `${p.title}: ${f.str(fd, "what") ?? "expense"}`, amountCents: cents, date: f.date(fd, "date") ?? todayIn(viewer.family.timezone), categoryName: "Home improvement", projectId: p.id });
+    await recordExpense(viewer, { name: `${p.title}: ${f.str(fd, "what") ?? "expense"}`, amountCents: cents, date: f.date(fd, "date") ?? todayIn(viewer.family.timezone), categoryName: "Home improvement", projectId: p.id, mine });
     revalidateHome();
     revalidatePath("/budget", "layout");
     return ok("Expense recorded.");
@@ -227,10 +241,13 @@ export async function recordProjectExpense(_: ActionState, fd: FormData): Promis
 
 export async function addHomePhotos(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await getViewer();
     const kind = f.str(fd, "kind") ?? "progress";
     if (!PHOTO_KINDS.some((k) => k.value === kind)) return fail("Choose a photo type.", "kind");
-    const projectId = f.str(fd, "projectId") ? (await ownProject(viewer, f.str(fd, "projectId"))).id : null;
+    const project = f.str(fd, "projectId") ? await ownProject(viewer, f.str(fd, "projectId")) : null;
+    // Family home photos need Home Maintenance edit; a private project's owner can add to it.
+    if (!project?.privateOwnerId && !viewer.can("maintenance", "edit")) throw new AuthorizationError("You can't add home photos.");
+    const projectId = project?.id ?? null;
     const repairId = f.str(fd, "repairId") ? (await getRepair(viewer, f.str(fd, "repairId")!))?.id : null;
     const roomId = await ownedRoomId(viewer, f.str(fd, "roomId"));
     if (!projectId && !repairId && !roomId) return fail("Nothing to attach the photos to.");
@@ -247,8 +264,13 @@ export async function addHomePhotos(_: ActionState, fd: FormData): Promise<Actio
 }
 
 export async function deleteHomePhoto(fd: FormData) {
-  const viewer = await edit();
-  const [ph] = await db.delete(homePhotos).where(and(eq(homePhotos.id, String(fd.get("id"))), eq(homePhotos.familyId, viewer.family.id))).returning();
+  const viewer = await getViewer();
+  const [found] = await db.select().from(homePhotos).where(and(eq(homePhotos.id, String(fd.get("id"))), eq(homePhotos.familyId, viewer.family.id)));
+  if (!found) return;
+  const project = found.projectId ? await getProject(viewer, found.projectId) : null;
+  if (found.projectId && !project) return; // someone else's private project
+  if (!project?.privateOwnerId && !viewer.can("maintenance", "edit")) throw new AuthorizationError("You can't remove home photos.");
+  const [ph] = await db.delete(homePhotos).where(eq(homePhotos.id, found.id)).returning();
   if (ph) await deleteFamilyFile(viewer.family.id, ph.fileId);
   revalidateHome();
 }
@@ -320,7 +342,7 @@ export async function saveHomeDocument(_: ActionState, fd: FormData): Promise<Ac
       docType: values.docType as string,
       applianceName: values.applianceName as string | null,
       roomId: await ownedRoomId(viewer, values.roomId as string | null),
-      projectId: await ownedId(viewer, homeProjects, values.projectId as string | null),
+      projectId: await familyProjectId(viewer, values.projectId as string | null),
       expiresOn: values.expiresOn as string | null,
       notes: values.notes as string | null,
       visibility,

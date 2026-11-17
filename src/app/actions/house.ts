@@ -1,28 +1,42 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { householdInfo, rooms } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { assertCanChange, AuthorizationError, isOthersPrivate, requireModule } from "@/lib/dal";
+import { assertCanChange, AuthorizationError, getViewer, isOthersPrivate, requireModule } from "@/lib/dal";
 import { ownedCategoryId } from "@/lib/queries";
 import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
 // Projects & documents moved to Home Maintenance (src/app/actions/maintenance.ts).
 
+/**
+ * Important Info: the family's (Important Info access), or a member's own private
+ * "My Important Info" (space=mine), which only that member ever sees, never parents.
+ */
+async function infoActor(fd: FormData) {
+  if (fd.get("space") === "mine") {
+    const viewer = await getViewer();
+    if (viewer.isParent || !viewer.member.privateInfo) throw new AuthorizationError("Your private Important Info isn't turned on.");
+    return { viewer, privateOwner: viewer.member.id as string | null };
+  }
+  return { viewer: await requireModule("info", "edit"), privateOwner: null as string | null };
+}
+const infoOwnerIs = (owner: string | null) => (owner ? eq(householdInfo.privateOwnerId, owner) : isNull(householdInfo.privateOwnerId));
+
 export async function saveInfo(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("info", "edit");
+    const { viewer, privateOwner } = await infoActor(fd);
     const title = f.str(fd, "title");
     const body = f.str(fd, "body");
     if (!title) return fail("Please add a title.", "title");
     if (!body) return fail("Please add the details.", "body");
     const id = f.str(fd, "id");
-    const { visibility, memberIds } = visibilityFromForm(fd);
-    const values = { familyId: viewer.family.id, title, body, visibility, categoryId: await ownedCategoryId(viewer, "household", f.str(fd, "categoryId")) };
+    const { visibility, memberIds } = privateOwner ? { visibility: "private" as const, memberIds: [] } : visibilityFromForm(fd);
+    const values = { familyId: viewer.family.id, title, body, visibility, privateOwnerId: privateOwner, categoryId: privateOwner ? null : await ownedCategoryId(viewer, "household", f.str(fd, "categoryId")) };
     if (id) {
-      const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, id), eq(householdInfo.familyId, viewer.family.id)));
+      const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, id), eq(householdInfo.familyId, viewer.family.id), infoOwnerIs(privateOwner)));
       if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) throw new AuthorizationError("Not found.");
       assertCanChange(viewer, old.createdByMemberId, "this info");
     }
@@ -41,8 +55,8 @@ export async function saveInfo(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deleteInfo(fd: FormData) {
-  const viewer = await requireModule("info", "edit");
-  const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, String(fd.get("id"))), eq(householdInfo.familyId, viewer.family.id)));
+  const { viewer, privateOwner } = await infoActor(fd);
+  const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, String(fd.get("id"))), eq(householdInfo.familyId, viewer.family.id), infoOwnerIs(privateOwner)));
   if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
   assertCanChange(viewer, old.createdByMemberId, "this info");
   await db.delete(householdInfo).where(eq(householdInfo.id, old.id));

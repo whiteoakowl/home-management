@@ -279,7 +279,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         !viewer.can("info") ? Promise.resolve([]) : db
           .select({ id: householdInfo.id, title: householdInfo.title })
           .from(householdInfo)
-          .where(and(eq(householdInfo.familyId, fid), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info"), or(ilike(householdInfo.title, like), ilike(householdInfo.body, like))))
+          .where(and(eq(householdInfo.familyId, fid), isNull(householdInfo.privateOwnerId), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info"), or(ilike(householdInfo.title, like), ilike(householdInfo.body, like))))
           .limit(4),
         !viewer.can("maintenance") ? Promise.resolve([]) : db
           .select({ id: homeDocuments.id, title: homeDocuments.title })
@@ -388,7 +388,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       Promise.all([
         db.select({ id: rooms.id, title: rooms.name, kind: rooms.kind }).from(rooms).where(and(eq(rooms.familyId, fid), or(ilike(rooms.name, like), ilike(rooms.description, like)))).limit(3),
         db.select({ id: homeRepairs.id, title: homeRepairs.title }).from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), or(ilike(homeRepairs.title, like), ilike(homeRepairs.problem, like), ilike(homeRepairs.contractor, like)))).limit(4),
-        db.select({ id: homeProjects.id, title: homeProjects.title }).from(homeProjects).where(and(eq(homeProjects.familyId, fid), or(ilike(homeProjects.title, like), ilike(homeProjects.description, like)))).limit(4),
+        db.select({ id: homeProjects.id, title: homeProjects.title }).from(homeProjects).where(and(eq(homeProjects.familyId, fid), isNull(homeProjects.privateOwnerId), or(ilike(homeProjects.title, like), ilike(homeProjects.description, like)))).limit(4),
         db.select({ id: homeItems.id, title: homeItems.name, model: homeItems.model }).from(homeItems).where(and(eq(homeItems.familyId, fid), or(ilike(homeItems.name, like), ilike(homeItems.brand, like), ilike(homeItems.model, like), ilike(homeItems.serialNumber, like)))).limit(4),
         db.select({ id: vendors.id, title: vendors.name, phone: vendors.phone }).from(vendors).where(and(eq(vendors.familyId, fid), or(ilike(vendors.name, like), ilike(vendors.trade, like), ilike(vendors.contactName, like)))).limit(4),
       ]).then(([r, rep, pr, items, vs]) => [

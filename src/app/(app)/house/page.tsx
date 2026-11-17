@@ -39,7 +39,7 @@ export default async function HousePage() {
       .from(rooms)
       .where(eq(rooms.familyId, fid))
       .orderBy(asc(rooms.sortOrder), asc(rooms.name)),
-    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, fid), ne(homeProjects.status, "completed"))).orderBy(asc(homeProjects.targetDate)).limit(4),
+    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, fid), isNull(homeProjects.privateOwnerId), ne(homeProjects.status, "completed"))).orderBy(asc(homeProjects.targetDate)).limit(4),
     db
       .select()
       .from(homeDocuments)

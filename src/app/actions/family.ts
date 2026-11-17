@@ -202,13 +202,15 @@ async function savePermissionsFromForm(formData: FormData) {
     if (!target || target.role === "parent") continue; // parents always have full access
     await setMemberPermissions(target.id, perms);
   }
-  // finance:<memberId> = on | off  (their own private money space; only they can see it)
+  // <space>:<memberId> = on | off  (their own private spaces; only they can see them, never parents)
+  const PRIVATE_FLAGS = { finance: "privateFinance", pinfo: "privateInfo", pprojects: "privateProjects" } as const;
   for (const [key, value] of formData.entries()) {
     const [prefix, memberId] = key.split(":");
-    if (prefix !== "finance" || !memberId) continue;
+    const flag = PRIVATE_FLAGS[prefix as keyof typeof PRIVATE_FLAGS];
+    if (!flag || !memberId) continue;
     const target = await getFamilyMember(viewer, memberId);
     if (!target || target.role === "parent") continue;
-    await db.update(familyMembers).set({ privateFinance: value === "on" }).where(eq(familyMembers.id, target.id));
+    await db.update(familyMembers).set({ [flag]: value === "on" }).where(eq(familyMembers.id, target.id));
   }
   // area:<memberId>:wellness = none | use  (Mental Wellness on their profile)
   for (const [key, value] of formData.entries()) {

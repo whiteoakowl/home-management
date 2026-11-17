@@ -1,7 +1,12 @@
 import type { Viewer } from "@/lib/dal";
 import { MODULE_META, NAV_GROUPS } from "@/lib/modules";
 
-export type NavItem = { href: string; label: string; icon: string; children?: { href: string; label: string }[] };
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: string;
+  children?: { href: string; label: string }[];
+};
 
 /** Submenus for the larger areas (shown under the active item in the sidebar). */
 export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
@@ -64,22 +69,56 @@ export type NavSection = { group: string; items: NavItem[] };
 
 /** Builds the nav a viewer is allowed to see (permissions + enabled areas). */
 const FOOD_MODULES: string[] = ["kitchen", "recipes", "meals", "shopping"];
-const FOOD_LABELS = { kitchen: { mine: "My Pantry" }, recipes: { mine: "My Recipes" }, meals: { mine: "My Meal Plans" }, shopping: { mine: "My Shopping List" } } as const;
+const FOOD_LABELS = {
+  kitchen: { mine: "My Pantry" },
+  recipes: { mine: "My Recipes" },
+  meals: { mine: "My Meal Plans" },
+  shopping: { mine: "My Shopping List" },
+} as const;
 
 export function buildNav(viewer: Viewer): NavSection[] {
   const sections: NavSection[] = NAV_GROUPS.map((group) => ({
     group,
     items: Object.values(MODULE_META)
       // Members with a private food space reach the food pages even without family access.
-      .filter((m) => m.group === group && m.inNav && (viewer.can(m.id) || (FOOD_MODULES.includes(m.id) && viewer.member.privateFood) || (m.id === "budget" && viewer.member.privateFinance)))
+      .filter(
+        (m) =>
+          m.group === group &&
+          m.inNav &&
+          (viewer.can(m.id) ||
+            (FOOD_MODULES.includes(m.id) && viewer.member.privateFood) ||
+            (m.id === "budget" && viewer.member.privateFinance) ||
+            (m.id === "projects" &&
+              viewer.member.privateProjects &&
+              !viewer.isParent)),
+      )
       .map((m) =>
         // Members never see the family budget; with a private money space they get "My Budget".
         m.id === "budget" && !viewer.can("budget")
           ? { href: "/budget?space=mine", label: "My Budget", icon: m.icon }
-          : { href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`, label: viewer.can(m.id) ? m.label : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ?? m.label), icon: m.icon, children: SUBMENUS[m.href] },
+          : // Older kids with a home of their own: "My Home Projects" (parents can't see it).
+            m.id === "projects" && !viewer.can("projects")
+            ? {
+                href: "/maintenance/projects?space=mine",
+                label: "My Home Projects",
+                icon: m.icon,
+              }
+            : {
+                href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`,
+                label: viewer.can(m.id)
+                  ? m.label
+                  : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ??
+                    m.label),
+                icon: m.icon,
+                children: SUBMENUS[m.href],
+              },
       ),
   }));
-  sections[0]!.items.unshift({ href: "/", label: "Home", icon: "LayoutDashboard" });
+  sections[0]!.items.unshift({
+    href: "/",
+    label: "Home",
+    icon: "LayoutDashboard",
+  });
   // Personal spaces belong to each person (private unless shared), so everyone has them.
   const personal = sections.find((s) => s.group === "Personal");
   const hidden = viewer.member.hiddenAreas;
@@ -88,13 +127,39 @@ export function buildNav(viewer: Viewer): NavSection[] {
       href: "/health",
       label: "Personal Health",
       icon: "HeartPulse",
-      children: [{ href: "/health", label: "Overview" }, ...(hidden.includes("period") ? [] : [{ href: "/health/period", label: "Period Tracker" }]), { href: "/privacy", label: "Privacy Center" }],
+      children: [
+        { href: "/health", label: "Overview" },
+        ...(hidden.includes("period")
+          ? []
+          : [{ href: "/health/period", label: "Period Tracker" }]),
+        { href: "/privacy", label: "Privacy Center" },
+      ],
     },
     { href: "/health/food", label: "Food Journal", icon: "Utensils" },
-    ...(hidden.includes("wellness") ? [] : [{ href: "/wellness", label: "Mental Wellness", icon: "Smile" }]),
+    // Each family member's own Important Info; parents share the family's instead.
+    ...(!viewer.isParent && viewer.member.privateInfo
+      ? [
+          {
+            href: "/house/info?space=mine",
+            label: "My Important Info",
+            icon: "KeyRound",
+          },
+        ]
+      : []),
+    ...(hidden.includes("wellness")
+      ? []
+      : [{ href: "/wellness", label: "Mental Wellness", icon: "Smile" }]),
   ];
   if (personal) personal.items.unshift(...mine);
-  sections[1]!.items.unshift({ href: "/family", label: "Family", icon: "Users" });
-  if (viewer.isParent) sections.push({ group: "Admin", items: [{ href: "/settings", label: "Settings", icon: "Settings" }] });
+  sections[1]!.items.unshift({
+    href: "/family",
+    label: "Family",
+    icon: "Users",
+  });
+  if (viewer.isParent)
+    sections.push({
+      group: "Admin",
+      items: [{ href: "/settings", label: "Settings", icon: "Settings" }],
+    });
   return sections.filter((s) => s.items.length > 0);
 }

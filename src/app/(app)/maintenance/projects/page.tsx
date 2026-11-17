@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { ClipboardList } from "lucide-react";
 import { db } from "@/db";
 import { homeProjects } from "@/db/schema";
@@ -20,6 +20,10 @@ export const metadata: Metadata = { title: "Remodeling projects" };
 export default async function ProjectsPage({ searchParams }: PageProps<"/maintenance/projects">) {
   const viewer = await projectsViewer();
   const sp = await searchParams;
+  // "My Home Projects": a member's own projects, which only they ever see (never parents).
+  const hasMine = viewer.member.privateProjects && !viewer.isParent;
+  const mine = hasMine && (sp.space === "mine" || !viewer.can("projects"));
+  const amp = mine ? "&space=mine" : "";
   const [members, rooms, rows] = await Promise.all([
     memberOptions(viewer),
     roomOpts(viewer),
@@ -31,11 +35,11 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/mainten
         spent: sql<number>`coalesce((select sum(amount_cents) from transactions t where t.project_id = ${homeProjects.id}),0)::int`,
       })
       .from(homeProjects)
-      .where(and(eq(homeProjects.familyId, viewer.family.id)))
+      .where(and(eq(homeProjects.familyId, viewer.family.id), mine ? eq(homeProjects.privateOwnerId, viewer.member.id) : isNull(homeProjects.privateOwnerId)))
       .orderBy(asc(homeProjects.targetDate)),
   ]);
-  const canEdit = viewer.can("projects", "edit");
-  const add = canEdit ? <ProjectModal rooms={rooms} members={members} defaultOpen={sp.new === "1"} /> : undefined;
+  const canEdit = mine || viewer.can("projects", "edit");
+  const add = canEdit ? <ProjectModal rooms={rooms} members={members} defaultOpen={sp.new === "1"} mine={mine} /> : undefined;
   // Active = everything not finished, with work under way first.
   const view = sp.view === "completed" || sp.view === "all" ? sp.view : "active";
   const ORDER = ["in_progress", "ready", "on_hold", "budgeting", "planning", "idea", "completed"];
@@ -44,11 +48,21 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/mainten
   const groups = statuses.map((s) => ({ ...s, list: rows.filter((r) => r.p.status === s.value) })).filter((g) => g.list.length);
   return (
     <>
-      <PageHeader eyebrow="Home Maintenance" title="Remodeling projects" description="From idea to completed: stages, tasks, materials, budget, expenses and photos." actions={add} />
-      <MaintenanceTabs active="projects" />
+      <PageHeader
+        eyebrow={mine ? "My private" : "Home Maintenance"}
+        title={mine ? "My home projects" : "Remodeling projects"}
+        description={mine ? "Projects for your own home: stages, materials, costs and photos. Only you can see these, not even parents." : "From idea to completed: stages, tasks, materials, budget, expenses and photos."}
+        actions={add}
+      />
+      {!mine && <MaintenanceTabs active="projects" />}
+      {hasMine && viewer.can("projects") && (
+        <div className="mb-5">
+          <SegmentLinks fit active={mine ? "mine" : "family"} items={[{ key: "family", href: "/maintenance/projects", label: "Family projects" }, { key: "mine", href: "/maintenance/projects?space=mine", label: "My projects (private)" }]} />
+        </div>
+      )}
       {rows.length === 0 ? (
         <Card>
-          <EmptyState icon={<ClipboardList />} title="No projects yet" description="Capture ideas early; move them through planning and budgeting when you're ready." action={canEdit && <ProjectModal rooms={rooms} members={members} />} />
+          <EmptyState icon={<ClipboardList />} title="No projects yet" description="Capture ideas early; move them through planning and budgeting when you're ready." action={canEdit && <ProjectModal rooms={rooms} members={members} mine={mine} />} />
         </Card>
       ) : (
         <>
@@ -56,9 +70,9 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/mainten
             fit
             active={view}
             items={[
-              { key: "active", href: "/maintenance/projects", label: `Active (${counts.active})` },
-              { key: "completed", href: "/maintenance/projects?view=completed", label: `Completed (${counts.completed})` },
-              { key: "all", href: "/maintenance/projects?view=all", label: `All (${counts.all})` },
+              { key: "active", href: `/maintenance/projects?view=active${amp}`, label: `Active (${counts.active})` },
+              { key: "completed", href: `/maintenance/projects?view=completed${amp}`, label: `Completed (${counts.completed})` },
+              { key: "all", href: `/maintenance/projects?view=all${amp}`, label: `All (${counts.all})` },
             ]}
           />
           {groups.length === 0 ? (

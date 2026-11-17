@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { ArrowLeft, ClipboardList, FileText, Hammer, Wrench } from "lucide-react";
 import { db } from "@/db";
 import { homeProjects, homeRepairs, lists, rooms } from "@/db/schema";
@@ -41,7 +41,7 @@ export default async function RoomPage({ params }: PageProps<"/maintenance/rooms
     categoryOptions(viewer, "household"),
     listChoreTemplates(viewer, ["maintenance"], today),
     db.select().from(homeRepairs).where(and(eq(homeRepairs.familyId, viewer.family.id), eq(homeRepairs.roomId, room.id))).orderBy(desc(homeRepairs.reportedOn)),
-    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, viewer.family.id), eq(homeProjects.roomId, room.id))).orderBy(desc(homeProjects.createdAt)),
+    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, viewer.family.id), isNull(homeProjects.privateOwnerId), eq(homeProjects.roomId, room.id))).orderBy(desc(homeProjects.createdAt)),
     visibleDocs(viewer, { roomId: room.id }),
     photosFor(viewer, { roomId: room.id }),
     db.select().from(lists).where(and(eq(lists.familyId, viewer.family.id), eq(lists.roomId, room.id))),

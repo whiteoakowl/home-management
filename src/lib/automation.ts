@@ -392,7 +392,7 @@ export async function runDailyAutomation(family: Family, force = false) {
       .select({ name: projectStages.name, project: homeProjects.title, pid: homeProjects.id })
       .from(projectStages)
       .innerJoin(homeProjects, eq(homeProjects.id, projectStages.projectId))
-      .where(and(eq(homeProjects.familyId, fid), eq(projectStages.done, false), gte(projectStages.dueOn, today), lte(projectStages.dueOn, addDays(today, 3))));
+      .where(and(eq(homeProjects.familyId, fid), isNull(homeProjects.privateOwnerId), eq(projectStages.done, false), gte(projectStages.dueOn, today), lte(projectStages.dueOn, addDays(today, 3))));
     for (const st of stages) await notify(fid, who, { kind: "maintenance_due", title: `${st.project}: "${st.name}" due soon`, href: `/maintenance/projects/${st.pid}` }, today);
   }
 

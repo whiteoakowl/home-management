@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { files, vendors, homeDocuments, homePhotos, homeProjects, homeRepairs, projectMaterials, projectStages, rooms, transactions } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
@@ -14,11 +14,12 @@ export const vendorOpts = async (viewer: Viewer) =>
   (await db.select({ id: vendors.id, name: vendors.name, trade: vendors.trade }).from(vendors).where(eq(vendors.familyId, viewer.family.id)).orderBy(asc(vendors.name))).map((v) => ({ value: v.id, label: v.trade ? `${v.name} (${v.trade.replace(/_/g, " ")})` : v.name }));
 
 export const projectOpts = async (viewer: Viewer) =>
-  (await db.select({ id: homeProjects.id, title: homeProjects.title }).from(homeProjects).where(eq(homeProjects.familyId, viewer.family.id)).orderBy(asc(homeProjects.title))).map((p) => ({ value: p.id, label: p.title }));
+  (await db.select({ id: homeProjects.id, title: homeProjects.title }).from(homeProjects).where(and(eq(homeProjects.familyId, viewer.family.id), isNull(homeProjects.privateOwnerId))).orderBy(asc(homeProjects.title))).map((p) => ({ value: p.id, label: p.title }));
 
 export async function getProject(viewer: Viewer, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const [p] = await db.select().from(homeProjects).where(and(eq(homeProjects.id, id), eq(homeProjects.familyId, viewer.family.id)));
+  // Someone's private project ("My Home Projects") exists only for its owner.
+  const [p] = await db.select().from(homeProjects).where(and(eq(homeProjects.id, id), eq(homeProjects.familyId, viewer.family.id), or(isNull(homeProjects.privateOwnerId), eq(homeProjects.privateOwnerId, viewer.member.id))));
   return p ?? null;
 }
 
@@ -81,7 +82,7 @@ export async function homeSpendThisYear(viewer: Viewer, year: string) {
     select
       coalesce((select sum(o.actual_cost_cents) from chore_occurrences o join chores c on c.id = o.chore_id where c.family_id = ${fid} and c.kind = 'maintenance' and o.due_date >= ${`${year}-01-01`}), 0)::int as maint,
       coalesce((select sum(cost_cents) from home_repairs where family_id = ${fid} and coalesce(completed_on, reported_on) >= ${`${year}-01-01`}), 0)::int as repairs,
-      coalesce((select sum(amount_cents) from transactions where family_id = ${fid} and project_id is not null and date >= ${`${year}-01-01`}), 0)::int as projects
+      coalesce((select sum(amount_cents) from transactions where family_id = ${fid} and owner_member_id is null and project_id is not null and date >= ${`${year}-01-01`}), 0)::int as projects
   `).then((r) => r.rows);
   return row ?? { maint: 0, repairs: 0, projects: 0 };
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, asc, eq, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, ne, isNull } from "drizzle-orm";
 import { CalendarClock, ClipboardList, DoorOpen, FileText, Hammer, ShieldCheck, Wrench } from "lucide-react";
 import { db } from "@/db";
 import { homeDocuments, homeProjects, homeRepairs, rooms } from "@/db/schema";
@@ -26,7 +26,7 @@ export default async function MaintenanceDashboard() {
     memberOptions(viewer),
     listOccurrences(viewer, { kinds: ["maintenance"], from: today, to: addDays(today, 30), statuses: ["pending"] }),
     listOccurrences(viewer, { kinds: ["maintenance"], to: addDays(today, -1), statuses: ["pending", "missed"], order: "desc", limit: 20 }),
-    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, fid), ne(homeProjects.status, "completed"))).orderBy(asc(homeProjects.targetDate)),
+    db.select().from(homeProjects).where(and(eq(homeProjects.familyId, fid), isNull(homeProjects.privateOwnerId), ne(homeProjects.status, "completed"))).orderBy(asc(homeProjects.targetDate)),
     db.select().from(homeRepairs).where(and(eq(homeRepairs.familyId, fid), inArray(homeRepairs.status, ["open", "scheduled"]))).orderBy(asc(homeRepairs.reportedOn)),
     db.select().from(homeDocuments).where(and(eq(homeDocuments.familyId, fid), lte(homeDocuments.expiresOn, addDays(today, 90)))).orderBy(asc(homeDocuments.expiresOn)).limit(5),
     db.$count(rooms, eq(rooms.familyId, fid)),

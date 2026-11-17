@@ -52,12 +52,19 @@ export async function ownedId(viewer: Viewer, table: { id: PgColumn; familyId: P
 }
 
 /** Project stages belong to a project, which belongs to the family. */
+/** A family (not private) house project's id, or null. Used where links show to the whole family. */
+export async function familyProjectId(viewer: Viewer, id: string | null) {
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [r] = await db.select({ id: homeProjects.id }).from(homeProjects).where(and(eq(homeProjects.id, id), eq(homeProjects.familyId, viewer.family.id), isNull(homeProjects.privateOwnerId)));
+  return r?.id ?? null;
+}
+
 export async function ownedStageId(viewer: Viewer, id: string | null) {
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [r] = await db
     .select({ id: projectStages.id })
     .from(projectStages)
     .innerJoin(homeProjects, eq(homeProjects.id, projectStages.projectId))
-    .where(and(eq(projectStages.id, id), eq(homeProjects.familyId, viewer.family.id)));
+    .where(and(eq(projectStages.id, id), eq(homeProjects.familyId, viewer.family.id), isNull(homeProjects.privateOwnerId)));
   return r?.id ?? null;
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { PrintButton } from "@/components/recipes/recipe-actions";
 import { MaintenanceTabs } from "@/components/maintenance/tabs";
 import { fmtDate } from "@/components/records/detail-list";
@@ -30,7 +30,7 @@ export default async function HouseholdManual() {
   const today = todayIn(viewer.family.timezone);
   const [info, spaces, appliances, docs, providers, upkeep, petRows] = await Promise.all([
     viewer.can("info")
-      ? db.select().from(householdInfo).where(and(eq(householdInfo.familyId, fid), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info"))).orderBy(asc(householdInfo.title))
+      ? db.select().from(householdInfo).where(and(eq(householdInfo.familyId, fid), isNull(householdInfo.privateOwnerId), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info"))).orderBy(asc(householdInfo.title))
       : Promise.resolve([]),
     db.select().from(rooms).where(eq(rooms.familyId, fid)).orderBy(asc(rooms.kind), asc(rooms.sortOrder), asc(rooms.name)),
     db.select().from(homeItems).where(and(eq(homeItems.familyId, fid), eq(homeItems.category, "appliance"))).orderBy(asc(homeItems.name)),

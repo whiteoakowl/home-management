@@ -19,9 +19,10 @@ export async function maintViewer() {
 }
 
 /** House (remodeling) projects have their own permission area. */
+/** House projects: family access, or a member's own private "My Home Projects". */
 export async function projectsViewer() {
   const viewer = await getViewer();
-  if (!viewer.can("projects")) redirect("/");
+  if (!viewer.can("projects") && !(viewer.member.privateProjects && !viewer.isParent)) redirect("/");
   return viewer;
 }
 
@@ -45,16 +46,17 @@ export function RoomModal({ room, defaultKind }: { room?: typeof rooms.$inferSel
   );
 }
 
-export function ProjectModal({ p, rooms, members, defaults, defaultOpen }: { p?: typeof homeProjects.$inferSelect; rooms: Opt[]; members: MemberOption[]; defaults?: Record<string, FieldValue>; defaultOpen?: boolean }) {
+export function ProjectModal({ p, rooms, members, defaults, defaultOpen, mine = false }: { p?: typeof homeProjects.$inferSelect; rooms: Opt[]; members: MemberOption[]; defaults?: Record<string, FieldValue>; defaultOpen?: boolean; /** New project goes into My Home Projects. */ mine?: boolean }) {
   return (
     <RecordModal
-      title={p ? "Edit project" : "New remodeling project"}
+      title={p ? "Edit project" : mine ? "New project (private)" : "New remodeling project"}
       triggerLabel={p ? "Edit" : "New project"}
       triggerVariant={p ? "secondary" : "primary"}
       action={saveHomeProject}
-      fields={withOptions(PROJECT_FIELDS, { roomId: rooms })}
+      // Private projects have no family rooms or project lead.
+      fields={mine || p?.privateOwnerId ? PROJECT_FIELDS.filter((f) => f.name !== "roomId" && f.name !== "ownerMemberId") : withOptions(PROJECT_FIELDS, { roomId: rooms })}
       defaults={p ? pick(PROJECT_FIELDS, p) : { status: "idea", ...defaults }}
-      hidden={p ? { id: p.id } : {}}
+      hidden={p ? { id: p.id } : mine ? { space: "mine" } : {}}
       members={members}
       imageUrls={{ image: p ? fileUrl(p.coverFileId) : null }}
       defaultOpen={defaultOpen}

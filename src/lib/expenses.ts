@@ -11,14 +11,15 @@ import type { Viewer } from "./dal";
  */
 export async function recordExpense(
   viewer: Viewer,
-  e: { name: string; amountCents: number; date: string; categoryName: string; notes?: string | null; repairId?: string; projectId?: string; celebrationId?: string },
+  e: { name: string; amountCents: number; date: string; categoryName: string; notes?: string | null; repairId?: string; projectId?: string; celebrationId?: string; /** Into the viewer's own My Budget instead of the family budget. */ mine?: boolean },
 ) {
-  if (!viewer.can("budget", "edit") || e.amountCents <= 0) return null;
+  const owner = e.mine ? viewer.member.id : null;
+  if ((owner ? !viewer.member.privateFinance : !viewer.can("budget", "edit")) || e.amountCents <= 0) return null;
   let [cat] = await db
     .select({ id: categories.id })
     .from(categories)
-    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, "budget"), isNull(categories.ownerMemberId), ilike(categories.name, e.categoryName)));
-  if (!cat) [cat] = await db.insert(categories).values({ familyId: viewer.family.id, domain: "budget", name: e.categoryName }).returning({ id: categories.id });
+    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, "budget"), owner ? eq(categories.ownerMemberId, owner) : isNull(categories.ownerMemberId), ilike(categories.name, e.categoryName)));
+  if (!cat) [cat] = await db.insert(categories).values({ familyId: viewer.family.id, domain: "budget", name: e.categoryName, ownerMemberId: owner }).returning({ id: categories.id });
   const [t] = await db
     .insert(transactions)
     .values({
@@ -30,6 +31,7 @@ export async function recordExpense(
       categoryId: cat!.id,
       memberId: viewer.member.id,
       notes: e.notes ?? null,
+      ownerMemberId: owner,
       repairId: e.repairId,
       projectId: e.projectId,
       celebrationId: e.celebrationId,

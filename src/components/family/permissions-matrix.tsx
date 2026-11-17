@@ -39,7 +39,14 @@ export const PERIOD_OPTIONS: { value: PeriodSetting; label: string; hint: string
   { value: "fertility", label: "Fertility", hint: "the same estimates, labelled as a fertile window" },
 ];
 /** Personal areas set in the same list: Period Tracker (its own choices) and Mental Wellness (No access / Use). */
-export type PersonalAreas = { period: PeriodSetting; wellness: boolean; finance: boolean };
+export type PersonalAreas = { period: PeriodSetting; wellness: boolean; finance: boolean; info: boolean; projects: boolean };
+
+/** A member's own private spaces: only they ever see them (parents can't). */
+const PRIVATE_SPACES = [
+  { key: "finance", field: "finance", icon: "Wallet", label: "My Budget" },
+  { key: "info", field: "pinfo", icon: "KeyRound", label: "My Important Info" },
+  { key: "projects", field: "pprojects", icon: "Hammer", label: "My Home Projects" },
+] as const;
 
 const selectCls = "h-9 rounded-lg border border-line-strong bg-surface px-2 text-sm focus:border-primary-500 focus:outline-none";
 
@@ -82,18 +89,20 @@ export function PermissionRows({
               <option value="use">Use</option>
             </select>
           </div>
-          <div className="flex items-center justify-between gap-3 border-b border-line/70 py-2.5">
-            <label htmlFor={`finance-${memberId}`} className="flex items-center gap-2.5 text-[15px]">
-              <Icon name="Wallet" className="size-4 text-muted" />
-              <span>
-                My Budget <span className="text-sm text-muted">(private)</span>
-              </span>
-            </label>
-            <select id={`finance-${memberId}`} name={`finance:${memberId}`} defaultValue={personal.finance ? "on" : "off"} className={selectCls}>
-              <option value="off">No access</option>
-              <option value="on">Use</option>
-            </select>
-          </div>
+          {PRIVATE_SPACES.map((p) => (
+            <div key={p.key} className="flex items-center justify-between gap-3 border-b border-line/70 py-2.5">
+              <label htmlFor={`${p.field}-${memberId}`} className="flex items-center gap-2.5 text-[15px]">
+                <Icon name={p.icon} className="size-4 text-muted" />
+                <span>
+                  {p.label} <span className="text-sm text-muted">(private)</span>
+                </span>
+              </label>
+              <select id={`${p.field}-${memberId}`} name={`${p.field}:${memberId}`} defaultValue={personal[p.key] ? "on" : "off"} className={selectCls}>
+                <option value="off">No access</option>
+                <option value="on">Use</option>
+              </select>
+            </div>
+          ))}
         </>
       )}
       {modules.filter((m) => !PARENT_ONLY_MODULES.includes(m)).map((mod) => {

@@ -225,6 +225,8 @@ export const homeProjects = pgTable(
     ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
     }),
+    /** Set = in this member's own private space (only they ever see it, never parents); null = the family's. */
+    privateOwnerId: uuid("private_owner_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     ...timestamps,
   },
   (t) => [index("projects_family_idx").on(t.familyId)],
@@ -271,6 +273,8 @@ export const householdInfo = pgTable(
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {
       onDelete: "set null",
     }),
+    /** Set = in this member's own private space (only they ever see it, never parents); null = the family's. */
+    privateOwnerId: uuid("private_owner_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     ...timestamps,
   },
   (t) => [index("household_info_family_idx").on(t.familyId)],

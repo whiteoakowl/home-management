@@ -124,6 +124,10 @@ export const familyMembers = pgTable(
     shareFoodWithParents: boolean("share_food_with_parents").notNull().default(false),
     /** Has a private money space (My Budget). Set by parents. Only the member ever sees it, never parents. */
     privateFinance: boolean("private_finance").notNull().default(false),
+    /** Their own private Important Info (only they see it, never parents). On by default; parents can turn it off. */
+    privateInfo: boolean("private_info").notNull().default(true),
+    /** Their own private House Projects, for older kids with a home of their own. Set by parents; parents can't see it. */
+    privateProjects: boolean("private_projects").notNull().default(false),
     /**
      * Parent oversight for a minor: personal areas (privacy categories) parents may view
      * even if the member keeps them private. Set by parents; always shown to the member.

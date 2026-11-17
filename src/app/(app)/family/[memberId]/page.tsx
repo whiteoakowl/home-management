@@ -46,6 +46,10 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
     can("fitness") && viewer.can("fitness") && { href: `/fitness${q}`, label: "Fitness" },
     isSelf && viewer.can("goals") && { href: "/goals", label: "Goals" },
     isSelf && viewer.can("journal") && { href: "/journal", label: "Personal Journal" },
+    // Own private spaces: only ever linked on your own profile (parents can't open them).
+    isSelf && !viewer.isParent && viewer.member.privateInfo && { href: "/house/info?space=mine", label: "My Important Info" },
+    isSelf && viewer.member.privateFinance && { href: "/budget?space=mine", label: "My Budget" },
+    isSelf && !viewer.isParent && viewer.member.privateProjects && { href: "/maintenance/projects?space=mine", label: "My Home Projects" },
     isSelf && { href: "/privacy", label: "Privacy Center" },
   ].filter(Boolean) as { href: string; label: string }[];
   const familyLinks = [
