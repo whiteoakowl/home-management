@@ -114,7 +114,7 @@ export function MealPlanner({
                         </p>
                       )}
                       {m.missing !== null && (
-                        <p className={cn("text-[11px]", m.missing ? "text-olive-700" : "text-primary-600")}>{m.missing ? `${m.missing} to buy` : "✓ All in stock"}</p>
+                        <p className={cn("text-[11px] font-medium", m.missing ? "text-red-700" : "text-green-700")}>{m.missing ? `${m.missing} to buy` : "✓ All in stock"}</p>
                       )}
                     </div>
                     {(m.canRemove ?? canEdit) && (

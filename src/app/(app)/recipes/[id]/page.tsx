@@ -324,11 +324,12 @@ export default async function RecipePage({
                       <span
                         className={cn(
                           "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full print:hidden",
+                          // In stock: green circle; missing: red circle (optional extras stay grey).
                           s.have
-                            ? "bg-primary-100 text-primary-700"
+                            ? "bg-green-600 text-white"
                             : s.optional
                               ? "bg-sunken text-muted"
-                              : "bg-olive-100 text-olive-700",
+                              : "bg-red-600 text-white",
                         )}
                         title={
                           s.have ? `In stock: ${s.matchedItem}` : "Not in stock"
