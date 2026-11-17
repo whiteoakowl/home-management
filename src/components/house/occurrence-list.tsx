@@ -61,6 +61,7 @@ function Row({
   const startX = useRef<number | null>(null);
   const done = o.status === "done";
   const itemsDone = o.items.filter((i) => i.completedAt).length;
+  const badge = dueBadge(today, o.dueDate, o.status);
 
   const complete = () =>
     start(() => {
@@ -103,11 +104,13 @@ function Row({
         <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
           <CheckCircle action={setOccurrenceDone} id={o.id} done={done} label={`Mark "${o.title}" ${done ? "not done" : "done"}`} disabled={o.canUse === false} />
           <div className="flex min-w-0 flex-1 flex-col">
-            <Link href={`/house/chores/${o.choreId}`} className={cn("truncate text-[15px] font-medium hover:underline", done && "text-muted line-through")}>
+            <Link href={`/house/chores/${o.choreId}`} className={cn("text-[15px] leading-snug font-medium break-words hover:underline", done && "text-muted line-through")}>
               {o.priority === "high" && !done && <span className="mr-1.5 inline-block size-2 rounded-full bg-wine-500 align-middle" title="High priority" />}
               {o.title}
             </Link>
-            <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+              {/* Phones: the due badge sits here so the title gets the full width. */}
+              {badge && <span className="sm:hidden">{badge}</span>}
               {o.roomName && <span>{o.roomName}</span>}
               {o.points ? <span className="font-medium text-olive-700">★ {o.points}</span> : null}
               {o.estimatedMinutes ? (
@@ -124,7 +127,7 @@ function Row({
               {done && o.completedByName && <span>Done by {o.completedByName}</span>}
             </p>
           </div>
-          {dueBadge(today, o.dueDate, o.status)}
+          {badge && <span className="hidden sm:inline-flex">{badge}</span>}
           {showAssignee && o.assigneeName && <Avatar name={o.assigneeName} color={o.assigneeColor} size="sm" />}
           {(o.items.length > 0 || o.instructions) && (
             <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label="Show checklist" className="size-9 rounded-full text-muted hover:bg-sunken">

@@ -33,6 +33,15 @@ export const recipes = pgTable(
     /** Total time as written in the recipe (when it differs from prep + cook, or is all that's given). */
     totalMinutes: integer("total_minutes"),
     servings: integer("servings"),
+    /** As written, e.g. "35-40 minutes" or "1 hr 15 min". prep/cookMinutes hold the longest time for planning and sorting. */
+    prepTime: text("prep_time"),
+    cookTime: text("cook_time"),
+    /** e.g. "350°F" or "Medium-high heat". */
+    temperature: text("temperature"),
+    /** Whose recipe it is, e.g. "Grandma Rose". */
+    recipeBy: text("recipe_by"),
+    /** When the family started making it: a year or a date, e.g. "1985" or "Christmas 1992". */
+    makingSince: text("making_since"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     tags: text("tags").array().notNull().default([]),
     notes: text("notes"),
@@ -57,6 +66,8 @@ export const recipeIngredients = pgTable(
       .references(() => recipes.id, { onDelete: "cascade" }),
     /** Normalised name used to match inventory, e.g. "egg". */
     name: text("name").notNull(),
+    /** Ingredient group title, e.g. "Batter" or "Glaze" (null = no section). */
+    section: text("section"),
     /** Original line as written, e.g. "2 large eggs, beaten". */
     original: text("original"),
     quantity: numeric("quantity"),

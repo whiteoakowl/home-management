@@ -47,7 +47,6 @@ export function RecipeCard({ r }: { r: RecipeCardData }) {
               <Star className="size-3.5 fill-current text-olive-400" aria-hidden /> {r.rating.toFixed(1)}
             </span>
           )}
-          {r.categoryName && <span>{r.categoryName}</span>}
         </p>
       </div>
     </Link>

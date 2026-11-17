@@ -146,3 +146,61 @@ export function formatQty(q: number | null) {
   if (hit) return `${whole ? whole : ""}${hit[1]}`;
   return String(Math.round(q * 100) / 100);
 }
+
+// ─── Ingredient sections ("Batter:", "For the glaze:") ──────────────────────
+
+/**
+ * A line that titles a group of ingredients rather than being one: ends with a
+ * colon ("Batter:", "For the glaze:") or starts with "#" ("# Frosting").
+ * Returns the title, or null for an ordinary ingredient line.
+ */
+export function sectionTitle(line: string): string | null {
+  const t = line.trim().replace(/^[-*•]\s*/, "");
+  const hash = /^#+\s*(.+)$/.exec(t);
+  if (hash) return hash[1]!.replace(/:\s*$/, "").trim().slice(0, 80) || null;
+  const colon = /^(.{1,60}?):\s*$/.exec(t);
+  if (colon && !/^\d/.test(colon[1]!)) return colon[1]!.trim().replace(/^for the\s+/i, (m) => m) || null;
+  return null;
+}
+
+/** Parse the ingredients box: section title lines group the ingredients below them. */
+export function parseIngredientBlock(lines: string[]) {
+  let section: string | null = null;
+  const out: (ParsedIngredient & { section: string | null })[] = [];
+  for (const line of lines) {
+    const title = sectionTitle(line);
+    if (title) {
+      section = title;
+      continue;
+    }
+    const p = parseIngredientLine(line);
+    if (p) out.push({ ...p, section });
+  }
+  return out;
+}
+
+/** Back to the editable text: "Batter:" title lines before each group. */
+export function ingredientsToText(items: { section: string | null; text: string }[]) {
+  const out: string[] = [];
+  let current: string | null = null;
+  for (const it of items) {
+    if (it.section && it.section !== current) {
+      if (out.length) out.push("");
+      out.push(`${it.section}:`);
+    }
+    current = it.section;
+    out.push(it.text);
+  }
+  return out.join("\n");
+}
+
+/** Consecutive runs of ingredients that share a section, in order (for display). */
+export function groupBySection<T extends { section: string | null }>(items: T[]) {
+  const groups: { section: string | null; items: T[] }[] = [];
+  for (const it of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.section === it.section) last.items.push(it);
+    else groups.push({ section: it.section, items: [it] });
+  }
+  return groups;
+}

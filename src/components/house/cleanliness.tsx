@@ -45,7 +45,7 @@ export function CleanlinessBoard({ templates, today, canLog }: { templates: Chor
                 <li key={t.chore.id} className="flex items-center gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2 text-sm">
-                      <Link href={`/house/chores/${t.chore.id}`} className="truncate font-medium hover:underline">
+                      <Link href={`/house/chores/${t.chore.id}`} className="leading-snug font-medium break-words hover:underline">
                         {t.chore.title}
                       </Link>
                       <span className="shrink-0 text-xs text-muted">{l.label}</span>

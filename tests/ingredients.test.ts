@@ -42,3 +42,16 @@ test("formats fractions", () => {
   assert.equal(formatQty(1.5), "1½");
   assert.equal(formatQty(0.25), "¼");
 });
+
+test("ingredient sections: titles group the lines below them", async () => {
+  const { parseIngredientBlock, sectionTitle, ingredientsToText, groupBySection } = await import("../src/lib/ingredients");
+  assert.equal(sectionTitle("Batter:"), "Batter");
+  assert.equal(sectionTitle("For the glaze:"), "For the glaze");
+  assert.equal(sectionTitle("# Frosting"), "Frosting");
+  assert.equal(sectionTitle("2 cups flour"), null);
+  assert.equal(sectionTitle("1 tsp salt:"), null);
+  const rows = parseIngredientBlock(["2 cups flour", "Batter:", "2 eggs", "1 cup milk", "", "Glaze:", "1 cup powdered sugar"]);
+  assert.deepEqual(rows.map((r) => [r.section, r.name]), [[null, "flour"], ["Batter", "eggs"], ["Batter", "milk"], ["Glaze", "powdered sugar"]]);
+  assert.equal(ingredientsToText(rows.map((r) => ({ section: r.section, text: r.original }))), "2 cups flour\n\nBatter:\n2 eggs\n1 cup milk\n\nGlaze:\n1 cup powdered sugar");
+  assert.deepEqual(groupBySection(rows).map((g) => [g.section, g.items.length]), [[null, 1], ["Batter", 2], ["Glaze", 1]]);
+});

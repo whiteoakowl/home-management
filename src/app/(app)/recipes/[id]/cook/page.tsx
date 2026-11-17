@@ -20,5 +20,5 @@ export default async function CookPage({ params, searchParams }: PageProps<"/rec
   const lines = ingredients.map((i) =>
     scale === 1 || i.quantity === null ? (i.original ?? `${i.quantity ?? ""} ${i.unit ?? ""} ${i.name}`.trim()) : `${formatQty(Number(i.quantity) * scale)} ${i.unit ?? ""} ${i.name}`.replace(/\s+/g, " ").trim(),
   );
-  return <CookMode id={r.id} name={r.name} ingredients={lines} steps={r.instructions} servingsLabel={base ? `Serves ${servings}${scale !== 1 ? ` (scaled ×${formatQty(scale)})` : ""}` : null} />;
+  return <CookMode id={r.id} name={r.name} ingredients={lines} sections={ingredients.map((i) => i.section)} details={[r.temperature, r.cookTime ? `Cook ${r.cookTime}` : null].filter((x): x is string => !!x)} notes={r.notes} steps={r.instructions} servingsLabel={base ? `Serves ${servings}${scale !== 1 ? ` (scaled ×${formatQty(scale)})` : ""}` : null} />;
 }

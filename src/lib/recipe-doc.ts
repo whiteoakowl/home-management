@@ -103,6 +103,11 @@ export type DocRecipe = {
   prepMinutes: number | null;
   cookMinutes: number | null;
   totalMinutes: number | null;
+  /** Times as written ("35-40 minutes"). */
+  prepTime: string | null;
+  cookTime: string | null;
+  temperature: string | null;
+  recipeBy: string | null;
   servings: number | null;
   notes: string | null;
   source: string | null;
@@ -129,7 +134,7 @@ export function parseDuration(s: string): number | null {
 const HEAD_ING = /^(ingredients?|you(?:'|’)ll need|what you need)\s*:?\s*$/i;
 const HEAD_STEP = /^(directions?|instructions?|method|steps?|preparation|how to make( it)?)\s*:?\s*$/i;
 const HEAD_NOTES = /^(notes?|tips?|cook'?s notes?)\s*:?\s*(.*)$/i;
-const FIELD = /^(prep(?:aration)?(?: time)?|cook(?:ing)?(?: time)?|bake(?: time)?|total(?: time)?|serves|servings|yield|makes|source|from|recipe from|category|course)\s*:?\s*(.+)$/i;
+const FIELD = /^(prep(?:aration)?(?: time)?|cook(?:ing)?(?: time)?|bake(?: time)?|total(?: time)?|serves|servings|yield|makes|source|recipe by|from|recipe from|category|course|temp(?:erature)?|oven(?: temp(?:erature)?)?)\s*:?\s*(.+)$/i;
 const QTY = /^([-*•–]\s*)?(\d|½|¼|¾|⅓|⅔|⅛|a |an |one |two |three |pinch|dash|handful)/i;
 const UNIT = /\b(cups?|c\.|tbsp|tablespoons?|tsp|teaspoons?|oz|ounces?|lbs?|pounds?|g|grams?|kg|ml|l|liters?|cloves?|cans?|packages?|pkg|sticks?|slices?|pinch|dash|large|medium|small|whole)\b/i;
 
@@ -141,7 +146,7 @@ export function parseRecipePage(paras: Para[]): DocRecipe | null {
   if (!lines.length) return null;
   const titleIdx = Math.max(0, paras.findIndex((p) => p.heading));
   const name = lines[titleIdx]!.replace(/^recipe\s*:\s*/i, "").slice(0, 200);
-  const r: DocRecipe = { name, ingredients: [], instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, servings: null, notes: null, source: null, category: null, description: null };
+  const r: DocRecipe = { name, ingredients: [], instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, prepTime: null, cookTime: null, temperature: null, recipeBy: null, servings: null, notes: null, source: null, category: null, description: null };
   let mode: "intro" | "ing" | "step" | "notes" = "intro";
   const intro: string[] = [];
   const notes: string[] = [];
@@ -152,8 +157,14 @@ export function parseRecipePage(paras: Para[]): DocRecipe | null {
     if (field && mode !== "step" && l.length < 90) {
       const k = field[1]!.toLowerCase();
       const v = field[2]!.trim();
-      if (k.startsWith("prep")) r.prepMinutes = parseDuration(v);
-      else if (k.startsWith("cook") || k.startsWith("bake")) r.cookMinutes = parseDuration(v);
+      if (k.startsWith("prep")) {
+        r.prepMinutes = parseDuration(v);
+        r.prepTime = v.slice(0, 60);
+      } else if (k.startsWith("cook") || k.startsWith("bake")) {
+        r.cookMinutes = parseDuration(v);
+        r.cookTime = v.slice(0, 60);
+      } else if (k.startsWith("temp") || k.startsWith("oven")) r.temperature = v.slice(0, 80);
+      else if (k === "recipe by") r.recipeBy = v.slice(0, 120);
       else if (k.startsWith("total")) r.totalMinutes = parseDuration(v);
       else if (/serves|servings|yield|makes/.test(k)) r.servings = Number(/\d+/.exec(v)?.[0]) || null;
       else if (/source|from/.test(k)) r.source = v.slice(0, 200);

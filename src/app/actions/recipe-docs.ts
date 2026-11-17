@@ -10,7 +10,7 @@ import { AuthorizationError, getViewer } from "@/lib/dal";
 import { logActivity } from "@/lib/family";
 import { saveUpload } from "@/lib/files";
 import { canOpenFood, hasPrivateFood, ownerForNew } from "@/lib/food-space";
-import { parseIngredientLine } from "@/lib/ingredients";
+import { parseIngredientBlock } from "@/lib/ingredients";
 import { ownedCategoryId } from "@/lib/queries";
 import { recipesFromDocx, type DocRecipe } from "@/lib/recipe-doc";
 
@@ -47,6 +47,10 @@ const Recipe = z.object({
   notes: z.string().max(4000).nullable(),
   source: z.string().max(200).nullable(),
   categoryId: z.string().nullable(),
+  prepTime: z.string().max(60).nullable().default(null),
+  cookTime: z.string().max(60).nullable().default(null),
+  temperature: z.string().max(80).nullable().default(null),
+  recipeBy: z.string().max(120).nullable().default(null),
   tags: z.array(z.string().trim().min(1).max(40)).max(20),
   imageIndex: z.number().int().min(0).max(200).nullable(),
 });
@@ -97,7 +101,7 @@ export async function importDocumentRecipes(fd: FormData): Promise<ImportBatchRe
     let created = 0;
     for (const r of parsed.data) {
       const image = r.imageIndex !== null ? await saveUpload(viewer, fd.get(`image-${r.imageIndex}`)) : null;
-      const lines = r.ingredients.map(parseIngredientLine).filter((x): x is NonNullable<typeof x> => !!x);
+      const lines = parseIngredientBlock(r.ingredients);
       const categoryId = await ownedCategoryId(viewer, "recipe", r.categoryId);
       await db.transaction(async (tx) => {
         const [row] = await tx
@@ -109,6 +113,10 @@ export async function importDocumentRecipes(fd: FormData): Promise<ImportBatchRe
             instructions: r.instructions,
             prepMinutes: r.prepMinutes,
             cookMinutes: r.cookMinutes,
+            prepTime: r.prepTime,
+            cookTime: r.cookTime,
+            temperature: r.temperature,
+            recipeBy: r.recipeBy,
             totalMinutes: r.totalMinutes,
             servings: r.servings,
             notes: r.notes,
@@ -121,7 +129,7 @@ export async function importDocumentRecipes(fd: FormData): Promise<ImportBatchRe
           })
           .returning({ id: recipes.id });
         if (lines.length) {
-          await tx.insert(recipeIngredients).values(lines.map((p, position) => ({ recipeId: row!.id, name: p.name, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })));
+          await tx.insert(recipeIngredients).values(lines.map((p, position) => ({ recipeId: row!.id, name: p.name, section: p.section, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })));
         }
         if (collectionId) await tx.insert(recipeCollectionItems).values({ collectionId, recipeId: row!.id, position: startPos + created });
       });

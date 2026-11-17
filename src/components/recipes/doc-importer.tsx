@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 type Row = DocRecipe & {
   key: number;
   include: boolean;
-  categoryId: string;
   tags: string;
   image: File | null;
   open: boolean;
@@ -42,12 +41,10 @@ const BATCH = 5;
 export function RecipeDocImporter({
   family,
   mine,
-  categories,
   collections,
 }: {
   family: boolean;
   mine: boolean;
-  categories: Opt[];
   collections: { family: Opt[]; mine: Opt[] };
 }) {
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -83,11 +80,6 @@ export function RecipeDocImporter({
           open: false,
           image: null,
           tags: "",
-          categoryId:
-            categories.find(
-              (c) =>
-                r.category && c.name.toLowerCase() === r.category.toLowerCase(),
-            )?.id ?? "",
         })),
       );
     });
@@ -129,7 +121,11 @@ export function RecipeDocImporter({
               servings: r.servings,
               notes: r.notes?.slice(0, 4000) ?? null,
               source: r.source?.slice(0, 200) ?? null,
-              categoryId: r.categoryId || null,
+              categoryId: null,
+              prepTime: r.prepTime?.slice(0, 60) ?? null,
+              cookTime: r.cookTime?.slice(0, 60) ?? null,
+              temperature: r.temperature?.slice(0, 80) ?? null,
+              recipeBy: r.recipeBy?.slice(0, 120) ?? null,
               tags: r.tags
                 .split(",")
                 .map((t) => t.trim().slice(0, 40))
@@ -356,31 +352,26 @@ export function RecipeDocImporter({
                 {r.instructions.length} step
                 {r.instructions.length === 1 ? "" : "s"}
                 {r.servings ? ` · serves ${r.servings}` : ""}
-                {r.prepMinutes ? ` · prep ${r.prepMinutes} min` : ""}
-                {r.cookMinutes ? ` · cook ${r.cookMinutes} min` : ""}
+                {r.prepTime || r.prepMinutes
+                  ? ` · prep ${r.prepTime ?? `${r.prepMinutes} min`}`
+                  : ""}
+                {r.cookTime || r.cookMinutes
+                  ? ` · cook ${r.cookTime ?? `${r.cookMinutes} min`}`
+                  : ""}
+                {r.temperature ? ` · ${r.temperature}` : ""}
                 {r.totalMinutes ? ` · total ${r.totalMinutes} min` : ""}
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <label className="flex flex-col gap-1 text-xs font-medium text-muted">
-                  Category
-                  <select
-                    value={r.categoryId}
+                  Recipe by
+                  <input
+                    value={r.recipeBy ?? ""}
                     onChange={(e) =>
-                      update(r.key, { categoryId: e.target.value })
+                      update(r.key, { recipeBy: e.target.value || null })
                     }
+                    placeholder="Grandma Rose"
                     className={input}
-                  >
-                    <option value="">
-                      {r.category
-                        ? `None (document says “${r.category}”)`
-                        : "None"}
-                    </option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </label>
                 <label className="flex flex-col gap-1 text-xs font-medium text-muted">
                   Tags (comma separated)

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -48,8 +49,18 @@ export default async function PrintBookPage({ params }: PageProps<"/recipes/coll
         <section key={r.id} className="print-page mb-10 rounded-[var(--radius-card)] border border-line bg-surface p-8 print:border-0 print:p-0">
           <h2 className="text-3xl font-semibold">{r.name}</h2>
           <p className="mt-1 text-sm text-muted">
-            {[r.prepMinutes && `Prep ${r.prepMinutes} min`, r.cookMinutes && `Cook ${r.cookMinutes} min`, r.servings && `Serves ${r.servings}`].filter(Boolean).join(" · ")}
+            {[
+              (r.prepTime || r.prepMinutes) && `Prep ${r.prepTime ?? `${r.prepMinutes} min`}`,
+              (r.cookTime || r.cookMinutes) && `Cook ${r.cookTime ?? `${r.cookMinutes} min`}`,
+              r.temperature,
+              r.servings && `Serves ${r.servings}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
+          {(r.recipeBy || r.makingSince) && (
+            <p className="mt-1 text-sm text-ink-soft">{[r.recipeBy && `Recipe by ${r.recipeBy}`, r.makingSince && `Making since ${r.makingSince}`].filter(Boolean).join(" · ")}</p>
+          )}
           {r.imageFileId && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={fileUrl(r.imageFileId)!} alt="" className="mt-4 max-h-64 w-full rounded-xl object-cover" />
@@ -59,8 +70,11 @@ export default async function PrintBookPage({ params }: PageProps<"/recipes/coll
             <div>
               <h3 className="mb-2 font-sans text-sm font-semibold tracking-wide text-muted uppercase">Ingredients</h3>
               <ul className="flex flex-col gap-1 text-[15px]">
-                {ingredients.map((i) => (
-                  <li key={i.id}>{i.original ?? `${formatQty(i.quantity !== null ? Number(i.quantity) : null)} ${i.unit ?? ""} ${i.name}`}</li>
+                {ingredients.map((i, n) => (
+                  <Fragment key={i.id}>
+                    {i.section && i.section !== ingredients[n - 1]?.section && <li className={n > 0 ? "mt-2 font-semibold" : "font-semibold"}>{i.section}</li>}
+                    <li>{i.original ?? `${formatQty(i.quantity !== null ? Number(i.quantity) : null)} ${i.unit ?? ""} ${i.name}`}</li>
+                  </Fragment>
                 ))}
               </ul>
             </div>
@@ -73,7 +87,12 @@ export default async function PrintBookPage({ params }: PageProps<"/recipes/coll
               </ol>
             </div>
           </div>
-          {r.notes && <p className="mt-6 text-sm text-ink-soft italic">{r.notes}</p>}
+          {r.notes && (
+            <div className="mt-6 rounded-xl border-2 border-olive-300 p-3 text-[15px] print:border-black">
+              <p className="mb-1 font-sans text-xs font-semibold tracking-wide uppercase">Special notes</p>
+              <p className="whitespace-pre-line">{r.notes}</p>
+            </div>
+          )}
         </section>
       ))}
     </div>

@@ -34,7 +34,7 @@ function beep() {
 }
 
 /** Distraction-free cooking: one step at a time, ingredient check-off, timers, screen kept awake. */
-export function CookMode({ id, name, ingredients, steps, servingsLabel }: { id: string; name: string; ingredients: string[]; steps: string[]; servingsLabel: string | null }) {
+export function CookMode({ id, name, ingredients, sections = [], details = [], notes = null, steps, servingsLabel }: { id: string; name: string; ingredients: string[]; sections?: (string | null)[]; details?: string[]; notes?: string | null; steps: string[]; servingsLabel: string | null }) {
   const [step, setStep] = useState(0);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [timers, setTimers] = useState<RunningTimer[]>([]);
@@ -121,10 +121,17 @@ export function CookMode({ id, name, ingredients, steps, servingsLabel }: { id: 
       <div className="grid flex-1 gap-6 lg:grid-cols-[320px_1fr]">
         <aside className="rounded-[var(--radius-card)] border border-line bg-surface p-5 lg:max-h-[70dvh] lg:overflow-y-auto">
           <h2 className="mb-1 font-semibold">Ingredients</h2>
-          {servingsLabel && <p className="mb-3 text-sm text-muted">{servingsLabel}</p>}
+          {(servingsLabel || details.length > 0) && <p className="mb-3 text-sm text-muted">{[servingsLabel, ...details].filter(Boolean).join(" · ")}</p>}
+          {notes && (
+            <div className="mb-3 rounded-xl border-2 border-olive-300 bg-olive-50 p-3 text-[15px] text-olive-900">
+              <p className="text-xs font-semibold tracking-wide uppercase">Special notes</p>
+              <p className="whitespace-pre-line">{notes}</p>
+            </div>
+          )}
           <ul className="flex flex-col gap-1">
             {ingredients.map((ing, i) => (
               <li key={i}>
+                {sections[i] && sections[i] !== sections[i - 1] && <p className={cn("px-2 text-sm font-semibold tracking-wide text-primary-700 uppercase", i > 0 && "mt-3")}>{sections[i]}</p>}
                 <label className={cn("flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-[15px] hover:bg-sunken", checked.has(i) && "text-muted line-through")}>
                   <input
                     type="checkbox"

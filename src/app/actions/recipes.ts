@@ -13,9 +13,9 @@ import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
 import { assertChange, ownerForNew } from "@/lib/food-space";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
-import { parseIngredientLine } from "@/lib/ingredients";
+import { parseIngredientBlock } from "@/lib/ingredients";
+import { parseDuration } from "@/lib/recipe-doc";
 import { addNeedsToShopping, missingFor } from "@/lib/kitchen";
-import { ownedCategoryId } from "@/lib/queries";
 import { f } from "@/lib/records";
 
 function revalidateRecipes() {
@@ -45,7 +45,11 @@ export async function saveRecipe(_: ActionState, fd: FormData): Promise<ActionSt
     if (editing) assertChange(viewer, "recipes", editing);
     const owner = editing ? editing.ownerMemberId : ownerForNew(viewer, "recipes", fd);
     const ingredientLines = String(fd.get("ingredients") ?? "").split("\n");
-    const parsed = ingredientLines.map(parseIngredientLine).filter((x): x is NonNullable<typeof x> => !!x);
+    // "Batter:" / "For the glaze:" lines title the ingredients below them.
+    const parsed = parseIngredientBlock(ingredientLines);
+    // Times are kept as written ("35-40 minutes"); the longest time in minutes is kept for planning.
+    const prepTime = f.str(fd, "prepTime")?.slice(0, 60) ?? null;
+    const cookTime = f.str(fd, "cookTime")?.slice(0, 60) ?? null;
     const instructions = String(fd.get("instructions") ?? "")
       .split("\n")
       .map((s) => s.replace(/^\s*(\d+[.)]|step \d+:?)\s*/i, "").trim())
@@ -57,10 +61,14 @@ export async function saveRecipe(_: ActionState, fd: FormData): Promise<ActionSt
       name,
       description: f.str(fd, "description"),
       instructions,
-      prepMinutes: f.int(fd, "prepMinutes"),
-      cookMinutes: f.int(fd, "cookMinutes"),
+      prepTime,
+      cookTime,
+      prepMinutes: prepTime ? parseDuration(prepTime) : null,
+      cookMinutes: cookTime ? parseDuration(cookTime) : null,
       servings: f.int(fd, "servings"),
-      categoryId: await ownedCategoryId(viewer, "recipe", f.str(fd, "categoryId")),
+      temperature: f.str(fd, "temperature")?.slice(0, 80) ?? null,
+      recipeBy: f.str(fd, "recipeBy")?.slice(0, 120) ?? null,
+      makingSince: f.str(fd, "makingSince")?.slice(0, 60) ?? null,
       tags: f.split(fd, "tags").map((t) => t.toLowerCase()).slice(0, 20),
       notes: f.str(fd, "notes"),
       source: f.str(fd, "source"),
@@ -83,7 +91,7 @@ export async function saveRecipe(_: ActionState, fd: FormData): Promise<ActionSt
       }
       if (parsed.length) {
         await tx.insert(recipeIngredients).values(
-          parsed.map((p, position) => ({ recipeId: recipeId!, name: p.name, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })),
+          parsed.map((p, position) => ({ recipeId: recipeId!, name: p.name, section: p.section, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })),
         );
       }
       if (collections.length) {
@@ -239,7 +247,7 @@ export async function importRecipe(_: ActionState, fd: FormData): Promise<Action
         // The recipe still imports without its photo.
       }
     }
-    const lines = parsed.ingredients.map(parseIngredientLine).filter((x): x is NonNullable<typeof x> => !!x);
+    const lines = parseIngredientBlock(parsed.ingredients);
     let recipeId = "";
     await db.transaction(async (tx) => {
       const [row] = await tx
@@ -261,7 +269,7 @@ export async function importRecipe(_: ActionState, fd: FormData): Promise<Action
         .returning({ id: recipes.id });
       recipeId = row!.id;
       if (lines.length) {
-        await tx.insert(recipeIngredients).values(lines.map((p, position) => ({ recipeId, name: p.name, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })));
+        await tx.insert(recipeIngredients).values(lines.map((p, position) => ({ recipeId, name: p.name, section: p.section, original: p.original, quantity: p.quantity !== null ? String(p.quantity) : null, unit: p.unit, optional: p.optional, position })));
       }
     });
     if (!owner) await logActivity(db, viewer.family.id, viewer.member.id, "recipe.added", `imported the recipe "${parsed.name}"`, { module: "recipes", entityId: recipeId });

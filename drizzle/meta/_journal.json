@@ -176,6 +176,13 @@
       "when": 1794863038463,
       "tag": "0024_use_level_and_period_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794873155535,
+      "tag": "0025_recipe_sections_and_details",
+      "breakpoints": true
     }
   ]
 }
