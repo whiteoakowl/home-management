@@ -55,14 +55,14 @@ function Bar({ item, members, showTime = true }: { item: CalendarItem; members?:
       href={item.href}
       title={tip(item, members)}
       className={cn(
-        "flex min-w-0 items-center gap-1 rounded-[5px] border-l-[3px] px-1 py-px text-[10px] leading-4 font-medium hover:brightness-95 sm:px-1.5 sm:py-0.5 sm:text-xs",
+        "flex min-w-0 items-center gap-1 rounded-[3px] border-l-2 px-0.5 text-[9px] leading-[13px] font-medium tracking-tight hover:brightness-95 sm:rounded-[5px] sm:border-l-[3px] sm:px-1.5 sm:py-0.5 sm:text-xs sm:leading-4 sm:tracking-normal",
         item.done && "line-through opacity-60",
       )}
       style={{ background: c.soft, color: c.ink, borderColor: c.solid }}
     >
       {item.layer === "chores" && <Check className="hidden size-3 shrink-0 sm:block" aria-hidden />}
       {showTime && item.startMin !== null && <span className="hidden shrink-0 tabular-nums opacity-75 sm:inline">{fmtMin(item.startMin)}</span>}
-      <span className="truncate">{item.title}</span>
+      <span className="overflow-hidden whitespace-nowrap sm:truncate">{item.title}</span>
     </Link>
   );
 }
@@ -88,26 +88,31 @@ export function MonthView({ month, items, today, weekStartsOn, dayHref, members 
           const list = byDay.get(d) ?? [];
           const inMonth = d.slice(0, 7) === month.slice(0, 7);
           return (
-            <div key={d} className={cn("min-h-24 min-w-0 border-r border-b border-line p-0.5 sm:min-h-28 sm:p-1.5 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-sunken/40")}>
+            <div key={d} className={cn("min-h-24 min-w-0 border-r border-b border-line px-px pt-0.5 pb-1 sm:min-h-28 sm:p-1.5 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-sunken/40")}>
               <Link
                 href={dayHref(d)}
                 className={cn(
-                  "mb-1 inline-flex size-7 items-center justify-center rounded-full text-sm",
+                  "mb-0.5 ml-0.5 inline-flex size-5 items-center justify-center rounded-full text-xs sm:mb-1 sm:ml-0 sm:size-7 sm:text-sm",
                   d === today ? "bg-primary-600 font-semibold text-white" : inMonth ? "text-ink hover:bg-sunken" : "text-muted",
                 )}
               >
                 {Number(d.slice(8))}
               </Link>
-              <div className="flex flex-col gap-0.5">
-                {list.slice(0, 3).map((i, k) => (
-                  <div key={i.key} className={cn(k === 2 && "hidden sm:block")}>
+              <div className="flex flex-col gap-px sm:gap-0.5">
+                {/* Phone: up to 5 slim bars; larger screens: 3. */}
+                {list.slice(0, 5).map((i, k) => (
+                  <div key={i.key} className={cn(k >= 3 && "sm:hidden", list.length > 5 && k === 4 && "hidden")}>
                     <Bar item={i} members={members} />
                   </div>
                 ))}
-                {list.length > 2 && (
-                  <Link href={dayHref(d)} className={cn("px-1 text-[10px] font-medium text-muted hover:text-ink sm:text-xs", list.length === 3 && "sm:hidden")}>
-                    +<span className="sm:hidden">{list.length - 2}</span>
-                    <span className="hidden sm:inline">{list.length - 3} more</span>
+                {list.length > 5 && (
+                  <Link href={dayHref(d)} className="px-0.5 text-[9px] leading-3 font-medium text-muted hover:text-ink sm:hidden">
+                    +{list.length - 4} more
+                  </Link>
+                )}
+                {list.length > 3 && (
+                  <Link href={dayHref(d)} className="hidden px-1 text-xs font-medium text-muted hover:text-ink sm:block">
+                    {list.length - 3} more
                   </Link>
                 )}
               </div>

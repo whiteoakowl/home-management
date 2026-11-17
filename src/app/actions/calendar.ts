@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { calendarEvents, eventAttachments, eventAttendees } from "@/db/schema";
+import { calendarEvents, eventAttachments, eventAttendees, familyMembers } from "@/db/schema";
+import { LAYERS } from "@/lib/calendar";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, isOthersPrivate, requireModule } from "@/lib/dal";
+import { AuthorizationError, getViewer, isOthersPrivate, requireModule } from "@/lib/dal";
 import { zonedToUtc } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { saveUpload } from "@/lib/files";
@@ -114,4 +115,13 @@ export async function deleteEvent(fd: FormData) {
   revalidatePath("/calendar", "layout");
   revalidatePath("/");
   redirect("/calendar");
+}
+
+/** Remember which calendar categories this member shows, until they change them. */
+export async function saveCalendarLayers(fd: FormData) {
+  const viewer = await getViewer();
+  const layers = String(fd.get("layers") ?? "")
+    .split(",")
+    .filter((l) => (LAYERS as readonly string[]).includes(l));
+  await db.update(familyMembers).set({ calendarLayers: layers }).where(eq(familyMembers.id, viewer.member.id));
 }

@@ -134,6 +134,8 @@ export const familyMembers = pgTable(
     privateProjects: boolean("private_projects").notNull().default(false),
     /** Their own private Vehicles ("My Vehicles"), e.g. a teen's first car. Set by parents; parents can't see it. */
     privateVehicles: boolean("private_vehicles").notNull().default(false),
+    /** Calendar categories this member chose to show (null = the default set). Kept until they change it. */
+    calendarLayers: text("calendar_layers").array(),
     /**
      * Parent oversight for a minor: personal areas (privacy categories) parents may view
      * even if the member keeps them private. Set by parents; always shown to the member.

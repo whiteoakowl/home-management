@@ -10,6 +10,7 @@ import { Input, Select } from "@/components/ui/form";
 import { memberColor, isMemberColor } from "@/lib/colors";
 import { Avatar, EmptyState, PageHeader } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
+import { RememberLayers } from "@/components/calendar/remember-layers";
 import { ensureCalendarCategories, getCalendarItems, LAYERS, type Layer } from "@/lib/calendar";
 import { getViewer } from "@/lib/dal";
 import { addDays, addMonths, daysBetween, monthLabel, startOfMonth, startOfWeek, todayIn } from "@/lib/dates";
@@ -42,7 +43,10 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   const view: View = sp.view === "agenda" ? "list" : VIEWS.includes(sp.view as View) ? (sp.view as View) : "month";
   const date = typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today;
   const member = typeof sp.member === "string" ? sp.member : "";
-  const layers = (typeof sp.layers === "string" ? sp.layers.split(",") : ["events", "chores", "workouts", "dance", "work", "vehicles"]).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
+  // Categories shown: the link's choice, else what this member last picked (kept until they change it), else the default set.
+  const saved = viewer.member.calendarLayers;
+  const layers = (typeof sp.layers === "string" ? sp.layers.split(",") : (saved ?? ["events", "chores", "workouts", "dance", "work", "vehicles"])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
+  const layersChanged = typeof sp.layers === "string" && layers.join(",") !== (saved ?? []).join(",");
   const ws = viewer.family.settings?.weekStartsOn ?? 0;
 
   // List view: a preset or custom range (max one year) plus filters.
@@ -118,6 +122,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
 
   return (
     <>
+      {layersChanged && <RememberLayers layers={layers.join(",")} />}
       <PageHeader
         title="Calendar"
         description="Everyone's schedule in one place, with privacy per event."
