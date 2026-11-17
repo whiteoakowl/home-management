@@ -331,21 +331,20 @@ async function correctableRecord(viewer: Viewer, id: string, managersOnly = fals
 }
 
 /**
- * "They didn't really do it": mark a done record not done (missed if the day
- * has passed) and take back its points.
+ * Put a done or skipped record back on the list as not done (it shows as
+ * overdue if its day has passed). A done one gives back its points.
  */
 export async function undoCompletion(fd: FormData) {
   const viewer = await getViewer();
   const { occ, title, kind } = await correctableRecord(viewer, String(fd.get("id")));
-  const today = todayIn(viewer.family.timezone);
   const who = occ.completedByMemberId;
   await db
     .update(choreOccurrences)
-    .set({ status: occ.dueDate < today ? "missed" : "pending", completedAt: null, completedByMemberId: null, pointsAwarded: null })
+    .set({ status: "pending", completedAt: null, completedByMemberId: null, pointsAwarded: null })
     .where(eq(choreOccurrences.id, occ.id));
   await db.update(choreOccurrenceItems).set({ completedAt: null, completedByMemberId: null }).where(eq(choreOccurrenceItems.occurrenceId, occ.id));
   if (who && who !== viewer.member.id)
-    await logActivity(db, viewer.family.id, viewer.member.id, "chore.undone", `marked "${title}" (${occ.dueDate}) not done${occ.pointsAwarded ? `, taking back ${occ.pointsAwarded} points` : ""}`, { module: kindModule(kind), entityId: occ.choreId });
+    await logActivity(db, viewer.family.id, viewer.member.id, "chore.undone", `${occ.status === "skipped" ? "un-skipped" : "marked not done"} "${title}" (${occ.dueDate})${occ.pointsAwarded ? `, taking back ${occ.pointsAwarded} points` : ""}`, { module: kindModule(kind), entityId: occ.choreId });
   revalidateHouse();
   revalidatePath(`/house/chores/${occ.choreId}`);
 }

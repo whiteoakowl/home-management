@@ -209,13 +209,17 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
                     {fixer && (
                       <td className="py-2">
                         <span className="flex items-center justify-end gap-1">
-                          {h.status === "done" && (
+                          {(h.status === "done" || h.status === "skipped") && (
                             <ActionButton
                               action={undoCompletion}
                               fields={{ id: h.id }}
-                              confirm={`Mark this ${formatShortDate(h.dueDate)} record not done${h.pointsAwarded ? ` and take back ${h.pointsAwarded} points from ${h.completedByName ?? "them"}` : ""}?`}
-                              label="Mark not done"
-                              title="Didn't really do it: mark not done and take back the points"
+                              confirm={
+                                h.status === "skipped"
+                                  ? `Un-skip ${formatShortDate(h.dueDate)} and put it back on the list?`
+                                  : `Put ${formatShortDate(h.dueDate)} back on the list as not done${h.pointsAwarded ? ` and take back ${h.pointsAwarded} points from ${h.completedByName ?? "them"}` : ""}?`
+                              }
+                              label={h.status === "skipped" ? "Un-skip" : "Mark not done"}
+                              title={h.status === "skipped" ? "Put it back on the list" : "Didn't really do it: put it back on the list and take back the points"}
                               className="inline-flex h-8 items-center gap-1 rounded-full border border-line px-2.5 text-xs font-medium whitespace-nowrap hover:bg-sunken"
                             >
                               <Undo2 className="size-3.5" /> Undo
