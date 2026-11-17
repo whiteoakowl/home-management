@@ -21,6 +21,7 @@ export function TransactionModal({
   triggerContent,
   triggerVariant = "primary",
   triggerAriaLabel,
+  privateSpace = false,
 }: {
   categories: Opt[];
   goals: Opt[];
@@ -34,6 +35,8 @@ export function TransactionModal({
   triggerContent?: ReactNode;
   triggerVariant?: "primary" | "secondary" | "soft" | "ghost";
   triggerAriaLabel?: string;
+  /** In the member's private money space (My Budget). */
+  privateSpace?: boolean;
 }) {
   const [kind, setKind] = useState(defaults?.kind ?? defaultKind);
   const label = { expense: "Add expense", income: "Add income", savings_transfer: "Move to savings" }[kind] ?? "Add";
@@ -50,6 +53,7 @@ export function TransactionModal({
       defaultOpen={defaultOpen}
     >
       {defaults && <input type="hidden" name="id" value={defaults.id} />}
+      {privateSpace && <input type="hidden" name="space" value="mine" />}
       <div className="inline-flex w-fit rounded-xl bg-sunken p-1" role="radiogroup" aria-label="Type">
         {[
           ["expense", "Expense"],
@@ -70,7 +74,7 @@ export function TransactionModal({
         {kind === "income" && sources.length > 0 && <SelectField name="incomeSourceId" label="Income source" defaultValue={defaults?.incomeSourceId ?? ""} placeholder="—" options={sources.map((c) => ({ value: c.id, label: c.name }))} />}
         {kind === "savings_transfer" && <SelectField name="goalId" label="Toward goal" defaultValue={defaults?.goalId ?? ""} placeholder="General savings" options={goals.map((c) => ({ value: c.id, label: c.name }))} />}
         {kind === "savings_transfer" && <SelectField name="categoryId" label="Category" defaultValue={defaults?.categoryId ?? ""} placeholder="—" options={categories.map((c) => ({ value: c.id, label: c.name }))} />}
-        <MemberSelect name="memberId" label="Who" members={members} defaultValue={defaults?.memberId} placeholder="Household" />
+        {!privateSpace && <MemberSelect name="memberId" label="Who" members={members} defaultValue={defaults?.memberId} placeholder="Household" />}
       </FormRow>
       {!defaults && <RecurrenceField label="Repeats (bills, paychecks…)" />}
       <TextAreaField name="notes" label="Notes" rows={2} defaultValue={defaults?.notes ?? ""} />
@@ -78,10 +82,11 @@ export function TransactionModal({
   );
 }
 
-export function IncomeSourceModal({ members, source, triggerContent, triggerAriaLabel }: { members: MemberOption[]; source?: { id: string; name: string; amount: number; frequency: string; memberId: string | null; notes: string | null }; triggerContent?: ReactNode; triggerAriaLabel?: string }) {
+export function IncomeSourceModal({ members, source, triggerContent, triggerAriaLabel, privateSpace = false }: { members: MemberOption[]; source?: { id: string; name: string; amount: number; frequency: string; memberId: string | null; notes: string | null }; triggerContent?: ReactNode; triggerAriaLabel?: string; privateSpace?: boolean }) {
   return (
     <FormModal title={source ? "Edit income source" : "Add income source"} triggerLabel="Add income source" triggerContent={triggerContent} triggerAriaLabel={triggerAriaLabel} triggerClassName="size-9 rounded-full text-muted hover:bg-sunken" action={saveIncomeSource} size="sm">
       {source && <input type="hidden" name="id" value={source.id} />}
+      {privateSpace && <input type="hidden" name="space" value="mine" />}
       <TextField name="name" label="Income source" required defaultValue={source?.name} placeholder="Dad's job" />
       <FormRow>
         <NumberField name="amount" label="Amount per payment ($)" required min={0} step="0.01" defaultValue={source?.amount ?? ""} />
@@ -100,16 +105,17 @@ export function IncomeSourceModal({ members, source, triggerContent, triggerAria
           ]}
         />
       </FormRow>
-      <MemberSelect name="memberId" label="Earner" members={members} defaultValue={source?.memberId} placeholder="Household" />
+      {!privateSpace && <MemberSelect name="memberId" label="Earner" members={members} defaultValue={source?.memberId} placeholder="Household" />}
       <TextField name="notes" label="Notes" defaultValue={source?.notes ?? ""} />
     </FormModal>
   );
 }
 
-export function CategoryModal({ category, triggerContent, triggerAriaLabel }: { category?: { id: string; name: string; limit: number | null; isBill: boolean }; triggerContent?: ReactNode; triggerAriaLabel?: string }) {
+export function CategoryModal({ category, triggerContent, triggerAriaLabel, privateSpace = false }: { category?: { id: string; name: string; limit: number | null; isBill: boolean }; triggerContent?: ReactNode; triggerAriaLabel?: string; privateSpace?: boolean }) {
   return (
     <FormModal title={category ? "Edit category" : "Add budget category"} triggerLabel="Add category" triggerVariant="secondary" triggerContent={triggerContent} triggerAriaLabel={triggerAriaLabel} triggerClassName="size-9 rounded-full text-muted hover:bg-sunken" action={saveBudgetCategory} size="sm">
       {category && <input type="hidden" name="id" value={category.id} />}
+      {privateSpace && <input type="hidden" name="space" value="mine" />}
       <TextField name="name" label="Category" required defaultValue={category?.name} placeholder="Childcare" />
       <NumberField name="limit" label="Monthly budget ($)" min={0} step="1" defaultValue={category?.limit ?? ""} hint="Leave blank for no limit." />
       <CheckboxField name="isBill" label="This is a bill (rent, utilities, insurance…)" defaultChecked={category?.isBill} />

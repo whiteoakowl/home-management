@@ -2,7 +2,7 @@ import type { AccessLevel, Module } from "@/db/schema/_shared";
 import { Avatar } from "@/components/ui/display";
 import { Icon } from "@/components/icons";
 import { MODULE_META } from "@/lib/modules";
-import { ADD_LEVEL_MODULES } from "@/lib/permissions";
+import { ADD_LEVEL_MODULES, PARENT_ONLY_MODULES } from "@/lib/permissions";
 
 const LEVELS: { value: AccessLevel; label: string }[] = [
   { value: "none", label: "No access" },
@@ -39,7 +39,7 @@ export const PERIOD_OPTIONS: { value: PeriodSetting; label: string; hint: string
   { value: "fertility", label: "Fertility", hint: "the same estimates, labelled as a fertile window" },
 ];
 /** Personal areas set in the same list: Period Tracker (its own choices) and Mental Wellness (No access / Use). */
-export type PersonalAreas = { period: PeriodSetting; wellness: boolean };
+export type PersonalAreas = { period: PeriodSetting; wellness: boolean; finance: boolean };
 
 const selectCls = "h-9 rounded-lg border border-line-strong bg-surface px-2 text-sm focus:border-primary-500 focus:outline-none";
 
@@ -82,9 +82,21 @@ export function PermissionRows({
               <option value="use">Use</option>
             </select>
           </div>
+          <div className="flex items-center justify-between gap-3 border-b border-line/70 py-2.5">
+            <label htmlFor={`finance-${memberId}`} className="flex items-center gap-2.5 text-[15px]">
+              <Icon name="Wallet" className="size-4 text-muted" />
+              <span>
+                My Budget <span className="text-sm text-muted">(private)</span>
+              </span>
+            </label>
+            <select id={`finance-${memberId}`} name={`finance:${memberId}`} defaultValue={personal.finance ? "on" : "off"} className={selectCls}>
+              <option value="off">No access</option>
+              <option value="on">Use</option>
+            </select>
+          </div>
         </>
       )}
-      {modules.map((mod) => {
+      {modules.filter((m) => !PARENT_ONLY_MODULES.includes(m)).map((mod) => {
         const meta = MODULE_META[mod];
         const id = `perm-${memberId}-${mod}`;
         return (

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, eq, ilike, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, transactions } from "@/db/schema";
 import type { Viewer } from "./dal";
@@ -17,7 +17,7 @@ export async function recordExpense(
   let [cat] = await db
     .select({ id: categories.id })
     .from(categories)
-    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, "budget"), ilike(categories.name, e.categoryName)));
+    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, "budget"), isNull(categories.ownerMemberId), ilike(categories.name, e.categoryName)));
   if (!cat) [cat] = await db.insert(categories).values({ familyId: viewer.family.id, domain: "budget", name: e.categoryName }).returning({ id: categories.id });
   const [t] = await db
     .insert(transactions)

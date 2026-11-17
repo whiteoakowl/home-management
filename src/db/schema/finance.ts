@@ -32,6 +32,8 @@ export const incomeSources = pgTable(
     frequency: incomeFrequency("frequency").notNull(),
     memberId: uuid("member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     notes: text("notes"),
+    /** Set = in this member's private money space (only they ever see it); null = the family's. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     ...timestamps,
   },
   (t) => [index("income_family_idx").on(t.familyId)],
@@ -50,6 +52,8 @@ export const budgetLimits = pgTable("budget_limits", {
   effectiveFrom: date("effective_from").notNull(),
   monthlyCents: integer("monthly_cents").notNull(),
   isBill: integer("is_bill").notNull().default(0),
+  /** Set = in this member's private money space (only they ever see it); null = the family's. */
+  ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
   ...timestamps,
 });
 
@@ -81,6 +85,8 @@ export const transactions = pgTable(
     projectId: uuid("project_id"),
     celebrationId: uuid("celebration_id"),
     notes: text("notes"),
+    /** Set = in this member's private money space (only they ever see it); null = the family's. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     ...timestamps,
   },
   (t) => [index("transactions_family_date_idx").on(t.familyId, t.date)],

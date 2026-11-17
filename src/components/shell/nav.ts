@@ -71,8 +71,13 @@ export function buildNav(viewer: Viewer): NavSection[] {
     group,
     items: Object.values(MODULE_META)
       // Members with a private food space reach the food pages even without family access.
-      .filter((m) => m.group === group && m.inNav && (viewer.can(m.id) || (FOOD_MODULES.includes(m.id) && viewer.member.privateFood)))
-      .map((m) => ({ href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`, label: viewer.can(m.id) ? m.label : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ?? m.label), icon: m.icon, children: SUBMENUS[m.href] })),
+      .filter((m) => m.group === group && m.inNav && (viewer.can(m.id) || (FOOD_MODULES.includes(m.id) && viewer.member.privateFood) || (m.id === "budget" && viewer.member.privateFinance)))
+      .map((m) =>
+        // Members never see the family budget; with a private money space they get "My Budget".
+        m.id === "budget" && !viewer.can("budget")
+          ? { href: "/budget?space=mine", label: "My Budget", icon: m.icon }
+          : { href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`, label: viewer.can(m.id) ? m.label : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ?? m.label), icon: m.icon, children: SUBMENUS[m.href] },
+      ),
   }));
   sections[0]!.items.unshift({ href: "/", label: "Home", icon: "LayoutDashboard" });
   // Personal spaces belong to each person (private unless shared), so everyone has them.

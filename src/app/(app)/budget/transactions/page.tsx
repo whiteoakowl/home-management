@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { Pencil, Receipt, Repeat } from "lucide-react";
 import { db } from "@/db";
@@ -11,7 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
 import { monthRange } from "@/lib/budget";
-import { budgetContext } from "@/lib/budget-page";
+import { budgetContext, budgetSpaceOrNotFound } from "@/lib/budget-page";
+import { ownerIs } from "@/lib/finance-space";
 import { getViewer } from "@/lib/dal";
 import { formatShortDate } from "@/lib/dates";
 import { formatCents } from "@/lib/utils";
@@ -22,9 +22,9 @@ export const metadata: Metadata = { title: "Transactions" };
 
 export default async function TransactionsPage({ searchParams }: PageProps<"/budget/transactions">) {
   const viewer = await getViewer();
-  if (!viewer.can("budget")) notFound();
   const sp = await searchParams;
-  const ctx = await budgetContext(viewer, sp.month);
+  const fin = budgetSpaceOrNotFound(viewer, sp.space);
+  const ctx = await budgetContext(viewer, sp.month, fin.owner);
   const kind = ["expense", "income", "savings_transfer"].includes(String(sp.kind)) ? String(sp.kind) : "all";
   const { from, to } = monthRange(ctx.month);
   const rows = await db
@@ -33,17 +33,17 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/bud
     .leftJoin(categories, eq(categories.id, transactions.categoryId))
     .leftJoin(familyMembers, eq(familyMembers.id, transactions.memberId))
     .leftJoin(goals, eq(goals.id, transactions.goalId))
-    .where(and(eq(transactions.familyId, viewer.family.id), gte(transactions.date, from), lte(transactions.date, to), kind !== "all" ? eq(transactions.kind, kind as "expense") : undefined))
+    .where(and(eq(transactions.familyId, viewer.family.id), ownerIs(transactions.ownerMemberId, fin.owner), gte(transactions.date, from), lte(transactions.date, to), kind !== "all" ? eq(transactions.kind, kind as "expense") : undefined))
     .orderBy(desc(transactions.date), desc(transactions.createdAt));
-  const canEdit = viewer.can("budget", "edit");
-  const modalProps = { categories: ctx.cats, goals: ctx.savingsGoals, sources: ctx.sources, members: ctx.members, today: ctx.today };
+  const canEdit = fin.canEdit;
+  const modalProps = { categories: ctx.cats, goals: ctx.savingsGoals, sources: ctx.sources, members: ctx.members, today: ctx.today, privateSpace: fin.isPrivate };
   const total = (k: string) => rows.filter((r) => r.t.kind === k).reduce((s, r) => s + r.t.amountCents, 0);
-  const q = (k: string) => `/budget/transactions?month=${ctx.month}&kind=${k}`;
+  const q = (k: string) => `/budget/transactions?month=${ctx.month}&kind=${k}${fin.amp}`;
   return (
     <>
-      <PageHeader eyebrow="Budget" title="Transactions" actions={canEdit ? <TransactionModal {...modalProps} /> : undefined} />
-      <BudgetTabs active="transactions" month={ctx.month} />
-      <MonthNav month={ctx.month} base="/budget/transactions" />
+      <PageHeader eyebrow={fin.title} title="Transactions" actions={canEdit ? <TransactionModal {...modalProps} /> : undefined} />
+      <BudgetTabs active="transactions" month={ctx.month} amp={fin.amp} />
+      <MonthNav month={ctx.month} base="/budget/transactions" amp={fin.amp} />
       <div className="mb-5 flex flex-wrap items-center gap-4">
         <SegmentLinks active={kind} items={[{ key: "all", href: q("all"), label: "All" }, { key: "expense", href: q("expense"), label: "Expenses" }, { key: "income", href: q("income"), label: "Income" }, { key: "savings_transfer", href: q("savings_transfer"), label: "Savings" }]} />
         <p className="text-sm text-muted">
@@ -86,7 +86,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/bud
                       {canEdit && (
                         <>
                           <TransactionModal {...modalProps} triggerAriaLabel="Edit" triggerContent={<Pencil className="mx-auto size-4" />} defaults={{ id: t.id, kind: t.kind, name: t.name, amount: t.amountCents / 100, date: t.date, categoryId: t.categoryId, incomeSourceId: t.incomeSourceId, goalId: t.goalId, memberId: t.memberId, notes: t.notes }} />
-                          <DeleteButton action={deleteTransaction} fields={{ id: t.id }} what={`"${t.name}"`} />
+                          <DeleteButton action={deleteTransaction} fields={{ id: t.id, ...fin.fields }} what={`"${t.name}"`} />
                         </>
                       )}
                     </td>

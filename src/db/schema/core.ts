@@ -122,6 +122,8 @@ export const familyMembers = pgTable(
     privateFood: boolean("private_food").notNull().default(false),
     /** Let parents open (read-only) my private food space. The member's own choice; off by default. */
     shareFoodWithParents: boolean("share_food_with_parents").notNull().default(false),
+    /** Has a private money space (My Budget). Set by parents. Only the member ever sees it, never parents. */
+    privateFinance: boolean("private_finance").notNull().default(false),
     /**
      * Parent oversight for a minor: personal areas (privacy categories) parents may view
      * even if the member keeps them private. Set by parents; always shown to the member.
@@ -185,6 +187,8 @@ export const categories = pgTable(
     color: text("color"),
     icon: text("icon"),
     sortOrder: integer("sort_order").notNull().default(0),
+    /** Set = a category in this member's private money space; null = the family's. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     ...timestamps,
   },
   (t) => [index("categories_family_domain_idx").on(t.familyId, t.domain)],

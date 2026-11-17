@@ -183,6 +183,13 @@
       "when": 1794873155535,
       "tag": "0025_recipe_sections_and_details",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794873720783,
+      "tag": "0026_private_finance",
+      "breakpoints": true
     }
   ]
 }

@@ -242,7 +242,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       db
         .select({ id: transactions.id, title: transactions.name, cents: transactions.amountCents, date: transactions.date, kind: transactions.kind })
         .from(transactions)
-        .where(and(eq(transactions.familyId, fid), or(ilike(transactions.name, like), ilike(transactions.notes, like))))
+        .where(and(eq(transactions.familyId, fid), isNull(transactions.ownerMemberId), or(ilike(transactions.name, like), ilike(transactions.notes, like))))
         .orderBy(sql`${transactions.date} desc`)
         .limit(LIMIT)
         .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${x.kind === "income" ? "+" : "−"}$${(x.cents / 100).toFixed(2)} · ${x.date}`, href: `/budget/transactions?month=${x.date.slice(0, 7)}` }))),

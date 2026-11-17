@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Receipt, Wallet } from "lucide-react";
 import { db } from "@/db";
@@ -10,7 +9,8 @@ import { TransactionModal } from "@/components/budget/budget-forms";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { FREQ_PER_MONTH, monthlyHistory, monthRange, monthTotals } from "@/lib/budget";
-import { budgetContext } from "@/lib/budget-page";
+import { budgetContext, budgetSpaceOrNotFound } from "@/lib/budget-page";
+import { ownerIs } from "@/lib/finance-space";
 import { getViewer } from "@/lib/dal";
 import { formatShortDate } from "@/lib/dates";
 import { listGoals, progressOf } from "@/lib/goals";
@@ -22,22 +22,24 @@ export const metadata: Metadata = { title: "Budget" };
 
 export default async function BudgetPage({ searchParams }: PageProps<"/budget">) {
   const viewer = await getViewer();
-  if (!viewer.can("budget")) notFound();
   const sp = await searchParams;
-  const { today, month, cats, savingsGoals, sources, members } = await budgetContext(viewer, sp.month);
+  const fin = budgetSpaceOrNotFound(viewer, sp.space);
+  const { today, month, cats, savingsGoals, sources, members } = await budgetContext(viewer, sp.month, fin.owner);
   const { from, to } = monthRange(month);
   const [totals, history, recent, goalRows] = await Promise.all([
-    monthTotals(viewer, month),
-    monthlyHistory(viewer, month, 6),
+    monthTotals(viewer, month, fin.owner),
+    monthlyHistory(viewer, month, 6, fin.owner),
     db
       .select({ t: transactions, category: categories.name })
       .from(transactions)
       .leftJoin(categories, eq(categories.id, transactions.categoryId))
-      .where(and(eq(transactions.familyId, viewer.family.id), gte(transactions.date, from), lte(transactions.date, to)))
+      .where(and(eq(transactions.familyId, viewer.family.id), ownerIs(transactions.ownerMemberId, fin.owner), gte(transactions.date, from), lte(transactions.date, to)))
       .orderBy(desc(transactions.date), desc(transactions.createdAt))
       .limit(8),
     viewer.can("goals") ? listGoals(viewer, { kind: "savings" }) : Promise.resolve([]),
   ]);
+  // My Budget shows only the member's own savings goals.
+  const shownGoals = fin.owner ? goalRows.filter((x) => x.g.ownerMemberId === fin.owner) : goalRows;
   const expectedIncome = Math.round(sources.reduce((s, x) => s + x.amountCents * (FREQ_PER_MONTH[x.frequency] ?? 0), 0));
   const income = totals.income || expectedIncome;
   const bills = cats.filter((c) => c.isBill).reduce((s, c) => s + (totals.byCategory.get(c.id) ?? 0), 0);
@@ -49,9 +51,9 @@ export default async function BudgetPage({ searchParams }: PageProps<"/budget">)
   ]
     .filter((b) => b.value > 0 || b.limit)
     .sort((a, b) => b.value - a.value);
-  const canEdit = viewer.can("budget", "edit");
+  const canEdit = fin.canEdit;
   const hasAny = history.some((h) => h.income || h.expenses || h.saved) || sources.length > 0;
-  const modalProps = { categories: cats, goals: savingsGoals, sources, members, today };
+  const modalProps = { categories: cats, goals: savingsGoals, sources, members, today, privateSpace: fin.isPrivate };
 
   const tiles = [
     { label: totals.income ? "Income" : "Expected income", value: income, icon: ArrowUpRight, note: !totals.income && expectedIncome ? "from income sources" : undefined },
@@ -65,8 +67,8 @@ export default async function BudgetPage({ searchParams }: PageProps<"/budget">)
     <>
       <PageHeader
         eyebrow="Money"
-        title="Budget"
-        description="Income, bills, expenses and savings, month by month."
+        title={fin.title}
+        description={fin.isPrivate ? "Your own money: what comes in, what you spend and what you save. Only you can see this, not even parents." : "Income, bills, expenses and savings, month by month. Shared by parents."}
         actions={
           canEdit ? (
             <>
@@ -76,8 +78,8 @@ export default async function BudgetPage({ searchParams }: PageProps<"/budget">)
           ) : undefined
         }
       />
-      <BudgetTabs active="overview" month={month} />
-      <MonthNav month={month} base="/budget" />
+      <BudgetTabs active="overview" month={month} amp={fin.amp} />
+      <MonthNav month={month} base="/budget" amp={fin.amp} />
       {!hasAny ? (
         <Card>
           <EmptyState
@@ -85,7 +87,7 @@ export default async function BudgetPage({ searchParams }: PageProps<"/budget">)
             title="Your budget is empty"
             description="Add your income sources and a few expenses. Recurring bills can repeat automatically."
             example="Mortgage $1,850 · monthly · Bills"
-            action={canEdit ? <Link href={`/budget/income?month=${month}`} className="text-sm font-semibold text-primary-600 hover:underline">Start with income →</Link> : undefined}
+            action={canEdit ? <Link href={`/budget/income?month=${month}${fin.amp}`} className="text-sm font-semibold text-primary-600 hover:underline">Start with income →</Link> : undefined}
           />
         </Card>
       ) : (
@@ -107,13 +109,13 @@ export default async function BudgetPage({ searchParams }: PageProps<"/budget">)
               <BarChart data={history.map((h) => ({ label: h.label, values: [h.income / 100, h.expenses / 100] }))} series={[{ name: "Income" }, { name: "Expenses" }]} label="Income and expenses by month" valueFormat={{ currency: true }} />
             </Card>
             <Card>
-              <CardHeader title="Spending by category" href={`/budget/categories?month=${month}`} hrefLabel="Limits" />
+              <CardHeader title="Spending by category" href={`/budget/categories?month=${month}${fin.amp}`} hrefLabel="Limits" />
               {breakdown.length ? <HBarList data={breakdown} valueFormat={{ currency: true }} /> : <p className="text-sm text-muted">No expenses this month.</p>}
             </Card>
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Card>
-              <CardHeader title="Recent transactions" href={`/budget/transactions?month=${month}`} />
+              <CardHeader title="Recent transactions" href={`/budget/transactions?month=${month}${fin.amp}`} />
               {recent.length === 0 ? (
                 <p className="text-sm text-muted">Nothing recorded for this month.</p>
               ) : (
@@ -136,11 +138,11 @@ export default async function BudgetPage({ searchParams }: PageProps<"/budget">)
             </Card>
             <Card>
               <CardHeader title="Savings goals" href="/goals?kind=savings" />
-              {goalRows.length === 0 ? (
+              {shownGoals.length === 0 ? (
                 <p className="text-sm text-muted">Create savings goals, then use “Move to savings” to fund them from the budget.</p>
               ) : (
                 <ul className="flex flex-col gap-3">
-                  {goalRows.map(({ g }) => {
+                  {shownGoals.map(({ g }) => {
                     const p = progressOf(g);
                     return (
                       <li key={g.id} className="flex flex-col gap-1">

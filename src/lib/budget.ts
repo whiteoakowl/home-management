@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { budgetLimits, categories, incomeSources, recurrenceRules, transactions } from "@/db/schema";
 import type { Viewer } from "./dal";
+import { ownerIs } from "./finance-space";
 import { addDays, addMonths } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 
@@ -13,22 +14,23 @@ export const monthRange = (month: string) => {
   return { from, to: addDays(addMonths(from, 1), -1) };
 };
 
-export async function budgetCategories(viewer: Viewer) {
+/** owner: null = the family's budget; a member id = that member's private money space. */
+export async function budgetCategories(viewer: Viewer, owner: string | null = null) {
   const rows = await db
     .select({ c: categories, limit: budgetLimits })
     .from(categories)
-    .leftJoin(budgetLimits, eq(budgetLimits.categoryId, categories.id))
-    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, "budget")))
+    .leftJoin(budgetLimits, and(eq(budgetLimits.categoryId, categories.id), ownerIs(budgetLimits.ownerMemberId, owner)))
+    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, "budget"), ownerIs(categories.ownerMemberId, owner)))
     .orderBy(asc(categories.sortOrder), asc(categories.name));
   return rows.map((r) => ({ id: r.c.id, name: r.c.name, color: r.c.color, limitCents: r.limit?.monthlyCents ?? null, isBill: (r.limit?.isBill ?? 0) === 1 }));
 }
 
-export async function monthTotals(viewer: Viewer, month: string) {
+export async function monthTotals(viewer: Viewer, month: string, owner: string | null = null) {
   const { from, to } = monthRange(month);
   const rows = await db
     .select({ kind: transactions.kind, categoryId: transactions.categoryId, total: sql<number>`sum(${transactions.amountCents})::int` })
     .from(transactions)
-    .where(and(eq(transactions.familyId, viewer.family.id), gte(transactions.date, from), lte(transactions.date, to)))
+    .where(and(eq(transactions.familyId, viewer.family.id), ownerIs(transactions.ownerMemberId, owner), gte(transactions.date, from), lte(transactions.date, to)))
     .groupBy(transactions.kind, transactions.categoryId);
   const sum = (k: string) => rows.filter((r) => r.kind === k).reduce((s, r) => s + r.total, 0);
   const byCategory = new Map<string | null, number>();
@@ -37,13 +39,13 @@ export async function monthTotals(viewer: Viewer, month: string) {
 }
 
 /** Income vs expenses for the last n months (oldest first). */
-export async function monthlyHistory(viewer: Viewer, month: string, n = 6) {
+export async function monthlyHistory(viewer: Viewer, month: string, n = 6, owner: string | null = null) {
   const first = addMonths(`${month.slice(0, 7)}-01`, -(n - 1));
   const { to } = monthRange(month);
   const rows = await db
     .select({ m: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`, kind: transactions.kind, total: sql<number>`sum(${transactions.amountCents})::int` })
     .from(transactions)
-    .where(and(eq(transactions.familyId, viewer.family.id), gte(transactions.date, first), lte(transactions.date, to)))
+    .where(and(eq(transactions.familyId, viewer.family.id), ownerIs(transactions.ownerMemberId, owner), gte(transactions.date, first), lte(transactions.date, to)))
     .groupBy(sql`1`, transactions.kind);
   return Array.from({ length: n }, (_, i) => {
     const m = addMonths(first, i).slice(0, 7);
@@ -52,8 +54,8 @@ export async function monthlyHistory(viewer: Viewer, month: string, n = 6) {
   });
 }
 
-export async function incomeSourceList(viewer: Viewer) {
-  return db.select().from(incomeSources).where(eq(incomeSources.familyId, viewer.family.id)).orderBy(desc(incomeSources.amountCents));
+export async function incomeSourceList(viewer: Viewer, owner: string | null = null) {
+  return db.select().from(incomeSources).where(and(eq(incomeSources.familyId, viewer.family.id), ownerIs(incomeSources.ownerMemberId, owner))).orderBy(desc(incomeSources.amountCents));
 }
 
 /**
@@ -88,6 +90,7 @@ export async function materializeRecurringTransactions(familyId: string, today: 
         goalId: null,
         recurrenceRuleId: rule.id,
         memberId: t.memberId,
+        ownerMemberId: t.ownerMemberId,
         notes: t.notes,
       })),
     );

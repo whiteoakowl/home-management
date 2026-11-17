@@ -241,7 +241,7 @@ export async function getBudget(s: Scope) {
   const rows = await db
     .select({ kind: transactions.kind, total: sql<number>`coalesce(sum(${transactions.amountCents}),0)::int` })
     .from(transactions)
-    .where(and(eq(transactions.familyId, fid(s)), gte(transactions.date, monthStart), lte(transactions.date, s.today)))
+    .where(and(eq(transactions.familyId, fid(s)), isNull(transactions.ownerMemberId), gte(transactions.date, monthStart), lte(transactions.date, s.today)))
     .groupBy(transactions.kind);
   const by = Object.fromEntries(rows.map((r) => [r.kind, r.total]));
   return { income: by.income ?? 0, expenses: by.expense ?? 0, saved: by.savings_transfer ?? 0, hasData: rows.length > 0 };

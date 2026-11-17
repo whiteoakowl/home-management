@@ -6,7 +6,8 @@ import { db } from "@/db";
 import { budgetLimits, categories, goals, incomeFrequency, incomeSources, transactions } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { materializeRecurringTransactions } from "@/lib/budget";
-import { requireModule } from "@/lib/dal";
+import { getViewer, requireModule } from "@/lib/dal";
+import { financeOwnerFor, ownerIs } from "@/lib/finance-space";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { recordContribution } from "@/lib/goals";
@@ -25,7 +26,8 @@ function revalidateBudget() {
 
 export async function saveTransaction(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("budget", "edit");
+    const viewer = await getViewer();
+    const owner = financeOwnerFor(viewer, fd);
     const kind = f.str(fd, "kind") as "expense" | "income" | "savings_transfer";
     if (!["expense", "income", "savings_transfer"].includes(kind)) return fail("Choose a type.", "kind");
     const name = f.str(fd, "name") ?? (kind === "income" ? "Income" : kind === "savings_transfer" ? "Transfer to savings" : null);
@@ -35,12 +37,12 @@ export async function saveTransaction(_: ActionState, fd: FormData): Promise<Act
     const date = f.date(fd, "date") ?? todayIn(viewer.family.timezone);
     let goalId = f.str(fd, "goalId");
     if (goalId) {
-      const [g] = await db.select({ id: goals.id }).from(goals).where(and(eq(goals.id, goalId), eq(goals.familyId, viewer.family.id), eq(goals.kind, "savings"), or(isNull(goals.ownerMemberId), eq(goals.ownerMemberId, viewer.member.id))));
+      const [g] = await db.select({ id: goals.id }).from(goals).where(and(eq(goals.id, goalId), eq(goals.familyId, viewer.family.id), eq(goals.kind, "savings"), owner ? eq(goals.ownerMemberId, owner) : or(isNull(goals.ownerMemberId), eq(goals.ownerMemberId, viewer.member.id))));
       goalId = g?.id ?? null;
     }
     let incomeSourceId = f.str(fd, "incomeSourceId");
     if (incomeSourceId) {
-      const [s] = await db.select({ id: incomeSources.id }).from(incomeSources).where(and(eq(incomeSources.id, incomeSourceId), eq(incomeSources.familyId, viewer.family.id)));
+      const [s] = await db.select({ id: incomeSources.id }).from(incomeSources).where(and(eq(incomeSources.id, incomeSourceId), eq(incomeSources.familyId, viewer.family.id), ownerIs(incomeSources.ownerMemberId, owner)));
       incomeSourceId = s?.id ?? null;
     }
     const values = {
@@ -49,15 +51,16 @@ export async function saveTransaction(_: ActionState, fd: FormData): Promise<Act
       name,
       amountCents,
       date,
-      categoryId: kind === "income" ? null : await ownedCategoryId(viewer, "budget", f.str(fd, "categoryId")),
+      categoryId: kind === "income" ? null : await ownedCategoryId(viewer, "budget", f.str(fd, "categoryId"), owner),
       incomeSourceId: kind === "income" ? incomeSourceId : null,
       goalId: kind === "savings_transfer" ? goalId : null,
-      memberId: await familyMemberIdOrNull(viewer.family.id, f.str(fd, "memberId")),
+      memberId: owner ?? (await familyMemberIdOrNull(viewer.family.id, f.str(fd, "memberId"))),
       notes: f.str(fd, "notes"),
+      ownerMemberId: owner,
     };
     const id = f.str(fd, "id");
     if (id) {
-      const [old] = await db.select().from(transactions).where(and(eq(transactions.id, id), eq(transactions.familyId, viewer.family.id)));
+      const [old] = await db.select().from(transactions).where(and(eq(transactions.id, id), eq(transactions.familyId, viewer.family.id), ownerIs(transactions.ownerMemberId, owner)));
       if (!old) return fail("Not found.");
       await db.update(transactions).set(values).where(eq(transactions.id, id));
     } else {
@@ -73,8 +76,9 @@ export async function saveTransaction(_: ActionState, fd: FormData): Promise<Act
 }
 
 export async function deleteTransaction(fd: FormData) {
-  const viewer = await requireModule("budget", "edit");
-  await db.delete(transactions).where(and(eq(transactions.id, String(fd.get("id"))), eq(transactions.familyId, viewer.family.id)));
+  const viewer = await getViewer();
+  const owner = financeOwnerFor(viewer, fd);
+  await db.delete(transactions).where(and(eq(transactions.id, String(fd.get("id"))), eq(transactions.familyId, viewer.family.id), ownerIs(transactions.ownerMemberId, owner)));
   revalidateBudget();
 }
 
@@ -82,15 +86,16 @@ const FREQS = incomeFrequency.enumValues;
 
 export async function saveIncomeSource(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("budget", "edit");
+    const viewer = await getViewer();
+    const owner = financeOwnerFor(viewer, fd);
     const name = f.str(fd, "name");
     if (!name) return fail("Name the income source.", "name");
     const amountCents = f.cents(fd, "amount");
     if (!amountCents || amountCents <= 0) return fail("Enter the amount per payment.", "amount");
     const frequency = f.str(fd, "frequency") as (typeof FREQS)[number];
-    const values = { familyId: viewer.family.id, name, amountCents, frequency: FREQS.includes(frequency) ? frequency : "monthly", memberId: await familyMemberIdOrNull(viewer.family.id, f.str(fd, "memberId")), notes: f.str(fd, "notes") };
+    const values = { familyId: viewer.family.id, name, amountCents, frequency: FREQS.includes(frequency) ? frequency : "monthly", memberId: owner ?? (await familyMemberIdOrNull(viewer.family.id, f.str(fd, "memberId"))), notes: f.str(fd, "notes"), ownerMemberId: owner };
     const id = f.str(fd, "id");
-    if (id) await db.update(incomeSources).set(values).where(and(eq(incomeSources.id, id), eq(incomeSources.familyId, viewer.family.id)));
+    if (id) await db.update(incomeSources).set(values).where(and(eq(incomeSources.id, id), eq(incomeSources.familyId, viewer.family.id), ownerIs(incomeSources.ownerMemberId, owner)));
     else await db.insert(incomeSources).values(values);
     revalidateBudget();
     return ok();
@@ -98,31 +103,33 @@ export async function saveIncomeSource(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function deleteIncomeSource(fd: FormData) {
-  const viewer = await requireModule("budget", "edit");
-  await db.delete(incomeSources).where(and(eq(incomeSources.id, String(fd.get("id"))), eq(incomeSources.familyId, viewer.family.id)));
+  const viewer = await getViewer();
+  const owner = financeOwnerFor(viewer, fd);
+  await db.delete(incomeSources).where(and(eq(incomeSources.id, String(fd.get("id"))), eq(incomeSources.familyId, viewer.family.id), ownerIs(incomeSources.ownerMemberId, owner)));
   revalidateBudget();
 }
 
 /** Create/rename a budget category and set its monthly limit / bill flag. */
 export async function saveBudgetCategory(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("budget", "edit");
+    const viewer = await getViewer();
+    const owner = financeOwnerFor(viewer, fd);
     const name = f.str(fd, "name");
     if (!name) return fail("Name the category.", "name");
     let id = f.str(fd, "id");
     if (id) {
-      const owned = await ownedCategoryId(viewer, "budget", id);
+      const owned = await ownedCategoryId(viewer, "budget", id, owner);
       if (!owned) return fail("Category not found.");
       await db.update(categories).set({ name }).where(eq(categories.id, id));
     } else {
-      const [row] = await db.insert(categories).values({ familyId: viewer.family.id, domain: "budget", name, sortOrder: 999 }).returning({ id: categories.id });
+      const [row] = await db.insert(categories).values({ familyId: viewer.family.id, domain: "budget", name, sortOrder: 999, ownerMemberId: owner }).returning({ id: categories.id });
       id = row!.id;
     }
     const limit = f.cents(fd, "limit");
     const isBill = f.bool(fd, "isBill") ? 1 : 0;
-    await db.delete(budgetLimits).where(eq(budgetLimits.categoryId, id));
+    await db.delete(budgetLimits).where(and(eq(budgetLimits.categoryId, id), ownerIs(budgetLimits.ownerMemberId, owner)));
     if (limit !== null || isBill) {
-      await db.insert(budgetLimits).values({ familyId: viewer.family.id, categoryId: id, effectiveFrom: `${todayIn(viewer.family.timezone).slice(0, 7)}-01`, monthlyCents: limit ?? 0, isBill });
+      await db.insert(budgetLimits).values({ familyId: viewer.family.id, categoryId: id, effectiveFrom: `${todayIn(viewer.family.timezone).slice(0, 7)}-01`, monthlyCents: limit ?? 0, isBill, ownerMemberId: owner });
     }
     revalidateBudget();
     return ok();
@@ -130,8 +137,9 @@ export async function saveBudgetCategory(_: ActionState, fd: FormData): Promise<
 }
 
 export async function deleteBudgetCategory(fd: FormData) {
-  const viewer = await requireModule("budget", "edit");
-  const id = await ownedCategoryId(viewer, "budget", String(fd.get("id")));
+  const viewer = await getViewer();
+  const owner = financeOwnerFor(viewer, fd);
+  const id = await ownedCategoryId(viewer, "budget", String(fd.get("id")), owner);
   if (id) await db.delete(categories).where(eq(categories.id, id));
   revalidateBudget();
 }

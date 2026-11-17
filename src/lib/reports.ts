@@ -150,13 +150,13 @@ export async function budgetReport(viewer: Viewer, today: string) {
     db
       .select({ m: sql<string>`to_char(${transactions.date}, 'YYYY-MM')`, kind: transactions.kind, total: sql<number>`sum(${transactions.amountCents})::int` })
       .from(transactions)
-      .where(and(eq(transactions.familyId, viewer.family.id), gte(transactions.date, `${months[0]}-01`), lte(transactions.date, today)))
+      .where(and(eq(transactions.familyId, viewer.family.id), isNull(transactions.ownerMemberId), gte(transactions.date, `${months[0]}-01`), lte(transactions.date, today)))
       .groupBy(sql`1`, transactions.kind),
     db
       .select({ name: sql<string>`coalesce(${categories.name}, 'Uncategorized')`, total: sql<number>`sum(${transactions.amountCents})::int` })
       .from(transactions)
       .leftJoin(categories, eq(categories.id, transactions.categoryId))
-      .where(and(eq(transactions.familyId, viewer.family.id), eq(transactions.kind, "expense"), gte(transactions.date, `${months[0]}-01`), lte(transactions.date, today)))
+      .where(and(eq(transactions.familyId, viewer.family.id), isNull(transactions.ownerMemberId), eq(transactions.kind, "expense"), gte(transactions.date, `${months[0]}-01`), lte(transactions.date, today)))
       .groupBy(sql`1`)
       .orderBy(desc(sql`2`)),
   ]);

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { HandCoins, Pencil } from "lucide-react";
 import { deleteIncomeSource } from "@/app/actions/budget";
 import { IncomeSourceModal } from "@/components/budget/budget-forms";
@@ -7,7 +6,7 @@ import { DeleteButton } from "@/components/forms/inline";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { FREQ_PER_MONTH, monthTotals } from "@/lib/budget";
-import { budgetContext } from "@/lib/budget-page";
+import { budgetContext, budgetSpaceOrNotFound } from "@/lib/budget-page";
 import { getViewer } from "@/lib/dal";
 import { formatCents } from "@/lib/utils";
 import { BudgetTabs } from "../budget-tabs";
@@ -18,17 +17,17 @@ const FREQ_LABEL: Record<string, string> = { weekly: "Weekly", biweekly: "Every 
 
 export default async function IncomePage({ searchParams }: PageProps<"/budget/income">) {
   const viewer = await getViewer();
-  if (!viewer.can("budget")) notFound();
   const sp = await searchParams;
-  const ctx = await budgetContext(viewer, sp.month);
-  const totals = await monthTotals(viewer, ctx.month);
+  const fin = budgetSpaceOrNotFound(viewer, sp.space);
+  const ctx = await budgetContext(viewer, sp.month, fin.owner);
+  const totals = await monthTotals(viewer, ctx.month, fin.owner);
   const monthly = Math.round(ctx.sources.reduce((s, x) => s + x.amountCents * (FREQ_PER_MONTH[x.frequency] ?? 0), 0));
-  const canEdit = viewer.can("budget", "edit");
-  const add = <IncomeSourceModal members={ctx.members} />;
+  const canEdit = fin.canEdit;
+  const add = <IncomeSourceModal members={ctx.members} privateSpace={fin.isPrivate} />;
   return (
     <>
-      <PageHeader eyebrow="Budget" title="Income" description="Every paycheck, side job and other income, normalised to a monthly figure." actions={canEdit ? add : undefined} />
-      <BudgetTabs active="income" month={ctx.month} />
+      <PageHeader eyebrow={fin.title} title="Income" description="Every paycheck, side job and other income, normalised to a monthly figure." actions={canEdit ? add : undefined} />
+      <BudgetTabs active="income" month={ctx.month} amp={fin.amp} />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Card>
           <p className="text-sm text-muted">Expected monthly income</p>
@@ -69,8 +68,8 @@ export default async function IncomePage({ searchParams }: PageProps<"/budget/in
                   <td className="py-1 pr-3 text-right whitespace-nowrap">
                     {canEdit && (
                       <>
-                        <IncomeSourceModal members={ctx.members} source={{ id: s.id, name: s.name, amount: s.amountCents / 100, frequency: s.frequency, memberId: s.memberId, notes: s.notes }} triggerAriaLabel="Edit" triggerContent={<Pencil className="mx-auto size-4" />} />
-                        <DeleteButton action={deleteIncomeSource} fields={{ id: s.id }} what={s.name} />
+                        <IncomeSourceModal members={ctx.members} privateSpace={fin.isPrivate} source={{ id: s.id, name: s.name, amount: s.amountCents / 100, frequency: s.frequency, memberId: s.memberId, notes: s.notes }} triggerAriaLabel="Edit" triggerContent={<Pencil className="mx-auto size-4" />} />
+                        <DeleteButton action={deleteIncomeSource} fields={{ id: s.id, ...fin.fields }} what={s.name} />
                       </>
                     )}
                   </td>

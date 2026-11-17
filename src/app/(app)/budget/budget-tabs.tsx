@@ -1,7 +1,7 @@
 import { LinkTabs } from "@/components/ui/tabs";
 
-export function BudgetTabs({ active, month }: { active: string; month: string }) {
-  const q = `?month=${month}`;
+export function BudgetTabs({ active, month, amp = "" }: { active: string; month: string; amp?: string }) {
+  const q = `?month=${month}${amp}`;
   return (
     <LinkTabs
       active={active}

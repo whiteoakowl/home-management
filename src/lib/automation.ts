@@ -410,7 +410,8 @@ export async function runDailyAutomation(family: Family, force = false) {
       })
       .from(budgetLimits)
       .innerJoin(categories, eq(categories.id, budgetLimits.categoryId))
-      .where(eq(budgetLimits.familyId, fid));
+      // Family budget only: private money spaces never notify anyone.
+      .where(and(eq(budgetLimits.familyId, fid), isNull(budgetLimits.ownerMemberId)));
     const parents = await parentsOf(fid);
     for (const r of rows) {
       if (r.spent > r.limit) await notify(fid, parents, { kind: "budget_alert", title: `${r.name} is over budget this month`, href: "/budget" }, today);

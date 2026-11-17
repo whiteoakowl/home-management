@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, homeProjects, projectStages, rooms } from "@/db/schema";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
@@ -11,11 +11,12 @@ export async function memberOptions(viewer: Viewer) {
   return (await listFamilyMembers(viewer.family.id)).map((m) => ({ id: m.id, displayName: m.displayName, color: m.color, role: m.role }));
 }
 
-export async function categoryOptions(viewer: Viewer, domain: CategoryDomain) {
+/** owner: null = the family's categories; a member id = their private money space's. */
+export async function categoryOptions(viewer: Viewer, domain: CategoryDomain, owner: string | null = null) {
   return db
     .select({ id: categories.id, name: categories.name, color: categories.color })
     .from(categories)
-    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, domain)))
+    .where(and(eq(categories.familyId, viewer.family.id), eq(categories.domain, domain), owner ? eq(categories.ownerMemberId, owner) : isNull(categories.ownerMemberId)))
     .orderBy(asc(categories.sortOrder), asc(categories.name));
 }
 
@@ -28,12 +29,12 @@ export async function roomOptions(viewer: Viewer) {
 }
 
 /** Validate a category id from a form against the family + domain. */
-export async function ownedCategoryId(viewer: Viewer, domain: CategoryDomain, id: string | null) {
+export async function ownedCategoryId(viewer: Viewer, domain: CategoryDomain, id: string | null, owner: string | null = null) {
   if (!id) return null;
   const [c] = await db
     .select({ id: categories.id })
     .from(categories)
-    .where(and(eq(categories.id, id), eq(categories.familyId, viewer.family.id), eq(categories.domain, domain)));
+    .where(and(eq(categories.id, id), eq(categories.familyId, viewer.family.id), eq(categories.domain, domain), owner ? eq(categories.ownerMemberId, owner) : isNull(categories.ownerMemberId)));
   return c?.id ?? null;
 }
 
