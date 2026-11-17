@@ -44,7 +44,7 @@ export default async function CookFromPantryPage({ searchParams }: PageProps<"/k
       const status = checkIngredients(list, inv);
       const needed = status.filter((s) => !s.optional);
       const missing = needed.filter((s) => !s.have);
-      const usesExpiring = expiring.filter((e) => list.some((i) => namesMatch(i.name, e.name)));
+      const usesExpiring = expiring.filter((e) => list.some((i) => namesMatch(i.name, e.name) || e.aliases.some((a) => namesMatch(i.name, a))));
       return { r, total: needed.length, have: needed.length - missing.length, missing, usesExpiring };
     })
     .filter((x) => x.total > 0)

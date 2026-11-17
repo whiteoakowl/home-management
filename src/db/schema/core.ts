@@ -83,6 +83,8 @@ export type FamilySettings = {
   weekStartsOn?: 0 | 1;
   /** First day of the family meal planner's week (0 = Sunday … 6 = Saturday). */
   mealWeekStartsOn?: number;
+  /** The family's own keyword-bank groups (words that mean the same grocery), on top of the built-in ones. */
+  ingredientSynonyms?: string[][];
   /** Members' own meal-plan week starts, by member id. */
   privateMealWeekStartsOn?: Record<string, number>;
   /** ISO date the daily automation last ran for this family. */

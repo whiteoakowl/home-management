@@ -32,6 +32,7 @@ export type InventoryDefaults = {
   expiresOn?: string | null;
   lowStockThreshold?: string | null;
   notes?: string | null;
+  tags?: string[] | null;
   barcode?: string | null;
   brand?: string | null;
   productImageUrl?: string | null;
@@ -47,6 +48,7 @@ export function InventoryFields({ d, categories }: { d?: InventoryDefaults; cate
       {d?.brand && <input type="hidden" name="brand" value={d.brand} />}
       {d?.productImageUrl && <input type="hidden" name="productImageUrl" value={d.productImageUrl} />}
       <TextField name="name" label="Item" required defaultValue={d?.name} placeholder="Canned tomatoes" />
+      <TextField name="tags" label="Also called (optional)" defaultValue={(d?.tags ?? []).join(", ")} placeholder="poultry, chicken breasts" hint="Other names recipes use for it, separated by commas, so they find it in stock." />
       <FormRow cols={3}>
         <NumberField name="quantity" label="Quantity" min={0} defaultValue={d?.quantity ?? 1} />
         <TextField name="unit" label="Unit" defaultValue={d?.unit ?? ""} placeholder="can, lb, dozen…" list="unit-suggestions" />

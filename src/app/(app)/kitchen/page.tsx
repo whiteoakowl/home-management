@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import { AlarmClock, Refrigerator, ChefHat, Receipt, ScanBarcode, ShoppingBasket } from "lucide-react";
+import { AlarmClock, ChefHat, Receipt, Refrigerator, ScanBarcode, ShoppingBasket, Tags } from "lucide-react";
 import { db } from "@/db";
 import { categories, inventoryItems } from "@/db/schema";
 import { restockLowItems } from "@/app/actions/kitchen";
@@ -127,6 +127,9 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
               </ButtonLink>
               <ButtonLink href="/kitchen/receipt" variant="secondary" icon={<Receipt className="size-4" />}>
                 Scan receipt
+              </ButtonLink>
+              <ButtonLink href="/kitchen/keywords" variant="secondary" icon={<Tags className="size-4" />}>
+                Keyword bank
               </ButtonLink>
               {add}
             </>

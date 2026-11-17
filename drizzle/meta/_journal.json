@@ -295,6 +295,13 @@
       "when": 1794931285563,
       "tag": "0041_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794933173863,
+      "tag": "0042_inventory_tags",
+      "breakpoints": true
     }
   ]
 }

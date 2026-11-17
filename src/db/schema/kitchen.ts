@@ -82,6 +82,8 @@ export const inventoryItems = pgTable(
     lowStockThreshold: numeric("low_stock_threshold"),
     imageFileId: uuid("image_file_id").references(() => files.id, { onDelete: "set null" }),
     notes: text("notes"),
+    /** Other names it goes by on recipes ("poultry", "green onions"). */
+    tags: text("tags").array().notNull().default([]),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     /** Set = in this member's private food space (My Pantry etc.); null = the family's. */
     ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "cascade" }),

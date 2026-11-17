@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { inventoryEvents, inventoryItems, listItems, products, storageLocation } from "@/db/schema";
+import { families, inventoryEvents, inventoryItems, listItems, products, storageLocation } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { addLowStockToShopping } from "@/lib/automation";
 import { AuthorizationError, getViewer, requireModule, type Viewer } from "@/lib/dal";
-import { assertChange, hasPrivateFood, ownerForNew } from "@/lib/food-space";
+import { assertChange, canOpenFood, hasPrivateFood, ownerForNew } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
@@ -68,6 +68,7 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
       expiresOn: f.date(fd, "expiresOn"),
       lowStockThreshold: f.num(fd, "lowStockThreshold") !== null ? String(f.num(fd, "lowStockThreshold")) : null,
       notes: f.str(fd, "notes"),
+      ...(fd.has("tags") ? { tags: splitWords(f.str(fd, "tags")) } : {}),
       ...(productId ? { productId } : {}),
       ...(image ? { imageFileId: image } : {}),
     };
@@ -242,4 +243,47 @@ export async function putAwayChecked(fd: FormData) {
   await db.delete(listItems).where(inArray(listItems.id, checked.map((c) => c.id)));
   await logActivity(db, viewer.family.id, viewer.member.id, "shopping.put_away", `put away ${count} item${count === 1 ? "" : "s"} from ${list.title}`, { module: "kitchen" });
   revalidateKitchen();
+}
+
+/** "chicken, poultry; hen" → ["chicken", "poultry", "hen"] (trimmed, no repeats, at most 12). */
+function splitWords(v: string | null) {
+  return [...new Set((v ?? "").split(/[,;\n]/).map((w) => w.trim().toLowerCase().slice(0, 40)).filter(Boolean))].slice(0, 12);
+}
+
+/** Add a keyword-bank group: words that mean the same grocery ("pop, soda, soft drink"). */
+export async function addSynonymGroup(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await getViewer();
+    if (!canOpenFood(viewer, "kitchen") || !(viewer.can("kitchen", "use") || viewer.member.privateFood)) throw new AuthorizationError("You can't change the keyword bank.");
+    const words = splitWords(f.str(fd, "words"));
+    if (words.length < 2) return fail("Add at least two words that mean the same thing, separated by commas.", "words");
+    await db.transaction(async (tx) => {
+      const [fam] = await tx.select({ settings: families.settings }).from(families).where(eq(families.id, viewer.family.id)).for("update");
+      const settings = { ...(fam?.settings ?? {}) };
+      settings.ingredientSynonyms = [...(settings.ingredientSynonyms ?? []), words].slice(-200);
+      await tx.update(families).set({ settings }).where(eq(families.id, viewer.family.id));
+    });
+    revalidatePath("/kitchen", "layout");
+    revalidatePath("/recipes", "layout");
+    revalidatePath("/meals");
+    return ok("Added to the keyword bank.");
+  });
+}
+
+/** Remove one of the family's keyword-bank groups (parents or Add & edit). */
+export async function removeSynonymGroup(fd: FormData) {
+  const viewer = await getViewer();
+  if (!viewer.isParent && !viewer.can("kitchen", "edit")) throw new AuthorizationError("Only parents can remove keyword groups.");
+  const index = Number(fd.get("index"));
+  await db.transaction(async (tx) => {
+    const [fam] = await tx.select({ settings: families.settings }).from(families).where(eq(families.id, viewer.family.id)).for("update");
+    const settings = { ...(fam?.settings ?? {}) };
+    const groups = [...(settings.ingredientSynonyms ?? [])];
+    if (!Number.isInteger(index) || index < 0 || index >= groups.length) return;
+    groups.splice(index, 1);
+    settings.ingredientSynonyms = groups;
+    await tx.update(families).set({ settings }).where(eq(families.id, viewer.family.id));
+  });
+  revalidatePath("/kitchen", "layout");
+  revalidatePath("/recipes", "layout");
 }

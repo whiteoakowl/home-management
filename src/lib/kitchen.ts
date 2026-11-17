@@ -1,7 +1,8 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { inventoryEvents, inventoryItems, listItems, recipeIngredients, recipes } from "@/db/schema";
+import { families, inventoryEvents, inventoryItems, listItems, recipeIngredients, recipes } from "@/db/schema";
+import { aliasesFor, BUILT_IN_SYNONYMS } from "./synonyms";
 import { mainShoppingListId } from "./automation";
 import { checkIngredients, formatQty, normalizeName } from "./ingredients";
 
@@ -10,10 +11,16 @@ export const FOOD_LOCATIONS = ["pantry", "fridge", "freezer", "supplies", "farm"
 
 /** Food on hand in one space: the family's (owner null) or a member's private pantry. */
 export async function activeInventory(familyId: string, owner: string | null = null) {
-  return db
-    .select({ id: inventoryItems.id, name: inventoryItems.name, quantity: inventoryItems.quantity, unit: inventoryItems.unit, expiresOn: inventoryItems.expiresOn })
-    .from(inventoryItems)
-    .where(and(eq(inventoryItems.familyId, familyId), ownerIs(owner), isNull(inventoryItems.archivedAt), inArray(inventoryItems.location, [...FOOD_LOCATIONS])));
+  const [rows, [fam]] = await Promise.all([
+    db
+      .select({ id: inventoryItems.id, name: inventoryItems.name, quantity: inventoryItems.quantity, unit: inventoryItems.unit, expiresOn: inventoryItems.expiresOn, tags: inventoryItems.tags })
+      .from(inventoryItems)
+      .where(and(eq(inventoryItems.familyId, familyId), ownerIs(owner), isNull(inventoryItems.archivedAt), inArray(inventoryItems.location, [...FOOD_LOCATIONS]))),
+    db.select({ settings: families.settings }).from(families).where(eq(families.id, familyId)),
+  ]);
+  // Each item's other names: its own tags plus keyword-bank partners (built in + the family's).
+  const groups = [...BUILT_IN_SYNONYMS, ...(fam?.settings?.ingredientSynonyms ?? [])];
+  return rows.map((r) => ({ ...r, aliases: aliasesFor(r.name, r.tags, groups) }));
 }
 
 const ownerIs = (owner: string | null) => (owner ? eq(inventoryItems.ownerMemberId, owner) : isNull(inventoryItems.ownerMemberId));

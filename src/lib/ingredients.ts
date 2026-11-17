@@ -93,7 +93,17 @@ export function namesMatch(ingredient: string, item: string) {
   return contains(aw, bw) || contains(bw, aw);
 }
 
-export type InventoryLike = { id: string; name: string; quantity: string | number; unit: string | null };
+export type InventoryLike = {
+  id: string;
+  name: string;
+  quantity: string | number;
+  unit: string | null;
+  /** Other names it goes by (its tags and keyword-bank partners). */
+  aliases?: string[];
+};
+
+/** Item matches if its name or any other name fits the ingredient (either side). */
+const itemMatches = (ingredient: string, it: InventoryLike) => namesMatch(ingredient, it.name) || (it.aliases ?? []).some((a) => namesMatch(ingredient, a));
 
 export type IngredientStatus = {
   name: string;
@@ -114,7 +124,7 @@ export function checkIngredients(
 ): IngredientStatus[] {
   return ingredients.map((ing) => {
     const need = ing.quantity !== null && ing.quantity !== "" ? Number(ing.quantity) * scale : null;
-    const matches = inventory.filter((it) => namesMatch(ing.name, it.name));
+    const matches = inventory.filter((it) => itemMatches(ing.name, it));
     const sameUnit = matches.filter((m) => (m.unit ?? "") === (ing.unit ?? ""));
     const haveQty = sameUnit.reduce((s, m) => s + Number(m.quantity), 0);
     let have = matches.length > 0 && matches.some((m) => Number(m.quantity) > 0);
