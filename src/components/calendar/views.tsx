@@ -55,7 +55,7 @@ function Bar({ item, members, showTime = true }: { item: CalendarItem; members?:
       href={item.href}
       title={tip(item, members)}
       className={cn(
-        "flex min-w-0 items-center gap-1 rounded-[3px] border-l-2 px-0.5 text-[9px] leading-[13px] font-medium tracking-tight hover:brightness-95 sm:rounded-[5px] sm:border-l-[3px] sm:px-1.5 sm:py-0.5 sm:text-xs sm:leading-4 sm:tracking-normal",
+        "flex min-w-0 items-center gap-1 rounded-[2px] border-l-2 pr-0 pl-[2px] text-[8px] leading-[11px] font-medium tracking-[-0.02em] hover:brightness-95 sm:rounded-[5px] sm:border-l-[3px] sm:px-1.5 sm:py-0.5 sm:text-xs sm:leading-4 sm:tracking-normal",
         item.done && "line-through opacity-60",
       )}
       style={{ background: c.soft, color: c.ink, borderColor: c.solid }}
@@ -88,7 +88,7 @@ export function MonthView({ month, items, today, weekStartsOn, dayHref, members 
           const list = byDay.get(d) ?? [];
           const inMonth = d.slice(0, 7) === month.slice(0, 7);
           return (
-            <div key={d} className={cn("min-h-24 min-w-0 border-r border-b border-line px-px pt-0.5 pb-1 sm:min-h-28 sm:p-1.5 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-sunken/40")}>
+            <div key={d} className={cn("min-h-24 min-w-0 border-r border-b border-line px-0 pt-0.5 pb-1 sm:min-h-28 sm:p-1.5 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-sunken/40")}>
               <Link
                 href={dayHref(d)}
                 className={cn(
@@ -99,15 +99,15 @@ export function MonthView({ month, items, today, weekStartsOn, dayHref, members 
                 {Number(d.slice(8))}
               </Link>
               <div className="flex flex-col gap-px sm:gap-0.5">
-                {/* Phone: up to 5 slim bars; larger screens: 3. */}
-                {list.slice(0, 5).map((i, k) => (
-                  <div key={i.key} className={cn(k >= 3 && "sm:hidden", list.length > 5 && k === 4 && "hidden")}>
+                {/* Phone: up to 6 slim bars; larger screens: 3. */}
+                {list.slice(0, 6).map((i, k) => (
+                  <div key={i.key} className={cn(k >= 3 && "sm:hidden", list.length > 6 && k === 5 && "hidden")}>
                     <Bar item={i} members={members} />
                   </div>
                 ))}
-                {list.length > 5 && (
-                  <Link href={dayHref(d)} className="px-0.5 text-[9px] leading-3 font-medium text-muted hover:text-ink sm:hidden">
-                    +{list.length - 4} more
+                {list.length > 6 && (
+                  <Link href={dayHref(d)} className="px-0.5 text-[8px] leading-3 font-medium text-muted hover:text-ink sm:hidden">
+                    +{list.length - 5} more
                   </Link>
                 )}
                 {list.length > 3 && (
