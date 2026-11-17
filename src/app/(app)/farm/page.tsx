@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { AlarmClock, Map as MapIcon, PawPrint, Wheat } from "lucide-react";
+import { AlarmClock, Map as MapIcon, PawPrint, Wheat, Tractor } from "lucide-react";
 import { db } from "@/db";
 import { animalHealthRecords, animals, farmPlans, feedLogs, productionLogs } from "@/db/schema";
 import { BarChart } from "@/components/charts";
@@ -15,6 +15,10 @@ import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { animalOptions, productionKindsUsed, productionSeries } from "@/lib/farm";
 import { fileUrl } from "@/lib/files";
 import { FarmTabs } from "./farm-tabs";
+import { OccurrenceList } from "@/components/house/occurrence-list";
+import { ButtonLink } from "@/components/ui/button";
+import { listOccurrences } from "@/lib/chores";
+import { memberOptions } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Farm" };
 
@@ -47,6 +51,9 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
       .groupBy(feedLogs.feed, feedLogs.unit),
     productionKindsUsed(viewer),
   ]);
+  // Today's (and overdue) farm chores; members see the ones assigned to them.
+  const farmChores = await listOccurrences(viewer, { kinds: ["farm"], to: today, statuses: ["pending"], assigneeId: viewer.isParent ? undefined : viewer.member.id, limit: 12 });
+  const members = farmChores.length ? await memberOptions(viewer) : [];
   const mainKind = kinds[0]?.kind ?? "eggs";
   const series = await productionSeries(viewer, mainKind, today, 14);
   const weekTotal = series.slice(-7).reduce((s, d) => s + d.value, 0);
@@ -80,6 +87,15 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
           ))}
         </ul>
       )}
+
+      <Card className="mt-6">
+        <CardHeader title={viewer.isParent ? "Farm chores today" : "My farm chores today"} icon={<Tractor className="size-4" />} href="/farm/chores" hrefLabel="All farm chores" />
+        {farmChores.length ? (
+          <OccurrenceList items={farmChores} today={today} members={members} canManage={viewer.can("farm", "edit")} showAssignee={viewer.isParent} />
+        ) : (
+          <EmptyState compact icon={<Tractor />} title="Nothing due" description={canEdit ? "Set up daily and weekly farm jobs (feeding, watering, eggs) and assign them." : "No farm chores due for you today."} action={canEdit ? <ButtonLink href="/farm/chores?new=farm" size="sm" variant="soft">Add farm chores</ButtonLink> : undefined} />
+        )}
+      </Card>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <Card>

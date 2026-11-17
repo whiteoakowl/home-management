@@ -26,7 +26,7 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await getViewer();
   const today = todayIn(viewer.family.timezone);
-  const ALL = ["chore", "cleaning", "maintenance", "task"] as const;
+  const ALL = ["chore", "cleaning", "maintenance", "task", "farm"] as const;
   const t =
     (await listChoreTemplates(viewer, [...ALL], today, { choreId: id }))[0] ??
     (await listChoreTemplates(viewer, [...ALL], today, { choreId: id, state: "archived" }))[0] ??
@@ -48,7 +48,7 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
 
   const finished = t.doneCount + t.missedCount;
   const rate = finished ? Math.round((t.doneCount / finished) * 100) : null;
-  const back = { chore: "/house/chores", task: "/house/tasks", cleaning: "/house/cleaning", maintenance: "/maintenance/schedule" }[kind];
+  const back = { chore: "/house/chores", task: "/house/tasks", cleaning: "/house/cleaning", maintenance: "/maintenance/schedule", farm: "/farm/chores" }[kind];
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">

@@ -15,11 +15,12 @@ import { ownedCategoryId, ownedId, ownedRoomId, ownedStageId, familyProjectId } 
 import { f, familyMemberIdOrNull, familyMemberIds, upsertRule } from "@/lib/records";
 import { CADENCE_PRESETS, ruleFromForm, type Rule } from "@/lib/recurrence";
 
-const KINDS: ChoreKind[] = ["chore", "cleaning", "maintenance", "task"];
+const KINDS: ChoreKind[] = ["chore", "cleaning", "maintenance", "task", "farm"];
 const CADENCES = ["daily", "weekly", "monthly", "seasonal", "biannual", "annual", "custom"] as const;
 type Cadence = (typeof CADENCES)[number];
 
 function revalidateHouse() {
+  revalidatePath("/farm", "layout");
   revalidatePath("/house", "layout");
   revalidatePath("/");
   revalidatePath("/calendar");
@@ -119,7 +120,7 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
     if (id) await rematerializeChore(choreId!, today);
     else {
       await materializeChore(choreId!, today);
-      const noun = { chore: "a chore", cleaning: "a cleaning task", maintenance: "a maintenance task", task: "a task" }[kind];
+      const noun = { chore: "a chore", cleaning: "a cleaning task", maintenance: "a maintenance task", task: "a task", farm: "a farm chore" }[kind];
       await logActivity(db, viewer.family.id, viewer.member.id, "chore.created", `added ${noun}: "${title}"`, { module: kindModule(kind), entityId: choreId! });
     }
     revalidateHouse();

@@ -21,7 +21,7 @@ export const recurrenceFreq = pgEnum("recurrence_freq", [
   "yearly",
 ]);
 export const priority = pgEnum("priority", ["low", "normal", "high"]);
-export const choreKind = pgEnum("chore_kind", ["chore", "cleaning", "maintenance", "task"]);
+export const choreKind = pgEnum("chore_kind", ["chore", "cleaning", "maintenance", "task", "farm"]);
 export const cleaningCadence = pgEnum("cleaning_cadence", [
   "daily",
   "weekly",

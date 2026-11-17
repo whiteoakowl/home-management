@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Archive, ArchiveRestore, CheckCircle2, ClipboardCheck, Repeat } from "lucide-react";
+import { Archive, ArchiveRestore, CheckCircle2, ClipboardCheck, Repeat, Tractor } from "lucide-react";
 import { restoreChore } from "@/app/actions/chores";
 import { ActionButton } from "@/components/forms/inline";
 import { ChoreFormModal } from "@/components/house/chore-form";
@@ -14,6 +14,7 @@ import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
 import { describeRule } from "@/lib/recurrence";
 import { HouseTabs } from "@/app/(app)/house/house-tabs";
+import { FarmTabs } from "@/app/(app)/farm/farm-tabs";
 
 const TABS = ["today", "upcoming", "overdue", "done", "all"] as const;
 type Tab = (typeof TABS)[number] | "archived";
@@ -39,17 +40,29 @@ const COPY = {
     example: "“Schedule furnace inspection”, due Friday, Dad",
     icon: <ClipboardCheck />,
   },
+  farm: {
+    title: "Farm chores",
+    mine: "My farm chores",
+    one: "farm chore",
+    many: "farm chores",
+    description: "Feeding, watering, egg collecting, mucking out: recurring farm work, assigned and tracked.",
+    empty: "Add the daily and weekly farm jobs and assign them. They earn points like other chores.",
+    example: "“Feed & water the chickens: daily, Jack” · “Clean the coop: Saturdays, Serenity”",
+    icon: <Tractor />,
+  },
 } as const;
 
 /**
  * Chores and Tasks share one board: Today / Upcoming / Overdue / Completed / All,
  * Mine or Everyone, today's progress, and Archived behind a button next to Add.
  */
-export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewer; kind: "chore" | "task"; basePath: string; sp: Record<string, string | string[] | undefined> }) {
+export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewer; kind: "chore" | "task" | "farm"; basePath: string; sp: Record<string, string | string[] | undefined> }) {
   const copy = COPY[kind];
   const kinds = [kind] as const;
   const tab: Tab = sp.view === "archived" ? "archived" : TABS.includes(sp.tab as (typeof TABS)[number]) ? (sp.tab as Tab) : "today";
-  const canManage = viewer.can("chores", "edit");
+  // Farm chores belong to the Farm area; chores and tasks to Chores.
+  const mod = kind === "farm" ? "farm" : "chores";
+  const canManage = viewer.can(mod, "edit");
   // Members default to their own; parents to everyone.
   const who = typeof sp.who === "string" ? sp.who : viewer.isParent ? "everyone" : "mine";
   const assigneeId = who === "mine" ? viewer.member.id : who === "everyone" ? undefined : who;
@@ -99,7 +112,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
   return (
     <>
       <PageHeader
-        eyebrow="House"
+        eyebrow={kind === "farm" ? "Farm" : "House"}
         title={tab === "archived" ? `Archived ${copy.many}` : who === "mine" ? copy.mine : copy.title}
         description={tab === "archived" ? `${copy.title} you've put away. Restore one to bring it back.` : copy.description}
         actions={
@@ -119,7 +132,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
           ) : undefined
         }
       />
-      <HouseTabs active={kind === "task" ? "tasks" : "chores"} viewer={viewer} />
+      {kind === "farm" ? <FarmTabs active="chores" /> : <HouseTabs active={kind === "task" ? "tasks" : "chores"} viewer={viewer} />}
 
       {tab === "archived" ? (
         templates.length ? (
@@ -177,7 +190,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
               active={who === "mine" ? "mine" : who === "everyone" ? "everyone" : "other"}
               items={[
                 { key: "mine", href: href({ who: "mine" }), label: "Mine" },
-                ...(viewer.can("chores") ? [{ key: "everyone", href: href({ who: "everyone" }), label: "Everyone" }] : []),
+                ...(viewer.can(mod) ? [{ key: "everyone", href: href({ who: "everyone" }), label: "Everyone" }] : []),
               ]}
             />
           </div>
@@ -190,7 +203,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
               { key: "upcoming", href: href({ tab: "upcoming" }), label: "Upcoming" },
               { key: "overdue", href: href({ tab: "overdue" }), label: "Overdue" },
               { key: "done", href: href({ tab: "done" }), label: "Done" },
-              ...(viewer.can("chores") ? [{ key: "all", href: href({ tab: "all" }), label: kind === "task" ? "All tasks" : "All chores" }] : []),
+              ...(viewer.can(mod) ? [{ key: "all", href: href({ tab: "all" }), label: kind === "task" ? "All tasks" : kind === "farm" ? "All farm" : "All chores" }] : []),
             ]}
           />
 

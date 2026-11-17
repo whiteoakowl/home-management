@@ -14,6 +14,7 @@ import { ensureCalendarCategories, getCalendarItems, LAYERS, type Layer } from "
 import { getViewer } from "@/lib/dal";
 import { addDays, addMonths, daysBetween, monthLabel, startOfMonth, startOfWeek, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions } from "@/lib/queries";
+import { CalendarCategoriesButton } from "@/components/calendar/category-panel";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Calendar" };
@@ -120,7 +121,14 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
       <PageHeader
         title="Calendar"
         description="Everyone's schedule in one place, with privacy per event."
-        actions={canEdit ? <EventFormModal members={members} categories={cats} defaultDate={view === "month" ? today : date} defaultOpen={sp.new === "1"} me={viewer.member.id} /> : undefined}
+        actions={
+          canEdit || viewer.isParent ? (
+            <>
+              {viewer.isParent && <CalendarCategoriesButton items={cats.map((c) => ({ id: c.id, name: c.name, color: c.color }))} />}
+              {canEdit && <EventFormModal members={members} categories={cats} defaultDate={view === "month" ? today : date} defaultOpen={sp.new === "1"} me={viewer.member.id} />}
+            </>
+          ) : undefined
+        }
       />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

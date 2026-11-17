@@ -40,7 +40,7 @@ export type ChoreDefaults = {
   rotationMemberIds?: string[];
 };
 
-const KIND_LABEL = { chore: "chore", cleaning: "cleaning task", maintenance: "maintenance task", task: "task" } as const;
+const KIND_LABEL = { chore: "chore", cleaning: "cleaning task", maintenance: "maintenance task", task: "task", farm: "farm chore" } as const;
 
 function ChecklistEditor({ members, initial }: { members: MemberOption[]; initial: { text: string; assigneeId: string | null }[] }) {
   const [rows, setRows] = useState(initial.length ? initial.map((r, i) => ({ ...r, key: i })) : []);
@@ -85,7 +85,7 @@ function ChecklistEditor({ members, initial }: { members: MemberOption[]; initia
   );
 }
 
-/** Create/edit form for every chore kind (chore, cleaning, maintenance, task). */
+/** Create/edit form for every chore kind (chore, cleaning, maintenance, task, farm). */
 export function ChoreFormModal({
   kind,
   members,
@@ -149,6 +149,7 @@ export function ChoreFormModal({
             { value: "chore", label: "Chore" },
             { value: "cleaning", label: "Cleaning" },
             { value: "task", label: "Task" },
+            { value: "farm", label: "Farm chore" },
             ...(kind === "maintenance" ? [{ value: "maintenance", label: "Maintenance" }] : []),
           ]}
           hint={type !== kind ? `Saving moves this from ${KIND_LABEL[kind]} to ${KIND_LABEL[type]}. Its history comes along.` : undefined}
@@ -163,7 +164,7 @@ export function ChoreFormModal({
         label="Name"
         required
         defaultValue={defaults?.title}
-        placeholder={{ chore: "Empty the dishwasher", cleaning: "Kitchen deep clean", maintenance: "Replace HVAC filter", task: "Call the plumber" }[type]}
+        placeholder={{ chore: "Empty the dishwasher", cleaning: "Kitchen deep clean", maintenance: "Replace HVAC filter", task: "Call the plumber", farm: "Feed the chickens and collect eggs" }[type]}
       />
       <FormRow>
         <MemberSelect name="assigneeId" members={members} defaultValue={defaults?.defaultAssigneeId} />

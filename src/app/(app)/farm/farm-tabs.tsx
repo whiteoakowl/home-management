@@ -6,6 +6,7 @@ export function FarmTabs({ active }: { active: string }) {
       active={active}
       tabs={[
         { key: "overview", href: "/farm", label: "Overview" },
+        { key: "chores", href: "/farm/chores", label: "Chores" },
         { key: "animals", href: "/farm/animals", label: "Animals" },
         { key: "production", href: "/farm/production", label: "Production" },
       ]}

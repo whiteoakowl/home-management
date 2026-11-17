@@ -1,0 +1,1 @@
+ALTER TYPE "public"."chore_kind" ADD VALUE 'farm';
