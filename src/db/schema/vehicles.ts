@@ -38,6 +38,8 @@ export const vehicles = pgTable(
     loanTermMonths: integer("loan_term_months"),
     active: boolean("active").notNull().default(true),
     notes: text("notes"),
+    /** Set = in this member's own "My Vehicles" (only they see it, never parents); null = the family's (parents). */
+    privateOwnerId: uuid("private_owner_id").references(() => familyMembers.id, { onDelete: "cascade" }),
     ...timestamps,
   },
   (t) => [index("vehicles_family_idx").on(t.familyId)],

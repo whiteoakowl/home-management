@@ -90,28 +90,34 @@ export function buildNav(viewer: Viewer): NavSection[] {
             (m.id === "budget" && viewer.member.privateFinance) ||
             (m.id === "projects" &&
               viewer.member.privateProjects &&
+              !viewer.isParent) ||
+            (m.id === "vehicles" &&
+              viewer.member.privateVehicles &&
               !viewer.isParent)),
       )
       .map((m) =>
         // Members never see the family budget; with a private money space they get "My Budget".
         m.id === "budget" && !viewer.can("budget")
           ? { href: "/budget?space=mine", label: "My Budget", icon: m.icon }
-          : // Older kids with a home of their own: "My Home Projects" (parents can't see it).
-            m.id === "projects" && !viewer.can("projects")
-            ? {
-                href: "/maintenance/projects?space=mine",
-                label: "My Home Projects",
-                icon: m.icon,
-              }
-            : {
-                href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`,
-                label: viewer.can(m.id)
-                  ? m.label
-                  : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ??
-                    m.label),
-                icon: m.icon,
-                children: SUBMENUS[m.href],
-              },
+          : // A teen's own car: "My Vehicles" (parents can't see it).
+            m.id === "vehicles" && !viewer.can("vehicles")
+            ? { href: "/vehicles", label: "My Vehicles", icon: m.icon }
+            : // Older kids with a home of their own: "My Home Projects" (parents can't see it).
+              m.id === "projects" && !viewer.can("projects")
+              ? {
+                  href: "/maintenance/projects?space=mine",
+                  label: "My Home Projects",
+                  icon: m.icon,
+                }
+              : {
+                  href: viewer.can(m.id) ? m.href : `${m.href}?space=mine`,
+                  label: viewer.can(m.id)
+                    ? m.label
+                    : (FOOD_LABELS[m.id as keyof typeof FOOD_LABELS]?.mine ??
+                      m.label),
+                  icon: m.icon,
+                  children: SUBMENUS[m.href],
+                },
       ),
   }));
   sections[0]!.items.unshift({

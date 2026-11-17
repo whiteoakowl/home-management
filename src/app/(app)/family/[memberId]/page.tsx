@@ -50,6 +50,7 @@ export default async function MemberPortalPage({ params }: PageProps<"/family/[m
     isSelf && !viewer.isParent && viewer.member.privateInfo && { href: "/house/info?space=mine", label: "My Important Info" },
     isSelf && viewer.member.privateFinance && { href: "/budget?space=mine", label: "My Budget" },
     isSelf && !viewer.isParent && viewer.member.privateProjects && { href: "/maintenance/projects?space=mine", label: "My Home Projects" },
+    isSelf && !viewer.isParent && viewer.member.privateVehicles && { href: "/vehicles", label: "My Vehicles" },
     isSelf && { href: "/privacy", label: "Privacy Center" },
   ].filter(Boolean) as { href: string; label: string }[];
   const familyLinks = [

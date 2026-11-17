@@ -6,12 +6,13 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { vehicleOdometer, vehicleParts, vehicles, vehicleSchedule, vehicleServices } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { recordExpense } from "@/lib/expenses";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { familyMemberIdOrNull, f } from "@/lib/records";
 import { DEFAULT_SCHEDULE, monthlyPayment } from "@/lib/vehicles";
+import { vehicleOwnerIs, vehicleScope } from "@/lib/vehicle-data";
 
 /**
  * Vehicles. "Use": log mileage and work done. "Add & edit": vehicles, the
@@ -24,16 +25,24 @@ function revalidateVehicles(id?: string) {
   revalidatePath("/");
 }
 
-async function ownVehicle(viewer: Viewer, id: string | null) {
+/** Parents work on the family's vehicles; a member with My Vehicles only on their own. */
+async function actor(level: "use" | "edit") {
+  const viewer = await getViewer();
+  const scope = vehicleScope(viewer);
+  if (!scope || (level === "edit" ? !scope.canEdit : !scope.canUse)) throw new AuthorizationError("You don't have access to vehicles.");
+  return { viewer, owner: scope.owner, canEditAll: scope.canEdit };
+}
+
+async function ownVehicle(viewer: Viewer, owner: string | null, id: string | null) {
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Vehicle not found.");
-  const [v] = await db.select().from(vehicles).where(and(eq(vehicles.id, id), eq(vehicles.familyId, viewer.family.id)));
+  const [v] = await db.select().from(vehicles).where(and(eq(vehicles.id, id), eq(vehicles.familyId, viewer.family.id), vehicleOwnerIs(owner)));
   if (!v) throw new AuthorizationError("Vehicle not found.");
   return v;
 }
 
 export async function saveVehicle(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("vehicles", "edit");
+    const { viewer, owner } = await actor("edit");
     const nickname = f.str(fd, "nickname");
     if (!nickname) return fail("Give it a name (e.g. Mom's SUV).", "nickname");
     const year = f.int(fd, "year");
@@ -49,7 +58,7 @@ export async function saveVehicle(_: ActionState, fd: FormData): Promise<ActionS
       color: f.str(fd, "color"),
       vin: f.str(fd, "vin")?.toUpperCase().slice(0, 17) ?? null,
       plate: f.str(fd, "plate")?.toUpperCase() ?? null,
-      driverMemberId: await familyMemberIdOrNull(viewer.family.id, f.str(fd, "driverMemberId")),
+      driverMemberId: owner ?? (await familyMemberIdOrNull(viewer.family.id, f.str(fd, "driverMemberId"))),
       purchaseDate: f.date(fd, "purchaseDate"),
       purchasePriceCents: f.cents(fd, "purchasePrice"),
       oilType: f.str(fd, "oilType"),
@@ -65,13 +74,13 @@ export async function saveVehicle(_: ActionState, fd: FormData): Promise<ActionS
     };
     const id = f.str(fd, "id");
     if (id) {
-      const old = await ownVehicle(viewer, id);
+      const old = await ownVehicle(viewer, owner, id);
       await db.update(vehicles).set(values).where(eq(vehicles.id, old.id));
       if (old.imageFileId && (image || fd.get("removeImage") === "1")) await deleteFamilyFile(viewer.family.id, old.imageFileId);
       revalidateVehicles(old.id);
       return ok("Saved.");
     }
-    const [v] = await db.insert(vehicles).values(values).returning({ id: vehicles.id });
+    const [v] = await db.insert(vehicles).values({ ...values, privateOwnerId: owner }).returning({ id: vehicles.id });
     // Starter maintenance plan (editable) and the current odometer.
     await db.insert(vehicleSchedule).values(DEFAULT_SCHEDULE.map((s) => ({ familyId: viewer.family.id, vehicleId: v!.id, ...s })));
     const miles = f.int(fd, "miles");
@@ -82,8 +91,8 @@ export async function saveVehicle(_: ActionState, fd: FormData): Promise<ActionS
 }
 
 export async function deleteVehicle(fd: FormData) {
-  const viewer = await requireModule("vehicles", "edit");
-  const v = await ownVehicle(viewer, String(fd.get("id")));
+  const { viewer, owner } = await actor("edit");
+  const v = await ownVehicle(viewer, owner, String(fd.get("id")));
   await db.delete(vehicles).where(eq(vehicles.id, v.id));
   if (v.imageFileId) await deleteFamilyFile(viewer.family.id, v.imageFileId);
   revalidateVehicles();
@@ -92,8 +101,8 @@ export async function deleteVehicle(fd: FormData) {
 
 export async function logMileage(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("vehicles", "use");
-    const v = await ownVehicle(viewer, f.str(fd, "vehicleId"));
+    const { viewer, owner } = await actor("use");
+    const v = await ownVehicle(viewer, owner, f.str(fd, "vehicleId"));
     const miles = f.int(fd, "miles");
     if (!miles || miles <= 0 || miles > 2_000_000) return fail("Enter the odometer reading.", "miles");
     await db.insert(vehicleOdometer).values({ familyId: viewer.family.id, vehicleId: v.id, date: f.date(fd, "date") ?? todayIn(viewer.family.timezone), miles });
@@ -103,8 +112,11 @@ export async function logMileage(_: ActionState, fd: FormData): Promise<ActionSt
 }
 
 export async function deleteMileage(fd: FormData) {
-  const viewer = await requireModule("vehicles", "edit");
-  await db.delete(vehicleOdometer).where(and(eq(vehicleOdometer.id, String(fd.get("id"))), eq(vehicleOdometer.familyId, viewer.family.id)));
+  const { viewer, owner } = await actor("edit");
+  const [row] = await db.select().from(vehicleOdometer).where(and(eq(vehicleOdometer.id, String(fd.get("id"))), eq(vehicleOdometer.familyId, viewer.family.id)));
+  if (!row) return;
+  await ownVehicle(viewer, owner, row.vehicleId);
+  await db.delete(vehicleOdometer).where(eq(vehicleOdometer.id, row.id));
   revalidateVehicles();
 }
 
@@ -113,8 +125,8 @@ const KINDS = ["maintenance", "repair", "inspection", "tires", "upgrade", "other
 /** Work done. Linking a maintenance item marks it done at this date/mileage. */
 export async function saveService(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("vehicles", "use");
-    const v = await ownVehicle(viewer, f.str(fd, "vehicleId"));
+    const { viewer, owner, canEditAll } = await actor("use");
+    const v = await ownVehicle(viewer, owner, f.str(fd, "vehicleId"));
     const scheduleId = f.str(fd, "scheduleId");
     const [item] = scheduleId ? await db.select().from(vehicleSchedule).where(and(eq(vehicleSchedule.id, scheduleId), eq(vehicleSchedule.vehicleId, v.id))) : [];
     const title = f.str(fd, "title") ?? item?.title;
@@ -129,13 +141,13 @@ export async function saveService(_: ActionState, fd: FormData): Promise<ActionS
     if (id) {
       const [old] = await db.select().from(vehicleServices).where(and(eq(vehicleServices.id, id), eq(vehicleServices.familyId, viewer.family.id)));
       if (!old) throw new AuthorizationError("Not found.");
-      if (!viewer.can("vehicles", "edit") && old.loggedByMemberId !== viewer.member.id) throw new AuthorizationError("You can only change what you logged.");
+      if (!canEditAll && old.loggedByMemberId !== viewer.member.id) throw new AuthorizationError("You can only change what you logged.");
       await db.update(vehicleServices).set(values).where(eq(vehicleServices.id, old.id));
     } else {
       await db.insert(vehicleServices).values({ familyId: viewer.family.id, ...values, loggedByMemberId: viewer.member.id });
       if (miles) await db.insert(vehicleOdometer).values({ familyId: viewer.family.id, vehicleId: v.id, date, miles });
-      if (values.costCents && f.bool(fd, "addToBudget") && viewer.can("budget", "edit")) {
-        await recordExpense(viewer, { name: `${v.nickname}: ${values.title}`, amountCents: values.costCents, date, categoryName: "Car" });
+      if (values.costCents && f.bool(fd, "addToBudget") && (owner ? viewer.member.privateFinance : viewer.can("budget", "edit"))) {
+        await recordExpense(viewer, { name: `${v.nickname}: ${values.title}`, amountCents: values.costCents, date, categoryName: "Car", mine: !!owner });
         revalidatePath("/budget", "layout");
       }
     }
@@ -146,10 +158,11 @@ export async function saveService(_: ActionState, fd: FormData): Promise<ActionS
 }
 
 export async function deleteService(fd: FormData) {
-  const viewer = await requireModule("vehicles", "use");
+  const { viewer, owner, canEditAll } = await actor("use");
   const [old] = await db.select().from(vehicleServices).where(and(eq(vehicleServices.id, String(fd.get("id"))), eq(vehicleServices.familyId, viewer.family.id)));
   if (!old) return;
-  if (!viewer.can("vehicles", "edit") && old.loggedByMemberId !== viewer.member.id) throw new AuthorizationError("You can only delete what you logged.");
+  await ownVehicle(viewer, owner, old.vehicleId);
+  if (!canEditAll && old.loggedByMemberId !== viewer.member.id) throw new AuthorizationError("You can only delete what you logged.");
   await db.delete(vehicleServices).where(eq(vehicleServices.id, old.id));
   if (old.receiptFileId) await deleteFamilyFile(viewer.family.id, old.receiptFileId);
   revalidateVehicles(old.vehicleId);
@@ -157,8 +170,8 @@ export async function deleteService(fd: FormData) {
 
 export async function saveScheduleItem(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("vehicles", "edit");
-    const v = await ownVehicle(viewer, f.str(fd, "vehicleId"));
+    const { viewer, owner } = await actor("edit");
+    const v = await ownVehicle(viewer, owner, f.str(fd, "vehicleId"));
     const title = f.str(fd, "title");
     if (!title) return fail("Name it (e.g. Oil change).", "title");
     const everyMiles = f.int(fd, "everyMiles");
@@ -174,15 +187,18 @@ export async function saveScheduleItem(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function deleteScheduleItem(fd: FormData) {
-  const viewer = await requireModule("vehicles", "edit");
-  await db.delete(vehicleSchedule).where(and(eq(vehicleSchedule.id, String(fd.get("id"))), eq(vehicleSchedule.familyId, viewer.family.id)));
+  const { viewer, owner } = await actor("edit");
+  const [row] = await db.select().from(vehicleSchedule).where(and(eq(vehicleSchedule.id, String(fd.get("id"))), eq(vehicleSchedule.familyId, viewer.family.id)));
+  if (!row) return;
+  await ownVehicle(viewer, owner, row.vehicleId);
+  await db.delete(vehicleSchedule).where(eq(vehicleSchedule.id, row.id));
   revalidateVehicles();
 }
 
 export async function savePart(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("vehicles", "edit");
-    const v = await ownVehicle(viewer, f.str(fd, "vehicleId"));
+    const { viewer, owner } = await actor("edit");
+    const v = await ownVehicle(viewer, owner, f.str(fd, "vehicleId"));
     const name = f.str(fd, "name");
     if (!name) return fail("Name the part (e.g. Wiper blades).", "name");
     const values = { name: name.slice(0, 80), partNumber: f.str(fd, "partNumber"), brand: f.str(fd, "brand"), whereToBuy: f.str(fd, "whereToBuy"), lastReplacedOn: f.date(fd, "lastReplacedOn"), notes: f.str(fd, "notes") };
@@ -195,16 +211,19 @@ export async function savePart(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deletePart(fd: FormData) {
-  const viewer = await requireModule("vehicles", "edit");
-  await db.delete(vehicleParts).where(and(eq(vehicleParts.id, String(fd.get("id"))), eq(vehicleParts.familyId, viewer.family.id)));
+  const { viewer, owner } = await actor("edit");
+  const [row] = await db.select().from(vehicleParts).where(and(eq(vehicleParts.id, String(fd.get("id"))), eq(vehicleParts.familyId, viewer.family.id)));
+  if (!row) return;
+  await ownVehicle(viewer, owner, row.vehicleId);
+  await db.delete(vehicleParts).where(eq(vehicleParts.id, row.id));
   revalidateVehicles();
 }
 
 /** Loan details. Leave the payment blank to calculate it from amount, APR and term. */
 export async function saveLoan(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("vehicles", "edit");
-    const v = await ownVehicle(viewer, f.str(fd, "vehicleId"));
+    const { viewer, owner } = await actor("edit");
+    const v = await ownVehicle(viewer, owner, f.str(fd, "vehicleId"));
     if (fd.get("clear") === "1") {
       await db.update(vehicles).set({ loanLender: null, loanAmountCents: null, loanApr: null, loanPaymentCents: null, loanStartDate: null, loanTermMonths: null }).where(eq(vehicles.id, v.id));
       revalidateVehicles(v.id);

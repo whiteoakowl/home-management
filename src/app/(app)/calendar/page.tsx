@@ -113,7 +113,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
         ? new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })
         : `${new Date(`${range.from}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${new Date(`${range.to}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   const toggleLayer = (l: Layer) => (layers.includes(l) ? layers.filter((x) => x !== l) : [...layers, l]).join(",");
-  const availableLayers = LAYERS.filter((l) => ({ events: true, chores: viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"), workouts: viewer.can("fitness"), dance: viewer.can("dance"), work: viewer.can("work"), vehicles: viewer.can("vehicles"), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft"), cycle: true })[l]);
+  const availableLayers = LAYERS.filter((l) => ({ events: true, chores: viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"), workouts: viewer.can("fitness"), dance: viewer.can("dance"), work: viewer.can("work"), vehicles: viewer.can("vehicles") || (!viewer.isParent && viewer.member.privateVehicles), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft"), cycle: true })[l]);
   const canEdit = viewer.can("calendar", "edit");
 
   return (

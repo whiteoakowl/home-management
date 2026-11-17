@@ -15,7 +15,7 @@ import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { memberOptions } from "@/lib/queries";
 import { cn, formatCents } from "@/lib/utils";
-import { vehicleSummary, vehicleTitle } from "@/lib/vehicle-data";
+import { vehicleOwnerIs, vehicleScope, vehicleSummary, vehicleTitle } from "@/lib/vehicle-data";
 import { monthDayYear } from "@/lib/vehicles";
 
 export const metadata: Metadata = { title: "Vehicle" };
@@ -26,20 +26,23 @@ export default async function VehiclePage({ params }: PageProps<"/vehicles/[id]"
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const viewer = await getViewer();
-  if (!viewer.can("vehicles")) notFound();
-  const [v] = await db.select().from(vehicles).where(and(eq(vehicles.id, id), eq(vehicles.familyId, viewer.family.id)));
+  const scope = vehicleScope(viewer);
+  if (!scope) notFound();
+  // Parents see the family's vehicles; a member only their own My Vehicles.
+  const [v] = await db.select().from(vehicles).where(and(eq(vehicles.id, id), eq(vehicles.familyId, viewer.family.id), vehicleOwnerIs(scope.owner)));
   if (!v) notFound();
   const today = todayIn(viewer.family.timezone);
   const [summary, services, parts, members] = await Promise.all([
     vehicleSummary(viewer, v, today),
     db.select({ s: vehicleServices, by: familyMembers.displayName }).from(vehicleServices).leftJoin(familyMembers, eq(familyMembers.id, vehicleServices.loggedByMemberId)).where(eq(vehicleServices.vehicleId, v.id)).orderBy(desc(vehicleServices.date), desc(vehicleServices.createdAt)),
     db.select().from(vehicleParts).where(eq(vehicleParts.vehicleId, v.id)).orderBy(vehicleParts.name),
-    memberOptions(viewer),
+    memberOptions(viewer).then((all) => (scope.owner ? all.filter((m) => m.id === viewer.member.id) : all)),
   ]);
   const { currentMiles, rate, due, loan, readings } = summary;
-  const canEdit = viewer.can("vehicles", "edit");
-  const canUse = viewer.can("vehicles", "use");
-  const canBudget = viewer.can("budget", "edit");
+  const canEdit = scope.canEdit;
+  const canUse = scope.canUse;
+  // Costs go to the family budget (parents) or the member's own My Budget.
+  const canBudget = scope.owner ? viewer.member.privateFinance : viewer.can("budget", "edit");
   const schedOpts = due.map((d) => ({ id: d.s.id, title: d.s.title }));
   const img = fileUrl(v.imageFileId);
   const driver = members.find((m) => m.id === v.driverMemberId);
@@ -64,7 +67,7 @@ export default async function VehiclePage({ params }: PageProps<"/vehicles/[id]"
   return (
     <div className="flex flex-col gap-6">
       <Link href="/vehicles" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
-        <ArrowLeft className="size-4" /> Vehicles
+        <ArrowLeft className="size-4" /> {scope.owner ? "My Vehicles" : "Vehicles"}
       </Link>
       <div className="grid gap-5 md:grid-cols-[1fr_1.2fr] md:items-center">
         <div className="overflow-hidden rounded-[var(--radius-card)] bg-gradient-to-br from-primary-100 to-mist-50">

@@ -39,13 +39,14 @@ export const PERIOD_OPTIONS: { value: PeriodSetting; label: string; hint: string
   { value: "fertility", label: "Fertility", hint: "the same estimates, labelled as a fertile window" },
 ];
 /** Personal areas set in the same list: Period Tracker (its own choices) and Mental Wellness (No access / Use). */
-export type PersonalAreas = { period: PeriodSetting; wellness: boolean; finance: boolean; info: boolean; projects: boolean };
+export type PersonalAreas = { period: PeriodSetting; wellness: boolean; finance: boolean; info: boolean; projects: boolean; vehicles: boolean };
 
 /** A member's own private spaces: only they ever see them (parents can't). */
 const PRIVATE_SPACES = [
   { key: "finance", field: "finance", icon: "Wallet", label: "My Budget" },
   { key: "info", field: "pinfo", icon: "KeyRound", label: "My Important Info" },
   { key: "projects", field: "pprojects", icon: "Hammer", label: "My Home Projects" },
+  { key: "vehicles", field: "pvehicles", icon: "Car", label: "My Vehicles" },
 ] as const;
 
 const selectCls = "h-9 rounded-lg border border-line-strong bg-surface px-2 text-sm focus:border-primary-500 focus:outline-none";

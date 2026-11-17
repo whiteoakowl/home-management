@@ -128,6 +128,8 @@ export const familyMembers = pgTable(
     privateInfo: boolean("private_info").notNull().default(true),
     /** Their own private House Projects, for older kids with a home of their own. Set by parents; parents can't see it. */
     privateProjects: boolean("private_projects").notNull().default(false),
+    /** Their own private Vehicles ("My Vehicles"), e.g. a teen's first car. Set by parents; parents can't see it. */
+    privateVehicles: boolean("private_vehicles").notNull().default(false),
     /**
      * Parent oversight for a minor: personal areas (privacy categories) parents may view
      * even if the member keeps them private. Set by parents; always shown to the member.

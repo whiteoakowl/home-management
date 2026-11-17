@@ -203,7 +203,7 @@ async function savePermissionsFromForm(formData: FormData) {
     await setMemberPermissions(target.id, perms);
   }
   // <space>:<memberId> = on | off  (their own private spaces; only they can see them, never parents)
-  const PRIVATE_FLAGS = { finance: "privateFinance", pinfo: "privateInfo", pprojects: "privateProjects" } as const;
+  const PRIVATE_FLAGS = { finance: "privateFinance", pinfo: "privateInfo", pprojects: "privateProjects", pvehicles: "privateVehicles" } as const;
   for (const [key, value] of formData.entries()) {
     const [prefix, memberId] = key.split(":");
     const flag = PRIVATE_FLAGS[prefix as keyof typeof PRIVATE_FLAGS];

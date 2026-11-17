@@ -22,7 +22,7 @@ export function atLeast(actual: AccessLevel, required: AccessLevel) {
 }
 
 /** Areas only parents have; they aren't offered in a member's permissions list. */
-export const PARENT_ONLY_MODULES: readonly Module[] = ["budget"];
+export const PARENT_ONLY_MODULES: readonly Module[] = ["budget", "vehicles"];
 
 export function defaultPermissions(role: Role): Record<Module, AccessLevel> {
   return Object.fromEntries(
@@ -44,7 +44,7 @@ export function effectiveAccess(opts: {
   if (opts.role === "parent") return "edit";
   // The family budget is shared by parents only. Other members can have their own
   // private money space instead (family_members.private_finance), which parents can't see.
-  if (opts.module === "budget") return "none";
+  if (PARENT_ONLY_MODULES.includes(opts.module)) return "none";
   const level = opts.stored[opts.module] ?? MODULE_META[opts.module].defaultMemberAccess;
   return level === "add" && !ADD_LEVEL_MODULES.includes(opts.module) ? "use" : level;
 }

@@ -9,7 +9,7 @@ import { getViewer } from "@/lib/dal";
 import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { memberOptions } from "@/lib/queries";
-import { familyVehicles, vehicleSummary, vehicleTitle } from "@/lib/vehicle-data";
+import { familyVehicles, vehicleScope, vehicleSummary, vehicleTitle } from "@/lib/vehicle-data";
 import { monthDayYear } from "@/lib/vehicles";
 import { cn } from "@/lib/utils";
 
@@ -17,17 +17,21 @@ export const metadata: Metadata = { title: "Vehicles" };
 
 export default async function VehiclesPage({ searchParams }: PageProps<"/vehicles">) {
   const viewer = await getViewer();
-  if (!viewer.can("vehicles")) notFound();
+  // Parents: the family's vehicles. Members with My Vehicles: only their own.
+  const scope = vehicleScope(viewer);
+  if (!scope) notFound();
+  const mine = !!scope.owner;
   const sp = await searchParams;
   const today = todayIn(viewer.family.timezone);
-  const [list, members] = await Promise.all([familyVehicles(viewer), memberOptions(viewer)]);
+  const [list, all] = await Promise.all([familyVehicles(viewer, scope.owner), memberOptions(viewer)]);
+  const members = mine ? all.filter((m) => m.id === viewer.member.id) : all;
   const summaries = await Promise.all(list.map((v) => vehicleSummary(viewer, v, today)));
-  const canEdit = viewer.can("vehicles", "edit");
+  const canEdit = scope.canEdit;
   const add = canEdit ? <VehicleModal members={members} defaultOpen={sp.new === "1"} /> : undefined;
 
   return (
     <>
-      <PageHeader eyebrow="Household" title="Vehicles" description="Every car's profile, mileage, maintenance due, repairs, parts and loan payoff." actions={add} />
+      <PageHeader eyebrow={mine ? "My private" : "Household"} title={mine ? "My Vehicles" : "Vehicles"} description={mine ? "Your own car: profile, mileage, maintenance due, repairs, parts and loan payoff. Only you can see this, not even parents." : "Every family car's profile, mileage, maintenance due, repairs, parts and loan payoff. Shared by parents."} actions={add} />
       {list.length === 0 ? (
         <Card>
           <EmptyState icon={<Car />} title="Add your first vehicle" description="We'll set up a standard maintenance plan (oil, tires, filters, brakes…) that you can adjust, and track what's due by miles or date." example="Mom's SUV · 2021 Toyota Highlander · 38,420 mi" action={canEdit ? <VehicleModal members={members} /> : undefined} />

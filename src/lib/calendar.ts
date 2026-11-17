@@ -41,7 +41,7 @@ import { addDays, todayIn, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { classDates, fmtTime, minutesOf } from "./dance";
 import { addMonths as vAddMonths, loanStatus } from "./vehicles";
-import { vehicleSummary } from "./vehicle-data";
+import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 
@@ -243,8 +243,10 @@ export async function getCalendarItems(
   }
 
   // Vehicles: paperwork deadlines, loan payments and (estimated) maintenance due dates.
-  if (want("vehicles") && viewer.can("vehicles") && !subject) {
-    const cars = await db.select().from(vehicles).where(and(eq(vehicles.familyId, fid), eq(vehicles.active, true)));
+  const carScope = vehicleScope(viewer);
+  if (want("vehicles") && carScope && !subject) {
+    // Parents: the family's cars. A member with My Vehicles: only their own (never shown to anyone else).
+    const cars = await db.select().from(vehicles).where(and(eq(vehicles.familyId, fid), eq(vehicles.active, true), vehicleOwnerIs(carScope.owner)));
     for (const v of cars) {
       const href = `/vehicles/${v.id}`;
       const add = (key: string, title: string, date: string | null) => {

@@ -56,7 +56,7 @@ export default async function ManageMemberPage({ params }: PageProps<"/family/[m
           <PermissionsForm
             member={{ id: member.id, displayName: member.displayName, color: member.color, access: stored }}
             modules={modules}
-            personal={{ period: member.hiddenAreas.includes("period") ? "hide" : (await healthProfile(viewer.family.id, member.id)).periodMode, wellness: !member.hiddenAreas.includes("wellness"), finance: member.privateFinance, info: member.privateInfo, projects: member.privateProjects }}
+            personal={{ period: member.hiddenAreas.includes("period") ? "hide" : (await healthProfile(viewer.family.id, member.id)).periodMode, wellness: !member.hiddenAreas.includes("wellness"), finance: member.privateFinance, info: member.privateInfo, projects: member.privateProjects, vehicles: member.privateVehicles }}
           />
         )}
       </Card>

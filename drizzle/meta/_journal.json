@@ -232,6 +232,13 @@
       "when": 1794897474457,
       "tag": "0032_vehicles",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794898026816,
+      "tag": "0033_private_vehicles",
+      "breakpoints": true
     }
   ]
 }

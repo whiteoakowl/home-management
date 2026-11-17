@@ -104,7 +104,7 @@ export function ServiceModal({ vehicleId, today, schedule, canBudget, item, pres
       </FormRow>
       <TextAreaField name="parts" label="Parts used (one per line)" rows={3} defaultValue={item?.parts ?? ""} placeholder={"Oil filter: Fram PH7317\n5 qt 0W-20 synthetic"} />
       <ImageField name="receipt" label="Receipt photo (optional)" />
-      {canBudget && !item && <CheckboxField name="addToBudget" label="Also record the cost in the family budget (Car)" />}
+      {canBudget && !item && <CheckboxField name="addToBudget" label="Also record the cost in the budget (Car)" />}
       <TextField name="notes" label="Notes" defaultValue={item?.notes ?? ""} placeholder="Mechanic said rear brakes have ~5k miles left" />
     </FormModal>
   );

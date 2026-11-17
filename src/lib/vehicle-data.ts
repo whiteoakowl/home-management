@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { vehicleOdometer, vehicles, vehicleSchedule } from "@/db/schema";
 import type { Viewer } from "./dal";
@@ -7,8 +7,21 @@ import { loanStatus, milesPerDay, nextDue } from "./vehicles";
 
 export type VehicleRow = typeof vehicles.$inferSelect;
 
-export async function familyVehicles(viewer: Viewer) {
-  return db.select().from(vehicles).where(eq(vehicles.familyId, viewer.family.id)).orderBy(desc(vehicles.active), asc(vehicles.nickname));
+/**
+ * Whose vehicles the viewer sees. Car information is shared by parents (the family's
+ * vehicles); a member with "My Vehicles" turned on has their own, which only they see.
+ */
+export function vehicleScope(viewer: Viewer): { owner: string | null; canEdit: boolean; canUse: boolean } | null {
+  if (viewer.can("vehicles")) return { owner: null, canEdit: viewer.can("vehicles", "edit"), canUse: viewer.can("vehicles", "use") };
+  if (!viewer.isParent && viewer.member.privateVehicles) return { owner: viewer.member.id, canEdit: true, canUse: true };
+  return null;
+}
+
+/** Row filter: the family's vehicles (no private owner) or exactly this member's. */
+export const vehicleOwnerIs = (owner: string | null) => (owner ? eq(vehicles.privateOwnerId, owner) : isNull(vehicles.privateOwnerId));
+
+export async function familyVehicles(viewer: Viewer, owner: string | null) {
+  return db.select().from(vehicles).where(and(eq(vehicles.familyId, viewer.family.id), vehicleOwnerIs(owner))).orderBy(desc(vehicles.active), asc(vehicles.nickname));
 }
 
 /** Current miles, driving rate, maintenance due (soonest first) and loan countdown for one vehicle. */
