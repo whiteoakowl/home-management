@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CalendarOff, Pencil, Plus, Star, Trophy } from "lucide-react";
+import { CalendarOff, Pencil, Plus, Star, Trophy, UserPlus } from "lucide-react";
 import { saveDanceClass, saveDanceEvent, saveDayOff, saveEnrollment, savePointeFavorite, savePointeShoe } from "@/app/actions/dance";
 import { FormModal } from "@/components/forms/action-form";
 import { ChipSelect, DateField, FormRow, MemberChips, SelectField, TextAreaField, TextField, type MemberOption } from "@/components/forms/fields";
@@ -21,12 +21,12 @@ export type EnrollmentDefaults = { id: string; memberId: string; name: string; k
 export function EnrollmentModal({ dancers, item, defaultMember }: { dancers: MemberOption[]; item?: EnrollmentDefaults; defaultMember?: string }) {
   return (
     <FormModal
-      title={item ? `Edit ${item.name}` : "Add a team or level"}
-      triggerLabel="Team / level"
+      title={item ? "Edit dancer" : "Add a dancer"}
+      triggerLabel="Add/edit dancer"
       triggerVariant="secondary"
-      triggerIcon={<Star className="size-4" />}
+      triggerIcon={<UserPlus className="size-4" />}
       triggerContent={item ? editIcon : undefined}
-      triggerAriaLabel={item ? `Edit ${item.name}` : undefined}
+      triggerAriaLabel={item ? "Edit dancer" : undefined}
       triggerClassName={iconBtn}
       action={saveEnrollment}
       size="sm"
@@ -34,11 +34,7 @@ export function EnrollmentModal({ dancers, item, defaultMember }: { dancers: Mem
       {item && <input type="hidden" name="id" value={item.id} />}
       <DancerField dancers={dancers} defaultValue={item?.memberId ?? defaultMember} />
       <FormRow>
-        <TextField name="name" label="Name" required defaultValue={item?.name} placeholder="Junior Competition Team" />
-        <SelectField name="kind" label="Type" defaultValue={item?.kind ?? "team"} options={[{ value: "team", label: "Team" }, { value: "level", label: "Level" }, { value: "class", label: "Class" }, { value: "company", label: "Company" }]} />
-      </FormRow>
-      <FormRow>
-        <TextField name="level" label="Level" defaultValue={item?.level ?? ""} placeholder="Level 3, Intermediate…" />
+        <TextField name="level" label="Level" defaultValue={item?.level ?? ""} placeholder="Level 3, Junior Company, Intermediate…" />
         <TextField name="style" label="Style(s)" defaultValue={item?.style ?? ""} placeholder="Ballet, Jazz, Hip hop" />
       </FormRow>
       <FormRow>
@@ -70,7 +66,7 @@ export function DanceClassModal({ dancers, enrollments, item, defaultMember, def
       <DancerField dancers={dancers} defaultValue={item?.memberId ?? defaultMember} />
       <FormRow>
         <TextField name="title" label="Class" required defaultValue={item?.title} placeholder="Jazz · Team rehearsal" />
-        {enrollments.length > 0 && <SelectField name="enrollmentId" label="Team / level" defaultValue={item?.enrollmentId ?? ""} placeholder="None" options={enrollments.map((e) => ({ value: e.id, label: `${dancers.find((d) => d.id === e.memberId)?.displayName.split(" ")[0] ?? ""}: ${e.name}` }))} />}
+        {enrollments.length > 0 && <SelectField name="enrollmentId" label="Level" defaultValue={item?.enrollmentId ?? ""} placeholder="None" options={enrollments.map((e) => ({ value: e.id, label: `${dancers.find((d) => d.id === e.memberId)?.displayName.split(" ")[0] ?? ""}: ${e.name}` }))} />}
       </FormRow>
       <Field label={item ? "Day" : "Day(s)"}>
         {item ? (

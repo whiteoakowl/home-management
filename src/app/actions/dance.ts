@@ -48,10 +48,13 @@ export async function saveEnrollment(_: ActionState, fd: FormData): Promise<Acti
   return guard(async () => {
     const viewer = await requireModule("dance", "use");
     const [memberId] = await allowedDancers(viewer, [String(fd.get("memberId") ?? "")]);
-    const name = f.str(fd, "name");
-    if (!name) return fail("Name the team, level or class.", "name");
-    const kind = (["team", "level", "class", "company"] as const).find((k) => k === fd.get("kind")) ?? "team";
-    const values = { familyId: viewer.family.id, memberId: memberId!, name: name.slice(0, 80), kind, level: f.str(fd, "level"), studio: f.str(fd, "studio"), style: f.str(fd, "style"), season: f.str(fd, "season"), active: fd.get("active") !== "no", notes: f.str(fd, "notes") };
+    // A dancer's entry: who, their level, style, studio and season (no separate name or type).
+    const level = f.str(fd, "level");
+    const style = f.str(fd, "style");
+    const studio = f.str(fd, "studio");
+    if (!level && !style && !studio) return fail("Add the dancer's level (or style or studio).", "level");
+    const name = (level ?? style ?? studio)!.slice(0, 80);
+    const values = { familyId: viewer.family.id, memberId: memberId!, name, kind: "level" as const, level, studio, style, season: f.str(fd, "season"), active: fd.get("active") !== "no", notes: f.str(fd, "notes") };
     const id = f.str(fd, "id");
     if (id) {
       const old = await existing(viewer, await db.select().from(danceEnrollments).where(eq(danceEnrollments.id, id)));

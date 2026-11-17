@@ -88,7 +88,7 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
 
       {!hasAny ? (
         <Card>
-          <EmptyState icon={<Music />} title="Set up the dance schedule" description="Add each dancer's teams or levels, their weekly classes, days off and upcoming performances. Classes repeat every week and show on the calendar." example="Serenity · Junior Competition Team · Tue & Thu 4:30–6:00 PM" action={canUse ? <DanceClassModal dancers={dancersForForms} enrollments={enrollments.filter((e) => e.active)} defaultMember={member || undefined} /> : undefined} />
+          <EmptyState icon={<Music />} title="Set up the dance schedule" description="Add each dancer and their level, their weekly classes, days off and upcoming performances. Classes repeat every week and show on the calendar." example="Serenity · Junior Competition Team · Tue & Thu 4:30–6:00 PM" action={canUse ? <DanceClassModal dancers={dancersForForms} enrollments={enrollments.filter((e) => e.active)} defaultMember={member || undefined} /> : undefined} />
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -251,7 +251,7 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
               )}
             </Card>
             <Card>
-              <CardHeader title="Teams & levels" icon={<Star className="size-4" />} />
+              <CardHeader title="Dancers" icon={<Star className="size-4" />} />
               {(member ? enrollments.filter((e) => e.memberId === member) : enrollments).length ? (
                 <ul className="flex flex-col divide-y divide-line">
                   {(member ? enrollments.filter((e) => e.memberId === member) : enrollments).map((e) => {
@@ -260,8 +260,8 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
                       <li key={e.id} className={cn("flex items-center gap-2 py-2", !e.active && "opacity-60")}>
                         {m && <Avatar name={m.displayName} color={m.color} size="xs" />}
                         <span className="min-w-0 flex-1">
-                          <span className="font-medium">{e.name}</span>
-                          <span className="block text-xs text-muted">{[e.kind[0]!.toUpperCase() + e.kind.slice(1), e.level, e.style, e.studio, e.season, e.active ? null : "past"].filter(Boolean).join(" · ")}</span>
+                          <span className="font-medium">{m?.displayName ?? "Dancer"}</span>
+                          <span className="block text-xs text-muted">{[e.level, e.style, e.studio, e.season, e.active ? null : "past"].filter(Boolean).join(" · ")}</span>
                         </span>
                         {canChange(e.memberId) && (
                           <>
@@ -274,7 +274,7 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
                   })}
                 </ul>
               ) : (
-                <p className="text-sm text-muted">Add teams, levels or companies. A dancer can have several.</p>
+                <p className="text-sm text-muted">Add each dancer with their level, style and studio. A dancer can have more than one.</p>
               )}
             </Card>
 
