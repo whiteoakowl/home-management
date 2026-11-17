@@ -133,7 +133,8 @@ export async function getCalendarItems(
       const color = e.color ?? catColor ?? (ids[0] ? colorOf.get(ids[0]) : null) ?? "plum";
       const start = utcToZoned(e.startsAt, tz);
       const durMin = e.endsAt ? Math.max(15, Math.round((e.endsAt.getTime() - e.startsAt.getTime()) / 60000)) : 60;
-      const dates = rule ? occurrencesBetween({ ...(rule as unknown as Rule), startsOn: start.date }, from, to) : [start.date];
+      const skipped = new Set(e.skippedDates ?? []);
+      const dates = rule ? occurrencesBetween({ ...(rule as unknown as Rule), startsOn: start.date }, from, to).filter((d) => !skipped.has(d)) : [start.date];
       for (const date of dates) {
         out.push({
           key: `e:${e.id}:${date}`,

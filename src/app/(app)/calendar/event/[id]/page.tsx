@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { ArrowLeft, Clock, Lock, MapPin, Paperclip, Pencil, Repeat, Trash2, Users } from "lucide-react";
 import { db } from "@/db";
 import { calendarEvents, categories, eventAttachments, eventAttendees, files, recurrenceRules } from "@/db/schema";
-import { deleteEvent } from "@/app/actions/calendar";
+import { deleteEvent, deleteEventOccurrence } from "@/app/actions/calendar";
 import { EventFormModal } from "@/components/calendar/event-form";
 import { ActionButton } from "@/components/forms/inline";
 import { Card } from "@/components/ui/card";
@@ -97,9 +97,20 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ca
                   </>
                 }
               />
-              <ActionButton action={deleteEvent} fields={{ id }} confirm={rule ? "Delete this event and all its repeats?" : "Delete this event?"} className="h-9 rounded-lg px-3 text-sm font-medium text-wine-500 hover:bg-wine-50">
-                <Trash2 className="size-4" /> Delete
-              </ActionButton>
+              {rule ? (
+                <>
+                  <ActionButton action={deleteEventOccurrence} fields={{ id, date: shown }} confirm={`Delete only this event on ${new Date(`${shown}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })}? The rest of the series stays.`} className="h-9 rounded-lg px-3 text-sm font-medium text-wine-500 hover:bg-wine-50">
+                    <Trash2 className="size-4" /> Delete this one
+                  </ActionButton>
+                  <ActionButton action={deleteEvent} fields={{ id }} confirm="Delete this event and all its repeats?" className="h-9 rounded-lg px-3 text-sm font-medium text-wine-500 hover:bg-wine-50">
+                    <Trash2 className="size-4" /> Delete series
+                  </ActionButton>
+                </>
+              ) : (
+                <ActionButton action={deleteEvent} fields={{ id }} confirm="Delete this event?" className="h-9 rounded-lg px-3 text-sm font-medium text-wine-500 hover:bg-wine-50">
+                  <Trash2 className="size-4" /> Delete
+                </ActionButton>
+              )}
             </>
           ) : undefined
         }

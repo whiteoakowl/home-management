@@ -45,6 +45,8 @@ export const calendarEvents = pgTable(
       onDelete: "set null",
     }),
     reminderMinutes: integer("reminder_minutes"),
+    /** Repeating events: dates ("YYYY-MM-DD") removed from the series ("delete this one only"). */
+    skippedDates: text("skipped_dates").array().notNull().default([]),
     notes: text("notes"),
     visibility: visibility("visibility").notNull().default("family"),
     source: eventSource("source").notNull().default("manual"),

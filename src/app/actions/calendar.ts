@@ -84,6 +84,26 @@ export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionSta
   });
 }
 
+/** Repeating event: remove just one date from the series ("Delete this one"). */
+export async function deleteEventOccurrence(fd: FormData) {
+  const viewer = await requireModule("calendar", "edit");
+  const id = String(fd.get("id"));
+  const date = String(fd.get("date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const [old] = await db.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id)));
+  if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
+  if (!viewer.isParent && old.createdByMemberId !== viewer.member.id) throw new AuthorizationError("Only the creator or a parent can delete this.");
+  if (!old.recurrenceRuleId) {
+    await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
+  } else {
+    const skipped = [...new Set([...(old.skippedDates ?? []), date])].sort();
+    await db.update(calendarEvents).set({ skippedDates: skipped }).where(eq(calendarEvents.id, id));
+  }
+  revalidatePath("/calendar", "layout");
+  revalidatePath("/");
+  redirect(`/calendar?date=${date}`);
+}
+
 export async function deleteEvent(fd: FormData) {
   const viewer = await requireModule("calendar", "edit");
   const id = String(fd.get("id"));
