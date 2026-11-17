@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ButtonLink } from "@/components/ui/button";
 import { redirect } from "next/navigation";
 import { and, asc, eq, inArray, isNull, lte, ne, sql } from "drizzle-orm";
-import { DoorOpen, FileText, Hammer, KeyRound, ListChecks, Sparkles, Wrench } from "lucide-react";
+import { DoorOpen, FileText, Hammer, KeyRound, ListChecks, Sparkles, Wrench, ClipboardCheck, Plus } from "lucide-react";
 import { db } from "@/db";
 import { choreOccurrences, chores, homeDocuments, homeProjects, rooms } from "@/db/schema";
 import { saveRoom, deleteRoom } from "@/app/actions/house";
@@ -53,6 +54,8 @@ export default async function HousePage() {
       .groupBy(chores.kind),
   ]);
   const count = (k: string) => counts.find((c) => c.kind === k)?.n ?? 0;
+  // Tasks card: overdue and due in the next week (members see their own and what's assigned to them).
+  const tasks = await listOccurrences(viewer, { kinds: ["task"], to: addDays(today, 7), statuses: ["pending"], limit: 8 });
   const weekDone = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(choreOccurrences)
@@ -92,6 +95,27 @@ export default async function HousePage() {
           ) : (
             <Card>
               <EmptyState compact icon={<Sparkles />} title="Nothing due today" description="Cleaning and maintenance due today will appear here." />
+            </Card>
+          )}
+
+          <div className="mt-6 mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-xl font-semibold">Tasks</h2>
+            <span className="flex items-center gap-2">
+              {viewer.can("chores", "edit") && (
+                <ButtonLink href="/house/tasks?new=task" size="sm" variant="soft" icon={<Plus className="size-4" />}>
+                  Add task
+                </ButtonLink>
+              )}
+              <Link href="/house/tasks" className="text-sm font-semibold text-primary-600 hover:underline">
+                View all
+              </Link>
+            </span>
+          </div>
+          {tasks.length ? (
+            <OccurrenceList items={tasks} today={today} members={members} canManage={viewer.can("chores", "edit")} showAssignee />
+          ) : (
+            <Card>
+              <EmptyState compact icon={<ClipboardCheck />} title="No tasks due this week" description="One-off jobs and to-dos (errands, calls, fix-its) show here when they're due." />
             </Card>
           )}
         </section>
