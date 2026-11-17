@@ -1,4 +1,4 @@
-CREATE TABLE "pointe_favorites" (
+CREATE TABLE IF NOT EXISTS "pointe_favorites" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"family_id" uuid NOT NULL,
 	"member_id" uuid NOT NULL,
@@ -11,9 +11,8 @@ CREATE TABLE "pointe_favorites" (
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "pointe_shoes" (
+);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "pointe_shoes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"family_id" uuid NOT NULL,
 	"member_id" uuid NOT NULL,
@@ -34,14 +33,13 @@ CREATE TABLE "pointe_shoes" (
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-ALTER TABLE "dance_events" ADD COLUMN "cost_cents" integer;--> statement-breakpoint
-ALTER TABLE "dance_events" ADD COLUMN "ticket_cents" integer;--> statement-breakpoint
-ALTER TABLE "dance_events" ADD COLUMN "link" text;--> statement-breakpoint
-ALTER TABLE "pointe_favorites" ADD CONSTRAINT "pointe_favorites_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "pointe_favorites" ADD CONSTRAINT "pointe_favorites_member_id_family_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."family_members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "pointe_shoes" ADD CONSTRAINT "pointe_shoes_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "pointe_shoes" ADD CONSTRAINT "pointe_shoes_member_id_family_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."family_members"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "pointe_favorites_member_idx" ON "pointe_favorites" USING btree ("family_id","member_id");--> statement-breakpoint
-CREATE INDEX "pointe_shoes_member_idx" ON "pointe_shoes" USING btree ("family_id","member_id");
+);--> statement-breakpoint
+ALTER TABLE "dance_events" ADD COLUMN IF NOT EXISTS "cost_cents" integer;--> statement-breakpoint
+ALTER TABLE "dance_events" ADD COLUMN IF NOT EXISTS "ticket_cents" integer;--> statement-breakpoint
+ALTER TABLE "dance_events" ADD COLUMN IF NOT EXISTS "link" text;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "pointe_favorites" ADD CONSTRAINT "pointe_favorites_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "pointe_favorites" ADD CONSTRAINT "pointe_favorites_member_id_family_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."family_members"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "pointe_shoes" ADD CONSTRAINT "pointe_shoes_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "pointe_shoes" ADD CONSTRAINT "pointe_shoes_member_id_family_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."family_members"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "pointe_favorites_member_idx" ON "pointe_favorites" USING btree ("family_id","member_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "pointe_shoes_member_idx" ON "pointe_shoes" USING btree ("family_id","member_id");

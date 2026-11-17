@@ -1,1 +1,1 @@
-ALTER TABLE "inventory_items" ADD COLUMN "tags" text[] DEFAULT '{}' NOT NULL;
+ALTER TABLE "inventory_items" ADD COLUMN IF NOT EXISTS "tags" text[] DEFAULT '{}' NOT NULL;
