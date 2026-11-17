@@ -315,3 +315,47 @@ export async function cleanNow(fd: FormData) {
   await logActivity(db, viewer.family.id, viewer.member.id, "chore.completed", `completed "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
   revalidateHouse();
 }
+
+/** A completed (or skipped) record the viewer may correct: parents / Add & edit, or the person who did it. */
+async function correctableRecord(viewer: Viewer, id: string, managersOnly = false) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Not found.");
+  const [row] = await db
+    .select({ occ: choreOccurrences, kind: chores.kind, title: chores.title })
+    .from(choreOccurrences)
+    .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
+    .where(and(eq(choreOccurrences.id, id), eq(choreOccurrences.familyId, viewer.family.id)));
+  if (!row) throw new AuthorizationError("Not found.");
+  const manager = viewer.isParent || viewer.can(kindModule(row.kind), "edit");
+  if (!manager && (managersOnly || row.occ.completedByMemberId !== viewer.member.id)) throw new AuthorizationError("Only a parent can change someone else's record.");
+  return row;
+}
+
+/**
+ * "They didn't really do it": mark a done record not done (missed if the day
+ * has passed) and take back its points.
+ */
+export async function undoCompletion(fd: FormData) {
+  const viewer = await getViewer();
+  const { occ, title, kind } = await correctableRecord(viewer, String(fd.get("id")));
+  const today = todayIn(viewer.family.timezone);
+  const who = occ.completedByMemberId;
+  await db
+    .update(choreOccurrences)
+    .set({ status: occ.dueDate < today ? "missed" : "pending", completedAt: null, completedByMemberId: null, pointsAwarded: null })
+    .where(eq(choreOccurrences.id, occ.id));
+  await db.update(choreOccurrenceItems).set({ completedAt: null, completedByMemberId: null }).where(eq(choreOccurrenceItems.occurrenceId, occ.id));
+  if (who && who !== viewer.member.id)
+    await logActivity(db, viewer.family.id, viewer.member.id, "chore.undone", `marked "${title}" (${occ.dueDate}) not done${occ.pointsAwarded ? `, taking back ${occ.pointsAwarded} points` : ""}`, { module: kindModule(kind), entityId: occ.choreId });
+  revalidateHouse();
+  revalidatePath(`/house/chores/${occ.choreId}`);
+}
+
+/** Remove a record altogether (and any points it gave). Parents / Add & edit only. */
+export async function deleteOccurrenceRecord(fd: FormData) {
+  const viewer = await getViewer();
+  const { occ, title, kind } = await correctableRecord(viewer, String(fd.get("id")), true);
+  await db.delete(choreOccurrences).where(eq(choreOccurrences.id, occ.id));
+  await logActivity(db, viewer.family.id, viewer.member.id, "chore.record_deleted", `deleted the ${occ.dueDate} record of "${title}"${occ.pointsAwarded ? ` (${occ.pointsAwarded} points removed)` : ""}`, { module: kindModule(kind), entityId: occ.choreId });
+  revalidateHouse();
+  revalidatePath(`/house/chores/${occ.choreId}`);
+}

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Archive, ArchiveRestore, Trash2 } from "lucide-react";
-import { archiveChore, deleteChore, restoreChore } from "@/app/actions/chores";
+import { ArrowLeft, Archive, ArchiveRestore, Trash2, Undo2 } from "lucide-react";
+import { archiveChore, deleteChore, deleteOccurrenceRecord, restoreChore, undoCompletion } from "@/app/actions/chores";
 import { ActionButton } from "@/components/forms/inline";
 import { ChoreFormModal } from "@/components/house/chore-form";
 import { MaintenanceCostModal } from "@/components/maintenance/cost-modal";
@@ -38,6 +38,8 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
   const manager = viewer.can(mod, "edit");
   // Members with Use manage the chores they added themselves.
   const canManage = manager || (viewer.can(mod, "use") && t.chore.createdByMemberId === viewer.member.id);
+  // Parents (and Add & edit) can correct records: "didn't really do it" takes the points back.
+  const fixer = viewer.isParent || manager;
 
   const [members, rooms, cats, upcoming, history] = await Promise.all([
     memberOptions(viewer),
@@ -178,7 +180,9 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
                   <th className="py-2 pr-4 font-medium">Assigned</th>
                   <th className="py-2 pr-4 font-medium">Completed by</th>
                   <th className="py-2 pr-4 font-medium">When</th>
+                  <th className="py-2 pr-4 font-medium">Points</th>
                   {kind === "maintenance" && <th className="py-2 font-medium">Cost</th>}
+                  {fixer && <th className="py-2 font-medium"><span className="sr-only">Fix</span></th>}
                 </tr>
               </thead>
               <tbody>
@@ -193,11 +197,39 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
                     <td className="py-2 text-muted">
                       {h.completedAt?.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: viewer.family.timezone }) ?? "—"}
                     </td>
+                    <td className="py-2 pr-4 tabular-nums">{h.pointsAwarded ?? "—"}</td>
                     {kind === "maintenance" && (
                       <td className="py-2">
                         <span className="inline-flex items-center gap-1">
                           {h.actualCostCents !== null ? formatCents(h.actualCostCents) : "—"}
                           {canManage && h.status === "done" && <MaintenanceCostModal occurrenceId={h.id} current={h.actualCostCents} canBudget={viewer.can("budget", "edit")} />}
+                        </span>
+                      </td>
+                    )}
+                    {fixer && (
+                      <td className="py-2">
+                        <span className="flex items-center justify-end gap-1">
+                          {h.status === "done" && (
+                            <ActionButton
+                              action={undoCompletion}
+                              fields={{ id: h.id }}
+                              confirm={`Mark this ${formatShortDate(h.dueDate)} record not done${h.pointsAwarded ? ` and take back ${h.pointsAwarded} points from ${h.completedByName ?? "them"}` : ""}?`}
+                              label="Mark not done"
+                              title="Didn't really do it: mark not done and take back the points"
+                              className="inline-flex h-8 items-center gap-1 rounded-full border border-line px-2.5 text-xs font-medium whitespace-nowrap hover:bg-sunken"
+                            >
+                              <Undo2 className="size-3.5" /> Undo
+                            </ActionButton>
+                          )}
+                          <ActionButton
+                            action={deleteOccurrenceRecord}
+                            fields={{ id: h.id }}
+                            confirm={`Delete the ${formatShortDate(h.dueDate)} record${h.pointsAwarded ? ` and its ${h.pointsAwarded} points` : ""}?`}
+                            label="Delete record"
+                            className="size-8 rounded-full text-muted hover:bg-wine-50 hover:text-wine-500"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </ActionButton>
                         </span>
                       </td>
                     )}

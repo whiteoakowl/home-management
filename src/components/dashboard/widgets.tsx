@@ -18,6 +18,8 @@ import {
   Target,
   UtensilsCrossed,
   Wallet,
+  Sparkles,
+  Tractor,
 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Avatar, Badge, EmptyState, ProgressBar, ProgressRing } from "@/components/ui/display";
@@ -119,20 +121,28 @@ export async function TodayWidget({ scope, name }: { scope: Scope; name: string 
 
 // ─── Chores & tasks ──────────────────────────────────────────────────────────
 
-export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; kind?: "chore" | "task" }) {
+const KIND_WIDGET = {
+  chore: { title: "Today's chores", short: "Chores", href: "/house/chores", module: "chores", empty: "No chores yet", setup: "Set up chores", newHref: "/house/chores?new=1", help: "Create recurring chores and assign them to family members." },
+  cleaning: { title: "Today's cleaning", short: "Cleaning", href: "/house/cleaning", module: "cleaning", empty: "No cleaning today", setup: "Set up cleaning", newHref: "/house/cleaning?new=1", help: "Add daily tidy-ups and weekly cleans with checklists." },
+  task: { title: "Today's tasks", short: "Tasks", href: "/house/tasks", module: "chores", empty: "No tasks due", setup: "Add a task", newHref: "/house/tasks?new=task", help: "One-off tasks with due dates will show up here." },
+  farm: { title: "Today's farm chores", short: "Farm chores", href: "/farm/chores", module: "farm", empty: "No farm chores today", setup: "Set up farm chores", newHref: "/farm/chores?new=farm", help: "Feeding, watering, eggs and mucking out, assigned and on schedule." },
+} as const;
+
+export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; kind?: "chore" | "cleaning" | "task" | "farm" }) {
   const s = await data.getChoreSummary(scope, kind);
   const isTask = kind === "task";
+  const k = KIND_WIDGET[kind];
   const items = [...s.overdue, ...s.today.filter((r) => r.status === "pending")].slice(0, 6);
   return (
     <Card>
       <CardHeader
-        title={isTask ? "Tasks" : scope.subjectId ? "Chores" : "Today's chores"}
-        icon={isTask ? <ClipboardCheck className={ic} /> : <CheckCircle2 className={ic} />}
-        href={isTask ? "/house/tasks" : "/house/chores"}
+        title={scope.subjectId ? k.short : k.title}
+        icon={isTask ? <ClipboardCheck className={ic} /> : kind === "cleaning" ? <Sparkles className={ic} /> : kind === "farm" ? <Tractor className={ic} /> : <CheckCircle2 className={ic} />}
+        href={k.href}
       />
       {!isTask && s.total > 0 && (
         <div className="mb-4 flex items-center gap-3">
-          <ProgressBar value={s.done} max={s.total} label="Chores completed today" />
+          <ProgressBar value={s.done} max={s.total} label={`${k.short} completed today`} />
           <span className="shrink-0 text-sm text-muted">
             {s.done}/{s.total}
           </span>
@@ -142,15 +152,9 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
         <EmptyState
           compact
           icon={<CheckCircle2 />}
-          title={s.total > 0 ? "All done for today" : isTask ? "No tasks due" : "No chores yet"}
-          description={
-            s.total > 0
-              ? "Every chore on today's list has been completed."
-              : isTask
-                ? "One-off tasks with due dates will show up here."
-                : "Create recurring chores and assign them to family members."
-          }
-          action={s.total === 0 && scope.viewer.can("chores", "edit") ? <ButtonLink href={isTask ? "/house/tasks?new=task" : "/house/chores?new=1"} size="sm" variant="soft">{isTask ? "Add a task" : "Set up chores"}</ButtonLink> : undefined}
+          title={s.total > 0 ? "All done for today" : k.empty}
+          description={s.total > 0 ? "Everything on today's list has been completed." : k.help}
+          action={s.total === 0 && scope.viewer.can(k.module, "use") ? <ButtonLink href={k.newHref} size="sm" variant="soft">{k.setup}</ButtonLink> : undefined}
         />
       ) : (
         <ul className="flex flex-col">
@@ -159,8 +163,8 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
             return (
               <li key={c.id}>
                 <Row>
-                  <CheckCircle action={setOccurrenceDone} id={c.id} done={false} label={`Mark "${c.title}" done`} size="sm" disabled={!scope.viewer.can("chores", "use")} />
-                  <Link href={isTask ? "/house/tasks" : "/house/chores"} className="min-w-0 flex-1 text-[15px] leading-snug break-words hover:underline">
+                  <CheckCircle action={setOccurrenceDone} id={c.id} done={false} label={`Mark "${c.title}" done`} size="sm" disabled={!scope.viewer.can(k.module, "use")} />
+                  <Link href={k.href} className="min-w-0 flex-1 text-[15px] leading-snug break-words hover:underline">
                     {c.title}
                   </Link>
                   {due && due.tone !== "olive" && <Badge tone={due.tone}>{due.text}</Badge>}
@@ -572,6 +576,8 @@ export function renderWidget(id: string, scope: Scope, name: string) {
     case "today": return <TodayWidget scope={scope} name={name} />;
     case "chores": return <ChoresWidget scope={scope} />;
     case "tasks": return <ChoresWidget scope={scope} kind="task" />;
+    case "cleaning": return <ChoresWidget scope={scope} kind="cleaning" />;
+    case "farmChores": return <ChoresWidget scope={scope} kind="farm" />;
     case "events": return <EventsWidget scope={scope} />;
     case "weather": return <WeatherWidget scope={scope} />;
     case "announcements": return <AnnouncementsWidget scope={scope} />;

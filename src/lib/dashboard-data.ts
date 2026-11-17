@@ -42,9 +42,10 @@ export function makeScope(viewer: Viewer, subjectId?: string): Scope {
 
 const fid = (s: Scope) => s.viewer.family.id;
 
-export async function getChoreSummary(s: Scope, kind: "chore" | "task" = "chore") {
+/** Today's (and overdue) work of one kind; "all" = everything but tasks (for the at-a-glance count). */
+export async function getChoreSummary(s: Scope, kind: "all" | "chore" | "cleaning" | "task" | "farm" = "all") {
   const assignee = alias(familyMembers, "assignee");
-  const kindFilter = kind === "task" ? eq(chores.kind, "task") : ne(chores.kind, "task");
+  const kindFilter = kind === "all" ? ne(chores.kind, "task") : eq(chores.kind, kind);
   const rows = await db
     .select({
       id: choreOccurrences.id,

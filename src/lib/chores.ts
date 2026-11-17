@@ -76,6 +76,7 @@ export async function listOccurrences(
       assigneeName: assignee.displayName,
       assigneeColor: assignee.color,
       completedByName: completer.displayName,
+      pointsAwarded: choreOccurrences.pointsAwarded,
     })
     .from(choreOccurrences)
     .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))

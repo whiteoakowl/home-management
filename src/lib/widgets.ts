@@ -10,15 +10,19 @@ export type WidgetDef = {
   defaultVisible: boolean;
   /** Also shown on a member's personal portal. */
   personal?: boolean;
+  /** Where a widget added in a later release goes in a layout someone already saved. */
+  after?: string;
 };
 
 export const WIDGETS: WidgetDef[] = [
   { id: "today", title: "Today at a glance", module: null, defaultSize: "lg", defaultVisible: true, personal: true },
-  { id: "chores", title: "Chores", module: "chores", defaultSize: "md", defaultVisible: true, personal: true },
+  { id: "chores", title: "Today's chores", module: "chores", defaultSize: "md", defaultVisible: true, personal: true },
+  { id: "cleaning", title: "Today's cleaning", module: "cleaning", defaultSize: "md", defaultVisible: true, personal: true, after: "chores" },
   { id: "events", title: "Events", module: "calendar", defaultSize: "sm", defaultVisible: true, personal: true },
   { id: "weather", title: "Weather", module: null, defaultSize: "sm", defaultVisible: true },
   { id: "announcements", title: "Announcements", module: null, defaultSize: "sm", defaultVisible: true, personal: true },
-  { id: "tasks", title: "Tasks", module: "chores", defaultSize: "sm", defaultVisible: true, personal: true },
+  { id: "tasks", title: "Today's tasks", module: "chores", defaultSize: "sm", defaultVisible: true, personal: true },
+  { id: "farmChores", title: "Today's farm chores", module: "farm", defaultSize: "md", defaultVisible: true, personal: true, after: "cleaning" },
   { id: "meals", title: "Today's meals", module: "meals", defaultSize: "sm", defaultVisible: true },
   { id: "shopping", title: "Shopping list", module: "shopping", defaultSize: "sm", defaultVisible: true },
   { id: "pantry", title: "Pantry alerts", module: "kitchen", defaultSize: "sm", defaultVisible: true },
@@ -51,12 +55,14 @@ export function widgetDef(id: string) {
 export function resolveLayout(saved: WidgetPref[] | null | undefined): WidgetPref[] {
   const known = (saved ?? []).filter((w) => WIDGET_IDS.includes(w.id));
   const seen = new Set(known.map((w) => w.id));
-  const added = WIDGETS.filter((w) => !seen.has(w.id)).map((w) => ({
-    id: w.id,
-    visible: w.defaultVisible,
-    size: w.defaultSize,
-  }));
-  return [...known, ...added];
+  const out = [...known];
+  for (const w of WIDGETS.filter((x) => !seen.has(x.id))) {
+    const pref = { id: w.id, visible: w.defaultVisible, size: w.defaultSize };
+    const at = w.after && saved?.length ? out.findIndex((x) => x.id === w.after) : -1;
+    if (at >= 0) out.splice(at + 1, 0, pref);
+    else out.push(pref);
+  }
+  return out;
 }
 
 /** Cards on section dashboards (Spiritual, Library…), customizable per member. */
