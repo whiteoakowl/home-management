@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { danceClasses, danceDaysOff, danceEnrollments, danceEvents, familyMembers } from "@/db/schema";
+import { danceClasses, danceDaysOff, danceEnrollments, danceEvents, familyMembers, pointeFavorites, pointeShoes } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
 import { f } from "@/lib/records";
@@ -140,7 +140,7 @@ export async function deleteDayOff(fd: FormData) {
   revalidateDance();
 }
 
-const EVENT_KINDS = ["performance", "competition", "recital", "rehearsal", "photos", "other"] as const;
+const EVENT_KINDS = ["performance", "competition", "recital", "rehearsal", "audition", "photos", "other"] as const;
 
 export async function saveDanceEvent(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
@@ -162,6 +162,9 @@ export async function saveDanceEvent(_: ActionState, fd: FormData): Promise<Acti
       endTime: time(fd, "endTime"),
       location: f.str(fd, "location"),
       details: f.str(fd, "details"),
+      costCents: f.cents(fd, "cost"),
+      ticketCents: f.cents(fd, "ticket"),
+      link: safeLink(f.str(fd, "link")),
     };
     const id = f.str(fd, "id");
     if (id) {
@@ -179,5 +182,118 @@ export async function deleteDanceEvent(fd: FormData) {
   const old = await existing(viewer, await db.select().from(danceEvents).where(eq(danceEvents.id, String(fd.get("id")))));
   await allowedDancers(viewer, old.memberIds);
   await db.delete(danceEvents).where(eq(danceEvents.id, old.id));
+  revalidateDance();
+}
+
+/** Only http(s) links; "tickets.example.com" gets https:// added. */
+function safeLink(v: string | null) {
+  if (!v) return null;
+  const url = /^https?:\/\//i.test(v) ? v : `https://${v}`;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString().slice(0, 500) : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Pointe shoes ────────────────────────────────────────────────────────────
+
+const SHOE_STATUS = ["ordered", "on_hand", "in_use", "retired"] as const;
+
+function shoeFields(fd: FormData) {
+  return {
+    brand: (f.str(fd, "brand") ?? "").slice(0, 80),
+    model: f.str(fd, "model"),
+    size: f.str(fd, "size"),
+    width: f.str(fd, "width"),
+    shank: f.str(fd, "shank"),
+    wings: f.str(fd, "wings"),
+    notes: f.str(fd, "notes"),
+  };
+}
+
+export async function savePointeShoe(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("dance", "use");
+    const [memberId] = await allowedDancers(viewer, [String(fd.get("memberId") ?? "")]);
+    const fields = shoeFields(fd);
+    if (!fields.brand) return fail("Which brand?", "brand");
+    const status = SHOE_STATUS.find((x) => x === fd.get("status")) ?? "on_hand";
+    const values = {
+      ...fields,
+      familyId: viewer.family.id,
+      memberId: memberId!,
+      status,
+      store: f.str(fd, "store"),
+      priceCents: f.cents(fd, "price"),
+      orderedOn: f.date(fd, "orderedOn"),
+      receivedOn: f.date(fd, "receivedOn"),
+      firstWornOn: f.date(fd, "firstWornOn"),
+      retiredOn: f.date(fd, "retiredOn"),
+      reorderBy: f.date(fd, "reorderBy"),
+    };
+    const id = f.str(fd, "id");
+    if (id) {
+      const old = await existing(viewer, await db.select().from(pointeShoes).where(eq(pointeShoes.id, id)));
+      await allowedDancers(viewer, [old.memberId]);
+      await db.update(pointeShoes).set(values).where(eq(pointeShoes.id, old.id));
+    } else await db.insert(pointeShoes).values(values);
+    revalidateDance();
+    return ok("Saved.");
+  });
+}
+
+/** Move a pair along: ordered → on hand → in use → retired (filling in today's date). */
+export async function advancePointeShoe(fd: FormData) {
+  const viewer = await requireModule("dance", "use");
+  const old = await existing(viewer, await db.select().from(pointeShoes).where(eq(pointeShoes.id, String(fd.get("id")))));
+  await allowedDancers(viewer, [old.memberId]);
+  const today = String(fd.get("today") ?? "");
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : new Date().toISOString().slice(0, 10);
+  const next = { ordered: "on_hand", on_hand: "in_use", in_use: "retired", retired: "retired" } as const;
+  const status = next[old.status];
+  await db
+    .update(pointeShoes)
+    .set({
+      status,
+      ...(status === "on_hand" && !old.receivedOn ? { receivedOn: day } : {}),
+      ...(status === "in_use" && !old.firstWornOn ? { firstWornOn: day } : {}),
+      ...(status === "retired" && !old.retiredOn ? { retiredOn: day } : {}),
+    })
+    .where(eq(pointeShoes.id, old.id));
+  revalidateDance();
+}
+
+export async function deletePointeShoe(fd: FormData) {
+  const viewer = await requireModule("dance", "use");
+  const old = await existing(viewer, await db.select().from(pointeShoes).where(eq(pointeShoes.id, String(fd.get("id")))));
+  await allowedDancers(viewer, [old.memberId]);
+  await db.delete(pointeShoes).where(eq(pointeShoes.id, old.id));
+  revalidateDance();
+}
+
+export async function savePointeFavorite(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("dance", "use");
+    const [memberId] = await allowedDancers(viewer, [String(fd.get("memberId") ?? "")]);
+    const fields = shoeFields(fd);
+    if (!fields.brand) return fail("Which brand?", "brand");
+    const id = f.str(fd, "id");
+    if (id) {
+      const old = await existing(viewer, await db.select().from(pointeFavorites).where(eq(pointeFavorites.id, id)));
+      await allowedDancers(viewer, [old.memberId]);
+      await db.update(pointeFavorites).set({ ...fields, memberId: memberId! }).where(eq(pointeFavorites.id, old.id));
+    } else await db.insert(pointeFavorites).values({ ...fields, familyId: viewer.family.id, memberId: memberId! });
+    revalidateDance();
+    return ok("Saved.");
+  });
+}
+
+export async function deletePointeFavorite(fd: FormData) {
+  const viewer = await requireModule("dance", "use");
+  const old = await existing(viewer, await db.select().from(pointeFavorites).where(eq(pointeFavorites.id, String(fd.get("id")))));
+  await allowedDancers(viewer, [old.memberId]);
+  await db.delete(pointeFavorites).where(eq(pointeFavorites.id, old.id));
   revalidateDance();
 }

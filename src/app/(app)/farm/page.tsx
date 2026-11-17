@@ -19,6 +19,7 @@ import { OccurrenceList } from "@/components/house/occurrence-list";
 import { ButtonLink } from "@/components/ui/button";
 import { listOccurrences } from "@/lib/chores";
 import { memberOptions } from "@/lib/queries";
+import { farmPlanVisible } from "@/lib/plans";
 
 export const metadata: Metadata = { title: "Farm" };
 
@@ -36,7 +37,7 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
       .where(and(eq(animals.familyId, fid), eq(animals.status, "active")))
       .groupBy(animals.species)
       .orderBy(asc(animals.species)),
-    db.select().from(farmPlans).where(eq(farmPlans.familyId, fid)).orderBy(asc(farmPlans.name)),
+    db.select().from(farmPlans).where(and(eq(farmPlans.familyId, fid), farmPlanVisible(viewer))).orderBy(asc(farmPlans.name)),
     db
       .select({ id: animalHealthRecords.id, kind: animalHealthRecords.kind, due: animalHealthRecords.nextDueOn, name: animals.name, animalId: animals.id })
       .from(animalHealthRecords)
@@ -53,7 +54,7 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
   ]);
   // Today's (and overdue) farm chores; members see the ones assigned to them.
   const farmChores = await listOccurrences(viewer, { kinds: ["farm"], to: today, statuses: ["pending"], assigneeId: viewer.isParent ? undefined : viewer.member.id, limit: 12 });
-  const members = farmChores.length ? await memberOptions(viewer) : [];
+  const members = await memberOptions(viewer);
   const mainKind = kinds[0]?.kind ?? "eggs";
   const series = await productionSeries(viewer, mainKind, today, 14);
   const weekTotal = series.slice(-7).reduce((s, d) => s + d.value, 0);
@@ -158,7 +159,7 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
             )}
           </Card>
           <Card>
-            <CardHeader title="Farm maps" icon={<MapIcon className="size-4" />} action={canEdit ? <NewFarmPlanModal /> : undefined} />
+            <CardHeader title="Farm maps" icon={<MapIcon className="size-4" />} action={canEdit ? <NewFarmPlanModal members={members} /> : undefined} />
             {plans.length === 0 ? (
               <p className="text-sm text-muted">Draw your barn, coop, pastures, fences and gates.</p>
             ) : (

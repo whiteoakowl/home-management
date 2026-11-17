@@ -54,3 +54,41 @@ export function shiftHours(shifts: { startTime: string; endTime: string }[]) {
   }
   return Math.round((mins / 60) * 10) / 10;
 }
+
+// ─── Pointe shoes ────────────────────────────────────────────────────────────
+
+export type PointePair = { status: "ordered" | "on_hand" | "in_use" | "retired"; firstWornOn: string | null; retiredOn: string | null; reorderBy: string | null };
+export type ReorderDue = { date: string | null; status: "ordered" | "now" | "soon" | "ok"; lifeDays: number; estimated: boolean };
+
+const daysBetweenIso = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000);
+
+/** How long this dancer's pairs last on average (retired pairs with both dates), or null if unknown. */
+export function pairLifeDays(pairs: PointePair[]): number | null {
+  const lives = pairs.filter((p) => p.status === "retired" && p.firstWornOn && p.retiredOn).map((p) => daysBetweenIso(p.firstWornOn!, p.retiredOn!)).filter((d) => d > 0);
+  return lives.length ? Math.round(lives.reduce((s, d) => s + d, 0) / lives.length) : null;
+}
+
+/**
+ * When to order the next pair. The pair in use is expected to last as long as
+ * past pairs did (6 weeks if we don't know yet), each spare on hand adds one
+ * more lifetime, and we order `leadDays` ahead for shipping and fitting.
+ * A date set by hand on a pair wins. A pair already on order means nothing is due.
+ */
+export function reorderDue(pairs: PointePair[], today: string, opts: { leadDays?: number; defaultLifeDays?: number } = {}): ReorderDue {
+  const lead = opts.leadDays ?? 14;
+  const known = pairLifeDays(pairs);
+  const life = known ?? opts.defaultLifeDays ?? 42;
+  const status = (date: string) => (date <= today ? "now" : date <= addDays(today, 7) ? "soon" : "ok") as ReorderDue["status"];
+  if (pairs.some((p) => p.status === "ordered")) return { date: null, status: "ordered", lifeDays: life, estimated: !known };
+  const manual = pairs
+    .filter((p) => p.status !== "retired" && p.reorderBy)
+    .map((p) => p.reorderBy!)
+    .sort()[0];
+  if (manual) return { date: manual, status: status(manual), lifeDays: life, estimated: false };
+  const inUse = pairs.filter((p) => p.status === "in_use").map((p) => p.firstWornOn ?? today).sort().reverse()[0];
+  const spares = pairs.filter((p) => p.status === "on_hand").length;
+  if (!inUse && !spares) return { date: today, status: "now", lifeDays: life, estimated: !known };
+  const start = inUse ?? today;
+  const date = addDays(start, life * ((inUse ? 1 : 0) + spares) - lead);
+  return { date, status: status(date), lifeDays: life, estimated: !known };
+}

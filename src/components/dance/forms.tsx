@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { CalendarOff, Pencil, Plus, Star, Trophy } from "lucide-react";
-import { saveDanceClass, saveDanceEvent, saveDayOff, saveEnrollment } from "@/app/actions/dance";
+import { saveDanceClass, saveDanceEvent, saveDayOff, saveEnrollment, savePointeFavorite, savePointeShoe } from "@/app/actions/dance";
 import { FormModal } from "@/components/forms/action-form";
 import { ChipSelect, DateField, FormRow, MemberChips, SelectField, TextAreaField, TextField, type MemberOption } from "@/components/forms/fields";
 import { Field } from "@/components/ui/form";
@@ -119,15 +119,19 @@ export function DayOffModal({ dancers, canAll, item, triggerContent }: { dancers
   );
 }
 
-export type DanceEventDefaults = { id: string; memberIds: string[]; kind: string; title: string; date: string; endDate: string | null; callTime: string | null; startTime: string | null; endTime: string | null; location: string | null; details: string | null };
+export type DanceEventDefaults = { id: string; memberIds: string[]; kind: string; title: string; date: string; endDate: string | null; callTime: string | null; startTime: string | null; endTime: string | null; location: string | null; details: string | null; costCents: number | null; ticketCents: number | null; link: string | null };
 
-export function DanceEventModal({ dancers, item, defaultMember }: { dancers: MemberOption[]; item?: DanceEventDefaults; defaultMember?: string }) {
+const money = (c: number | null | undefined) => (c != null ? (c / 100).toFixed(2) : "");
+const KIND_TITLE: Record<string, string> = { audition: "Add an audition", photos: "Add a picture day" };
+
+export function DanceEventModal({ dancers, item, defaultMember, defaultKind = "performance", triggerLabel = "Performance", triggerIcon }: { dancers: MemberOption[]; item?: DanceEventDefaults; defaultMember?: string; defaultKind?: string; triggerLabel?: string; triggerIcon?: ReactNode }) {
+  const kind = item?.kind ?? defaultKind;
   return (
     <FormModal
-      title={item ? `Edit ${item.title}` : "Add a performance or competition"}
-      triggerLabel="Performance"
+      title={item ? `Edit ${item.title}` : (KIND_TITLE[defaultKind] ?? "Add a performance or competition")}
+      triggerLabel={triggerLabel}
       triggerVariant="secondary"
-      triggerIcon={<Trophy className="size-4" />}
+      triggerIcon={triggerIcon ?? <Trophy className="size-4" />}
       triggerContent={item ? editIcon : undefined}
       triggerAriaLabel={item ? `Edit ${item.title}` : undefined}
       triggerClassName={iconBtn}
@@ -142,8 +146,8 @@ export function DanceEventModal({ dancers, item, defaultMember }: { dancers: Mem
         </Field>
       )}
       <FormRow>
-        <TextField name="title" label="Name" required defaultValue={item?.title} placeholder="Spring Recital" />
-        <SelectField name="kind" label="Type" defaultValue={item?.kind ?? "performance"} options={[{ value: "performance", label: "Performance" }, { value: "competition", label: "Competition" }, { value: "recital", label: "Recital" }, { value: "rehearsal", label: "Dress rehearsal" }, { value: "photos", label: "Picture day" }, { value: "other", label: "Other" }]} />
+        <TextField name="title" label="Name" required defaultValue={item?.title} placeholder={kind === "audition" ? "Nutcracker auditions" : kind === "photos" ? "Recital picture day" : "Spring Recital"} />
+        <SelectField name="kind" label="Type" defaultValue={kind} options={[{ value: "performance", label: "Performance" }, { value: "competition", label: "Competition" }, { value: "recital", label: "Recital" }, { value: "rehearsal", label: "Dress rehearsal" }, { value: "audition", label: "Audition" }, { value: "photos", label: "Picture day" }, { value: "other", label: "Other" }]} />
       </FormRow>
       <FormRow>
         <DateField name="date" label="Date" required defaultValue={item?.date ?? ""} />
@@ -155,7 +159,112 @@ export function DanceEventModal({ dancers, item, defaultMember }: { dancers: Mem
         <TextField name="endTime" label="Ends" type="time" defaultValue={item?.endTime?.slice(0, 5) ?? ""} />
       </FormRow>
       <TextField name="location" label="Venue" defaultValue={item?.location ?? ""} />
-      <TextAreaField name="details" label="Costume, hair & what to bring" rows={3} defaultValue={item?.details ?? ""} placeholder="Red costume, high bun, tan tights, bobby pins…" />
+      <TextAreaField name="details" label={kind === "audition" ? "What to prepare & bring" : kind === "photos" ? "Costume, hair & photo package" : "Costume, hair & what to bring"} rows={3} defaultValue={item?.details ?? ""} placeholder="Red costume, high bun, tan tights, bobby pins…" />
+      <FormRow cols={3}>
+        <TextField name="cost" label="Our cost ($)" inputMode="decimal" defaultValue={money(item?.costCents)} placeholder="Entry, costume, photos" />
+        <TextField name="ticket" label="Ticket price ($)" inputMode="decimal" defaultValue={money(item?.ticketCents)} placeholder="Per seat" />
+        <TextField name="link" label="Link" inputMode="url" defaultValue={item?.link ?? ""} placeholder="Tickets or info page" />
+      </FormRow>
+    </FormModal>
+  );
+}
+
+// ─── Pointe shoes ────────────────────────────────────────────────────────────
+
+export type PointeShoeDefaults = {
+  id: string;
+  memberId: string;
+  brand: string;
+  model: string | null;
+  size: string | null;
+  width: string | null;
+  shank: string | null;
+  wings: string | null;
+  status: string;
+  store: string | null;
+  priceCents: number | null;
+  orderedOn: string | null;
+  receivedOn: string | null;
+  firstWornOn: string | null;
+  retiredOn: string | null;
+  reorderBy: string | null;
+  notes: string | null;
+};
+type Fit = { brand: string; model: string | null; size: string | null; width: string | null; shank: string | null; wings: string | null };
+
+function FitFields({ item }: { item?: Partial<Fit> }) {
+  return (
+    <>
+      <FormRow>
+        <TextField name="brand" label="Brand" required defaultValue={item?.brand ?? ""} placeholder="Gaynor Minden, Bloch, Freed…" />
+        <TextField name="model" label="Model" defaultValue={item?.model ?? ""} placeholder="Classic, Jetstream…" />
+      </FormRow>
+      <FormRow cols={4}>
+        <TextField name="size" label="Size" defaultValue={item?.size ?? ""} placeholder="6" />
+        <TextField name="width" label="Width" defaultValue={item?.width ?? ""} placeholder="X, 3, C" />
+        <TextField name="shank" label="Shank" defaultValue={item?.shank ?? ""} placeholder="Hard, 3/4" />
+        <TextField name="wings" label="Wings" defaultValue={item?.wings ?? ""} placeholder="Medium" />
+      </FormRow>
+    </>
+  );
+}
+
+/** Add or edit a pair of pointe shoes (or start an order from a favourite fit). */
+export function PointeShoeModal({ dancers, item, fit, defaultMember, defaultStatus = "on_hand", triggerLabel = "Add pair", triggerContent, triggerClassName }: { dancers: MemberOption[]; item?: PointeShoeDefaults; fit?: Fit & { memberId: string }; defaultMember?: string; defaultStatus?: string; triggerLabel?: string; triggerContent?: ReactNode; triggerClassName?: string }) {
+  return (
+    <FormModal
+      title={item ? `Edit ${item.brand}` : defaultStatus === "ordered" ? "Order pointe shoes" : "Add a pair of pointe shoes"}
+      triggerLabel={triggerLabel}
+      triggerVariant="secondary"
+      triggerIcon={<Plus className="size-4" />}
+      triggerContent={triggerContent ?? (item ? editIcon : undefined)}
+      triggerAriaLabel={item ? `Edit ${item.brand}` : undefined}
+      triggerClassName={triggerClassName ?? (item ? iconBtn : undefined)}
+      action={savePointeShoe}
+    >
+      {item && <input type="hidden" name="id" value={item.id} />}
+      <DancerField dancers={dancers} defaultValue={item?.memberId ?? fit?.memberId ?? defaultMember} />
+      <FitFields item={item ?? fit} />
+      <FormRow>
+        <SelectField name="status" label="Status" defaultValue={item?.status ?? defaultStatus} options={[{ value: "ordered", label: "Ordered" }, { value: "on_hand", label: "On hand (spare)" }, { value: "in_use", label: "Wearing now" }, { value: "retired", label: "Dead / retired" }]} />
+        <TextField name="price" label="Price ($)" inputMode="decimal" defaultValue={money(item?.priceCents)} />
+      </FormRow>
+      <TextField name="store" label="Bought from" defaultValue={item?.store ?? ""} placeholder="Discount Dance, local studio shop…" />
+      <FormRow>
+        <DateField name="orderedOn" label="Ordered" defaultValue={item?.orderedOn ?? ""} />
+        <DateField name="receivedOn" label="Received / bought" defaultValue={item?.receivedOn ?? ""} />
+      </FormRow>
+      <FormRow>
+        <DateField name="firstWornOn" label="Started wearing" defaultValue={item?.firstWornOn ?? ""} />
+        <DateField name="retiredOn" label="Died / retired" defaultValue={item?.retiredOn ?? ""} />
+      </FormRow>
+      <DateField name="reorderBy" label="Order next pair by (optional)" defaultValue={item?.reorderBy ?? ""} hint="Leave blank and we'll work it out from how long pairs last." />
+      <TextField name="notes" label="Notes" defaultValue={item?.notes ?? ""} placeholder="Darned the platform, new ribbons…" />
+    </FormModal>
+  );
+}
+
+export type PointeFavoriteDefaults = Fit & { id: string; memberId: string; notes: string | null };
+
+/** A favourite brand / fit to reorder from. */
+export function PointeFavoriteModal({ dancers, item, defaultMember }: { dancers: MemberOption[]; item?: PointeFavoriteDefaults; defaultMember?: string }) {
+  return (
+    <FormModal
+      title={item ? `Edit ${item.brand}` : "Add a favourite brand"}
+      triggerLabel="Favourite"
+      triggerVariant="ghost"
+      triggerSize="sm"
+      triggerIcon={<Star className="size-4" />}
+      triggerContent={item ? editIcon : undefined}
+      triggerAriaLabel={item ? `Edit ${item.brand}` : undefined}
+      triggerClassName={item ? iconBtn : undefined}
+      action={savePointeFavorite}
+      size="sm"
+    >
+      {item && <input type="hidden" name="id" value={item.id} />}
+      <DancerField dancers={dancers} defaultValue={item?.memberId ?? defaultMember} />
+      <FitFields item={item} />
+      <TextField name="notes" label="Notes" defaultValue={item?.notes ?? ""} placeholder="Fitter: Jen at Allegro · needs gel toe pads" />
     </FormModal>
   );
 }

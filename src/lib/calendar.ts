@@ -40,6 +40,7 @@ import { visibleTo, type Viewer } from "./dal";
 import { addDays, todayIn, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { classDates, fmtTime, minutesOf } from "./dance";
+import { pointeSummary } from "./pointe";
 import { addMonths as vAddMonths, loanStatus } from "./vehicles";
 import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
@@ -224,10 +225,15 @@ export async function getCalendarItems(
       for (let d = e.date; d <= last; d = addDays(d, 1)) {
         if (d < from || d > to) continue;
         const start = minutesOf(e.callTime ?? e.startTime);
-        out.push({ key: `de:${e.id}:${d}`, id: e.id, layer: "dance", title: `🏆 ${e.title}${e.callTime ? ` (call ${fmtTime(e.callTime)})` : ""}`, date: d, startMin: start, endMin: minutesOf(e.endTime) ?? (start !== null ? start + 120 : null), color: colorOf.get(e.memberIds[0] ?? "") ?? "plum", location: e.location, href: "/dance", people: e.memberIds, type: "dance", description: e.details });
+        out.push({ key: `de:${e.id}:${d}`, id: e.id, layer: "dance", title: `${e.kind === "audition" ? "🎭" : e.kind === "photos" ? "📸" : "🏆"} ${e.title}${e.callTime ? ` (call ${fmtTime(e.callTime)})` : ""}`, date: d, startMin: start, endMin: minutesOf(e.endTime) ?? (start !== null ? start + 120 : null), color: colorOf.get(e.memberIds[0] ?? "") ?? "plum", location: e.location, href: "/dance", people: e.memberIds, type: "dance", description: e.details });
       }
     }
     if (!subject) for (const o of offs.filter((x) => x.memberId === null)) for (let d = o.startDate; d <= o.endDate; d = addDays(d, 1)) if (d >= from && d <= to) out.push({ key: `do:${o.id}:${d}`, id: o.id, layer: "dance", title: `No dance: ${o.title}`, date: d, startMin: null, endMin: null, color: "cornflower", href: "/dance", people: [], type: "dance" });
+    // Pointe shoes: the day to order each dancer's next pair.
+    for (const p of await pointeSummary(viewer, subject ? [subject] : null, todayIn(viewer.family.timezone))) {
+      if (p.due.status !== "ordered" && p.due.date && p.due.date >= from && p.due.date <= to)
+        out.push({ key: `pt:${p.memberId}`, id: p.memberId, layer: "dance", title: "🩰 Order pointe shoes", date: p.due.date, startMin: null, endMin: null, color: colorOf.get(p.memberId) ?? "plum", href: `/dance/pointe?member=${p.memberId}`, people: [p.memberId], type: "dance" });
+    }
   }
 
   // Work shifts.

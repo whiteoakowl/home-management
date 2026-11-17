@@ -3,13 +3,13 @@
 import { useState, type ReactNode } from "react";
 import { createGardenPlan, logGarden, savePlant, saveSeed, updatePlanting } from "@/app/actions/garden";
 import { FormModal } from "@/components/forms/action-form";
-import { CheckboxField, DateField, FormRow, ImageField, NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { CheckboxField, DateField, FormRow, ImageField, NumberField, SelectField, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
 import { LOCATION_OPTIONS } from "@/components/kitchen/inventory-form";
 
 type PlantOpt = { id: string; name: string; variety: string | null };
 type PlantingOpt = { id: string; label: string };
 
-export function NewGardenPlanModal({ defaultOpen, year }: { defaultOpen?: boolean; year: number }) {
+export function NewGardenPlanModal({ defaultOpen, year, members }: { defaultOpen?: boolean; year: number; members: MemberOption[] }) {
   return (
     <FormModal title="New garden plan" triggerLabel="New plan" action={createGardenPlan} submitLabel="Create & open" size="sm" defaultOpen={defaultOpen}>
       <TextField name="name" label="Name" required defaultValue={`${year + 1} Garden Plan`} />
@@ -19,6 +19,7 @@ export function NewGardenPlanModal({ defaultOpen, year }: { defaultOpen?: boolea
         <NumberField name="height" label="Depth (ft)" defaultValue={30} min={5} />
       </FormRow>
       <TextAreaField name="notes" label="Notes (soil tests, goals…)" rows={2} />
+      <VisibilityField members={members} />
     </FormModal>
   );
 }

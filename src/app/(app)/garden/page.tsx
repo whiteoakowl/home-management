@@ -10,6 +10,7 @@ import { PlantAvatar } from "@/components/garden/plant-avatar";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
+import { memberOptions } from "@/lib/queries";
 import { addDays, formatShortDate, relativeTime, todayIn } from "@/lib/dates";
 import { gardenLog, gardenPlanList, plantingsWithPlants, plantOptions, SEASON_TIPS, seasonFor } from "@/lib/garden";
 import { getWeather } from "@/lib/weather";
@@ -31,6 +32,7 @@ export default async function GardenPage({ searchParams }: PageProps<"/garden">)
     db.select({ n: count() }).from(seedInventory).where(and(eq(seedInventory.familyId, f.id))),
     getWeather(f.latitude, f.longitude, f.timezone),
   ]);
+  const members = await memberOptions(viewer);
   const season = seasonFor(today, f.latitude);
   const growing = plantings.filter((p) => ["sown", "growing", "harvesting"].includes(p.status));
   const toPlant = plantings.filter((p) => p.status === "planned");
@@ -46,7 +48,7 @@ export default async function GardenPage({ searchParams }: PageProps<"/garden">)
         eyebrow="Land"
         title="Garden"
         description="Plan beds, track every planting, and log what you harvest."
-        actions={canEdit ? <><LogGardenModal plantings={plantingOpts} plants={plants} canKitchen={viewer.can("kitchen", "add")} /><NewGardenPlanModal year={year} defaultOpen={sp.new === "1"} /></> : undefined}
+        actions={canEdit ? <><LogGardenModal plantings={plantingOpts} plants={plants} canKitchen={viewer.can("kitchen", "add")} /><NewGardenPlanModal year={year} members={members} defaultOpen={sp.new === "1"} /></> : undefined}
       />
       <GardenTabs active="overview" />
 
@@ -83,12 +85,12 @@ export default async function GardenPage({ searchParams }: PageProps<"/garden">)
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
         <section>
           <h2 className="mb-3 text-xl font-semibold">Garden plans</h2>
           {plans.length === 0 ? (
             <Card>
-              <EmptyState icon={<MapIcon />} title="No garden plans yet" description="Draw your beds, then drag plants onto them." example="“2027 Garden Plan”: Bed 1: tomatoes, basil, marigolds" action={canEdit ? <NewGardenPlanModal year={year} /> : undefined} />
+              <EmptyState icon={<MapIcon />} title="No garden plans yet" description="Draw your beds, then drag plants onto them." example="“2027 Garden Plan”: Bed 1: tomatoes, basil, marigolds" action={canEdit ? <NewGardenPlanModal year={year} members={members} /> : undefined} />
             </Card>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">

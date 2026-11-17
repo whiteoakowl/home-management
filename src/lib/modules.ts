@@ -1,6 +1,6 @@
 import type { AccessLevel, Module } from "@/db/schema/_shared";
 
-export type NavGroup = "Today" | "Household" | "Care" | "Family Pantry" | "Land" | "Personal" | "Spirit" | "Money";
+export type NavGroup = "Today" | "Household" | "Cleaning & Chores" | "Family Pantry" | "Land" | "Personal" | "Money";
 
 export type ModuleMeta = {
   id: Module;
@@ -73,7 +73,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     label: "Cleaning",
     href: "/house/cleaning",
     icon: "Sparkles",
-    group: "Household",
+    group: "Cleaning & Chores",
     phase: 2,
     inNav: true,
     defaultMemberAccess: "use",
@@ -109,7 +109,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     label: "Chores",
     href: "/house/chores",
     icon: "ListChecks",
-    group: "Household",
+    group: "Cleaning & Chores",
     phase: 2,
     inNav: true,
     defaultMemberAccess: "edit",
@@ -313,7 +313,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     label: "Medical",
     href: "/medical",
     icon: "HeartPulse",
-    group: "Care",
+    group: "Household",
     phase: 8,
     inNav: true,
     defaultMemberAccess: "use",
@@ -325,7 +325,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     label: "Pets",
     href: "/pets",
     icon: "PawPrint",
-    group: "Care",
+    group: "Household",
     phase: 8,
     inNav: true,
     defaultMemberAccess: "edit",
@@ -337,7 +337,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     label: "Spiritual",
     href: "/spiritual",
     icon: "Moon",
-    group: "Spirit",
+    group: "Personal",
     phase: 8,
     inNav: true,
     defaultMemberAccess: "edit",
@@ -346,7 +346,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
 };
 
-export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Care", "Family Pantry", "Land", "Personal", "Spirit", "Money"];
+export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Cleaning & Chores", "Family Pantry", "Land", "Personal", "Money"];
 
 export function moduleByHref(href: string): ModuleMeta | undefined {
   return Object.values(MODULE_META).find((m) => m.href === href);

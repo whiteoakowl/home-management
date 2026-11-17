@@ -50,7 +50,7 @@ export default async function MedicalDashboard() {
   return (
     <>
       <PageHeader
-        eyebrow="Care"
+        eyebrow="Household"
         title="Family Medical & Health"
         description="Profiles, allergies, conditions, medications and documents, private to each person and the parents unless shared."
         actions={viewer.can("medical", "edit") && <AppointmentModal members={members} />}

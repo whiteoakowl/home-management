@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { createFarmPlan, logFeed, logProduction, saveAnimal, saveAnimalCare, saveHealthRecord } from "@/app/actions/farm";
 import { FormModal } from "@/components/forms/action-form";
-import { CheckboxField, DateField, FormRow, ImageField, NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { CheckboxField, DateField, FormRow, ImageField, NumberField, SelectField, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
 import { LOCATION_OPTIONS } from "@/components/kitchen/inventory-form";
 
 type AnimalOpt = { id: string; name: string; species: string };
@@ -124,7 +124,7 @@ export function ProductionModal({ animals, canKitchen, defaultKind = "eggs", tri
   );
 }
 
-export function NewFarmPlanModal() {
+export function NewFarmPlanModal({ members }: { members: MemberOption[] }) {
   return (
     <FormModal title="New farm map" triggerLabel="New farm map" triggerVariant="secondary" action={createFarmPlan} submitLabel="Create & open" size="sm">
       <TextField name="name" label="Name" required defaultValue="Our farm" />
@@ -132,6 +132,7 @@ export function NewFarmPlanModal() {
         <NumberField name="width" label="Width (ft)" defaultValue={300} min={20} />
         <NumberField name="height" label="Depth (ft)" defaultValue={200} min={20} />
       </FormRow>
+      <VisibilityField members={members} />
     </FormModal>
   );
 }

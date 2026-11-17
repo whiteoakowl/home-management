@@ -125,6 +125,9 @@ export const farmPlans = pgTable(
     name: text("name").notNull(),
     layout: jsonb("layout").$type<BlueprintLayout>().notNull(),
     notes: text("notes"),
+    /** Who sees this map (family, selected people, Parents & me, Only me). */
+    visibility: visibility("visibility").notNull().default("family"),
+    createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     ...timestamps,
   },
   (t) => [index("farm_plans_family_idx").on(t.familyId)],

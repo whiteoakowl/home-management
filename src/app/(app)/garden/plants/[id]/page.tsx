@@ -14,6 +14,7 @@ import { Badge, PageHeader } from "@/components/ui/display";
 import { PhotoAlbum } from "@/components/photos/photo-album";
 import { albumPhotos } from "@/lib/photos";
 import { getViewer } from "@/lib/dal";
+import { gardenPlanVisible } from "@/lib/plans";
 import { formatShortDate } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 
@@ -33,7 +34,7 @@ export default async function PlantPage({ params }: PageProps<"/garden/plants/[i
       .select({ pl: gardenPlantings, plan: gardenPlans.name })
       .from(gardenPlantings)
       .leftJoin(gardenPlans, eq(gardenPlans.id, gardenPlantings.planId))
-      .where(and(eq(gardenPlantings.plantId, id), eq(gardenPlantings.familyId, viewer.family.id)))
+      .where(and(eq(gardenPlantings.plantId, id), eq(gardenPlantings.familyId, viewer.family.id), or(isNull(gardenPlantings.planId), gardenPlanVisible(viewer))))
       .orderBy(desc(gardenPlantings.createdAt)),
     db.select().from(gardenLogs).where(and(eq(gardenLogs.plantId, id), eq(gardenLogs.familyId, viewer.family.id))).orderBy(desc(gardenLogs.date)).limit(20),
   ]);

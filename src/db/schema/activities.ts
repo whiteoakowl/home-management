@@ -1,4 +1,4 @@
-import { boolean, date, index, pgTable, smallint, text, time, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgTable, smallint, text, time, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { families, familyMembers } from "./core";
 
@@ -81,7 +81,7 @@ export const danceEvents = pgTable(
       .notNull()
       .references(() => families.id, { onDelete: "cascade" }),
     memberIds: uuid("member_ids").array().notNull().default([]),
-    kind: text("kind").$type<"performance" | "competition" | "recital" | "rehearsal" | "photos" | "other">().notNull().default("performance"),
+    kind: text("kind").$type<"performance" | "competition" | "recital" | "rehearsal" | "audition" | "photos" | "other">().notNull().default("performance"),
     title: text("title").notNull(),
     date: date("date").notNull(),
     endDate: date("end_date"),
@@ -91,9 +91,72 @@ export const danceEvents = pgTable(
     location: text("location"),
     /** Costume, hair & makeup, what to bring. */
     details: text("details"),
+    /** What it costs us (entry, costume, photo package…), in cents. */
+    costCents: integer("cost_cents"),
+    /** Price of one audience ticket, in cents. */
+    ticketCents: integer("ticket_cents"),
+    /** Tickets, registration or info page. */
+    link: text("link"),
     ...timestamps,
   },
   (t) => [index("dance_events_family_idx").on(t.familyId, t.date)],
+);
+
+/** One pair of pointe shoes: ordered → on hand → in use → retired. */
+export const pointeShoes = pgTable(
+  "pointe_shoes",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    brand: text("brand").notNull(),
+    model: text("model"),
+    size: text("size"),
+    width: text("width"),
+    shank: text("shank"),
+    /** Box wings (e.g. "Medium", "3/4 wing"). */
+    wings: text("wings"),
+    status: text("status").$type<"ordered" | "on_hand" | "in_use" | "retired">().notNull().default("on_hand"),
+    store: text("store"),
+    priceCents: integer("price_cents"),
+    orderedOn: date("ordered_on"),
+    receivedOn: date("received_on"),
+    firstWornOn: date("first_worn_on"),
+    retiredOn: date("retired_on"),
+    /** Manual "order the next pair by" date (otherwise worked out from how long pairs last). */
+    reorderBy: date("reorder_by"),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [index("pointe_shoes_member_idx").on(t.familyId, t.memberId)],
+);
+
+/** A dancer's favourite pointe shoe fits and brands. */
+export const pointeFavorites = pgTable(
+  "pointe_favorites",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    brand: text("brand").notNull(),
+    model: text("model"),
+    size: text("size"),
+    width: text("width"),
+    shank: text("shank"),
+    wings: text("wings"),
+    /** Fitter notes, where to buy, toe pads… */
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [index("pointe_favorites_member_idx").on(t.familyId, t.memberId)],
 );
 
 // ─── Work schedules ───────────────────────────────────────────────────────────

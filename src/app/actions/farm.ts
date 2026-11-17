@@ -7,12 +7,13 @@ import { db } from "@/db";
 import { animalHealthRecords, animals, animalSex, animalStatus, farmPlans, feedLogs, productionKind, productionLogs, storageLocation } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { emptyLayout, LayoutSchema, type BlueprintLayout } from "@/lib/blueprint";
-import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, canChangeItem, requireModule, type Viewer } from "@/lib/dal";
+import { farmPlanVisible } from "@/lib/plans";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { addToInventory } from "@/lib/kitchen";
-import { f } from "@/lib/records";
+import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
 function revalidateFarm() {
   revalidatePath("/farm", "layout");
@@ -199,18 +200,50 @@ export async function createFarmPlan(_: ActionState, fd: FormData): Promise<Acti
     const viewer = await requireModule("farm", "edit");
     const name = f.str(fd, "name");
     if (!name) return fail("Name your farm map.", "name");
-    const [row] = await db
-      .insert(farmPlans)
-      .values({ familyId: viewer.family.id, name, layout: emptyLayout("farm", f.num(fd, "width") ?? undefined, f.num(fd, "height") ?? undefined), notes: f.str(fd, "notes") })
-      .returning({ id: farmPlans.id });
+    const { visibility, memberIds } = visibilityFromForm(fd);
+    let id = "";
+    await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(farmPlans)
+        .values({ familyId: viewer.family.id, name, layout: emptyLayout("farm", f.num(fd, "width") ?? undefined, f.num(fd, "height") ?? undefined), notes: f.str(fd, "notes"), visibility, createdByMemberId: viewer.member.id })
+        .returning({ id: farmPlans.id });
+      id = row!.id;
+      await saveRecordAccess(tx, viewer.family.id, "farm_plan", id, memberIds);
+    });
     revalidateFarm();
-    redirect(`/farm/plans/${row!.id}`);
+    redirect(`/farm/plans/${id}`);
+  });
+}
+
+/** A farm map the viewer can see (else "not found"). */
+async function visibleFarmPlan(viewer: Viewer, id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Plan not found.");
+  const [p] = await db.select().from(farmPlans).where(and(eq(farmPlans.id, id), eq(farmPlans.familyId, viewer.family.id), farmPlanVisible(viewer)));
+  if (!p) throw new AuthorizationError("Plan not found.");
+  return p;
+}
+
+/** Rename a farm map and choose who sees it (who-sees is for its creator or a parent). */
+export async function updateFarmPlan(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("farm", "edit");
+    const plan = await visibleFarmPlan(viewer, String(fd.get("id")));
+    const name = f.str(fd, "name");
+    if (!name) return fail("Name your farm map.", "name");
+    const mayShare = canChangeItem(viewer, plan.createdByMemberId);
+    const { visibility, memberIds } = visibilityFromForm(fd);
+    await db.transaction(async (tx) => {
+      await tx.update(farmPlans).set({ name, notes: f.str(fd, "notes"), ...(mayShare ? { visibility } : {}) }).where(eq(farmPlans.id, plan.id));
+      if (mayShare) await saveRecordAccess(tx, viewer.family.id, "farm_plan", plan.id, memberIds);
+    });
+    revalidateFarm();
+    return ok("Saved.");
   });
 }
 
 export async function saveFarmLayout(planId: string, layout: BlueprintLayout) {
   const viewer = await requireModule("farm", "edit");
-  const [p] = await db.select({ id: farmPlans.id }).from(farmPlans).where(and(eq(farmPlans.id, planId), eq(farmPlans.familyId, viewer.family.id)));
+  const p = await visibleFarmPlan(viewer, planId).catch(() => null);
   if (!p) return { ok: false, message: "Plan not found." };
   const parsed = LayoutSchema.safeParse(layout);
   if (!parsed.success) return { ok: false, message: "That layout couldn't be saved." };
@@ -221,7 +254,8 @@ export async function saveFarmLayout(planId: string, layout: BlueprintLayout) {
 
 export async function deleteFarmPlan(fd: FormData) {
   const viewer = await requireModule("farm", "edit");
-  await db.delete(farmPlans).where(and(eq(farmPlans.id, String(fd.get("id"))), eq(farmPlans.familyId, viewer.family.id)));
+  const plan = await visibleFarmPlan(viewer, String(fd.get("id")));
+  await db.delete(farmPlans).where(eq(farmPlans.id, plan.id));
   revalidateFarm();
   redirect("/farm");
 }

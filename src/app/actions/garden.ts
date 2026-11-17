@@ -7,12 +7,13 @@ import { db } from "@/db";
 import { gardenLogKind, gardenLogs, gardenPlans, gardenPlantings, plants, seedInventory, storageLocation, sunRequirement } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { emptyLayout, LayoutSchema, type BlueprintLayout } from "@/lib/blueprint";
-import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, canChangeItem, requireModule, type Viewer } from "@/lib/dal";
+import { gardenPlanVisible } from "@/lib/plans";
 import { addDays, todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { addToInventory } from "@/lib/kitchen";
-import { f } from "@/lib/records";
+import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
 function revalidateGarden() {
   revalidatePath("/garden", "layout");
@@ -22,7 +23,8 @@ function revalidateGarden() {
 }
 
 async function ownPlan(viewer: Viewer, id: string) {
-  const [p] = await db.select().from(gardenPlans).where(and(eq(gardenPlans.id, id), eq(gardenPlans.familyId, viewer.family.id)));
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Plan not found.");
+  const [p] = await db.select().from(gardenPlans).where(and(eq(gardenPlans.id, id), eq(gardenPlans.familyId, viewer.family.id), gardenPlanVisible(viewer)));
   if (!p) throw new AuthorizationError("Plan not found.");
   return p;
 }
@@ -47,18 +49,26 @@ export async function createGardenPlan(_: ActionState, fd: FormData): Promise<Ac
     const viewer = await requireModule("garden", "edit");
     const name = f.str(fd, "name");
     if (!name) return fail("Name your plan.", "name");
-    const [row] = await db
-      .insert(gardenPlans)
-      .values({
-        familyId: viewer.family.id,
-        name,
-        year: f.int(fd, "year"),
-        layout: emptyLayout("garden", f.num(fd, "width") ?? undefined, f.num(fd, "height") ?? undefined),
-        notes: f.str(fd, "notes"),
-      })
-      .returning({ id: gardenPlans.id });
+    const { visibility, memberIds } = visibilityFromForm(fd);
+    let id = "";
+    await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(gardenPlans)
+        .values({
+          familyId: viewer.family.id,
+          name,
+          year: f.int(fd, "year"),
+          layout: emptyLayout("garden", f.num(fd, "width") ?? undefined, f.num(fd, "height") ?? undefined),
+          notes: f.str(fd, "notes"),
+          visibility,
+          createdByMemberId: viewer.member.id,
+        })
+        .returning({ id: gardenPlans.id });
+      id = row!.id;
+      await saveRecordAccess(tx, viewer.family.id, "garden_plan", id, memberIds);
+    });
     revalidateGarden();
-    redirect(`/garden/plans/${row!.id}`);
+    redirect(`/garden/plans/${id}`);
   });
 }
 
@@ -82,7 +92,13 @@ export async function updateGardenPlan(_: ActionState, fd: FormData): Promise<Ac
     const plan = await ownPlan(viewer, String(fd.get("id")));
     const name = f.str(fd, "name");
     if (!name) return fail("Name your plan.", "name");
-    await db.update(gardenPlans).set({ name, year: f.int(fd, "year"), notes: f.str(fd, "notes") }).where(eq(gardenPlans.id, plan.id));
+    // Who sees the plan is for its creator or a parent to decide.
+    const mayShare = canChangeItem(viewer, plan.createdByMemberId);
+    const { visibility, memberIds } = visibilityFromForm(fd);
+    await db.transaction(async (tx) => {
+      await tx.update(gardenPlans).set({ name, year: f.int(fd, "year"), notes: f.str(fd, "notes"), ...(mayShare ? { visibility } : {}) }).where(eq(gardenPlans.id, plan.id));
+      if (mayShare) await saveRecordAccess(tx, viewer.family.id, "garden_plan", plan.id, memberIds);
+    });
     revalidateGarden();
     return ok();
   });
@@ -117,6 +133,7 @@ export async function addPlanting(planId: string, bedKey: string, plantId: strin
 async function ownPlanting(viewer: Viewer, id: string) {
   const [p] = await db.select().from(gardenPlantings).where(and(eq(gardenPlantings.id, id), eq(gardenPlantings.familyId, viewer.family.id)));
   if (!p) throw new AuthorizationError("Planting not found.");
+  if (p.planId) await ownPlan(viewer, p.planId); // plantings in a plan the viewer can't see stay hidden
   return p;
 }
 

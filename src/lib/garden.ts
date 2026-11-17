@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { gardenLogs, gardenPlans, gardenPlantings, plants } from "@/db/schema";
 import type { Viewer } from "./dal";
 import { fileUrl } from "./files";
+import { gardenPlanVisible } from "./plans";
 import { ensurePlantDatabase } from "./plant-seed";
 
 export async function plantOptions(viewer: Viewer) {
@@ -22,7 +23,7 @@ export async function plantingsWithPlants(viewer: Viewer, opts: { planId?: strin
     .from(gardenPlantings)
     .innerJoin(plants, eq(plants.id, gardenPlantings.plantId))
     .leftJoin(gardenPlans, eq(gardenPlans.id, gardenPlantings.planId))
-    .where(and(eq(gardenPlantings.familyId, viewer.family.id), opts.planId ? eq(gardenPlantings.planId, opts.planId) : undefined))
+    .where(and(eq(gardenPlantings.familyId, viewer.family.id), opts.planId ? eq(gardenPlantings.planId, opts.planId) : undefined, or(isNull(gardenPlantings.planId), gardenPlanVisible(viewer))))
     .orderBy(asc(plants.name));
   return rows.map(({ p, plant, planName }) => ({
     ...p,
@@ -47,7 +48,7 @@ export async function gardenLog(viewer: Viewer, limit = 50) {
 }
 
 export async function gardenPlanList(viewer: Viewer) {
-  return db.select().from(gardenPlans).where(eq(gardenPlans.familyId, viewer.family.id)).orderBy(desc(gardenPlans.year), asc(gardenPlans.name));
+  return db.select().from(gardenPlans).where(and(eq(gardenPlans.familyId, viewer.family.id), gardenPlanVisible(viewer))).orderBy(desc(gardenPlans.year), asc(gardenPlans.name));
 }
 
 /** Meteorological season for the northern hemisphere (south flips by latitude). */

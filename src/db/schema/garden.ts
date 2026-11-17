@@ -10,7 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
-import { families, familyMembers, files } from "./core";
+import { families, familyMembers, files, visibility } from "./core";
 
 /**
  * Shared geometry for garden and farm blueprints. Stored as JSONB so the
@@ -122,6 +122,9 @@ export const gardenPlans = pgTable(
     year: integer("year"),
     layout: jsonb("layout").$type<BlueprintLayout>().notNull(),
     notes: text("notes"),
+    /** Who sees this plan (family, selected people, Parents & me, Only me). */
+    visibility: visibility("visibility").notNull().default("family"),
+    createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     ...timestamps,
   },
   (t) => [index("garden_plans_family_idx").on(t.familyId)],

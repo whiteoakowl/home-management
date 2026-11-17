@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, gte } from "drizzle-orm";
-import { CalendarOff, ChevronLeft, ChevronRight, Clock, MapPin, Music, Star, Trophy } from "lucide-react";
+import { CalendarOff, Camera, ChevronLeft, ChevronRight, Clock, ExternalLink, Footprints, MapPin, Megaphone, Music, Star, Trophy } from "lucide-react";
 import { db } from "@/db";
 import { danceClasses, danceDaysOff, danceEnrollments, danceEvents } from "@/db/schema";
 import { deleteDanceClass, deleteDanceEvent, deleteDayOff, deleteEnrollment } from "@/app/actions/dance";
@@ -13,13 +13,15 @@ import { Avatar, Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
 import { getViewer } from "@/lib/dal";
 import { classDates, dayOffFor, fmtTime, WEEKDAYS } from "@/lib/dance";
+import { pointeSummary, reorderText } from "@/lib/pointe";
 import { addDays, formatShortDate, startOfWeek, todayIn } from "@/lib/dates";
 import { memberOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dance" };
 
-const KIND_LABEL: Record<string, string> = { performance: "Performance", competition: "Competition", recital: "Recital", rehearsal: "Dress rehearsal", photos: "Picture day", other: "Event" };
+const KIND_LABEL: Record<string, string> = { performance: "Performance", competition: "Competition", recital: "Recital", rehearsal: "Dress rehearsal", audition: "Audition", photos: "Picture day", other: "Event" };
+const usd = (c: number) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
 
 export default async function DancePage({ searchParams }: PageProps<"/dance">) {
   const viewer = await getViewer();
@@ -63,6 +65,9 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
   for (const e of myEvents) if (e.date >= week && e.date <= weekEnd) (byDay.get(e.date) ?? byDay.set(e.date, []).get(e.date)!).push({ time: e.callTime ?? e.startTime ?? "00:00", title: e.title, who: e.memberIds[0] ?? "", where: e.location, kind: "event", ev: e });
 
   const hasAny = enrollments.length + classes.length + events.length > 0;
+  const upcomingCost = myEvents.reduce((sum, e) => sum + (e.costCents ?? 0), 0);
+  // Pointe shoes: who needs to order a new pair, and when.
+  const pointe = await pointeSummary(viewer, member ? [member] : null, today);
   const actions = canUse ? (
     <>
       <DanceClassModal dancers={dancersForForms} enrollments={enrollments.filter((e) => e.active)} defaultMember={member || undefined} defaultOpen={sp.new === "1"} />
@@ -144,7 +149,23 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
             </Card>
 
             <Card>
-              <CardHeader title="Performances & competitions" icon={<Trophy className="size-4" />} />
+              <CardHeader
+                title="Performances, auditions & picture days"
+                icon={<Trophy className="size-4" />}
+                action={
+                  canUse ? (
+                    <span className="flex flex-wrap gap-1">
+                      <DanceEventModal dancers={dancersForForms} defaultMember={member || undefined} defaultKind="audition" triggerLabel="Audition" triggerIcon={<Megaphone className="size-4" />} />
+                      <DanceEventModal dancers={dancersForForms} defaultMember={member || undefined} defaultKind="photos" triggerLabel="Picture day" triggerIcon={<Camera className="size-4" />} />
+                    </span>
+                  ) : undefined
+                }
+              />
+              {upcomingCost > 0 && (
+                <p className="-mt-1 mb-3 text-sm text-muted">
+                  Coming up: <strong className="text-ink tabular-nums">{usd(upcomingCost)}</strong> in costs
+                </p>
+              )}
               {myEvents.length ? (
                 <ul className="flex flex-col gap-3">
                   {myEvents.map((e) => (
@@ -170,10 +191,29 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
                             })}
                           </p>
                           {e.details && <p className="mt-1.5 text-sm whitespace-pre-line text-ink-soft">{e.details}</p>}
+                          {(e.costCents != null || e.ticketCents != null || e.link) && (
+                            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                              {e.costCents != null && (
+                                <span>
+                                  <span className="text-muted">Cost</span> <strong className="tabular-nums">{usd(e.costCents)}</strong>
+                                </span>
+                              )}
+                              {e.ticketCents != null && (
+                                <span>
+                                  <span className="text-muted">Tickets</span> <strong className="tabular-nums">{usd(e.ticketCents)}</strong> <span className="text-muted">each</span>
+                                </span>
+                              )}
+                              {e.link && (
+                                <a href={e.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-primary-700 hover:underline">
+                                  <ExternalLink className="size-3.5" aria-hidden /> {e.kind === "audition" ? "Sign-up / info" : "Tickets / info"}
+                                </a>
+                              )}
+                            </p>
+                          )}
                         </div>
                         {e.memberIds.every((id) => canChange(id)) && (
                           <span className="flex">
-                            <DanceEventModal dancers={dancersForForms} item={{ id: e.id, memberIds: e.memberIds, kind: e.kind, title: e.title, date: e.date, endDate: e.endDate, callTime: e.callTime, startTime: e.startTime, endTime: e.endTime, location: e.location, details: e.details }} />
+                            <DanceEventModal dancers={dancersForForms} item={{ id: e.id, memberIds: e.memberIds, kind: e.kind, title: e.title, date: e.date, endDate: e.endDate, callTime: e.callTime, startTime: e.startTime, endTime: e.endTime, location: e.location, details: e.details, costCents: e.costCents, ticketCents: e.ticketCents, link: e.link }} />
                             <DeleteButton action={deleteDanceEvent} fields={{ id: e.id }} what={e.title} className="size-9" />
                           </span>
                         )}
@@ -182,12 +222,34 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted">No upcoming performances. Add recitals, competitions, dress rehearsals and picture days.</p>
+                <p className="text-sm text-muted">Nothing coming up. Add recitals, competitions, auditions, dress rehearsals and picture days.</p>
               )}
             </Card>
           </div>
 
           <div className="flex flex-col gap-6">
+            <Card>
+              <CardHeader title="Pointe shoes" icon={<Footprints className="size-4" />} href={member ? `/dance/pointe?member=${member}` : "/dance/pointe"} hrefLabel="Open" />
+              {pointe.length ? (
+                <ul className="flex flex-col divide-y divide-line">
+                  {pointe.map((p) => {
+                    const m = nameOf(p.memberId);
+                    return (
+                      <li key={p.memberId} className="flex items-center gap-2 py-2">
+                        {m && <Avatar name={m.displayName} color={m.color} size="xs" />}
+                        <span className="min-w-0 flex-1 text-[15px]">
+                          <span className="font-medium">{m?.displayName.split(" ")[0]}</span>
+                          <span className="block text-xs text-muted">{[p.inUse && `wearing ${p.inUse}`, p.spares ? `${p.spares} spare${p.spares === 1 ? "" : "s"}` : null].filter(Boolean).join(" · ") || "No pairs on hand"}</span>
+                        </span>
+                        <Badge tone={p.due.status === "now" ? "wine" : p.due.status === "soon" ? "olive" : "mist"}>{reorderText(p.due, today)}</Badge>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted">Track each pair: brand, size, shank, wings, price, when it was bought, worn and died, and when to order the next one.</p>
+              )}
+            </Card>
             <Card>
               <CardHeader title="Teams & levels" icon={<Star className="size-4" />} />
               {(member ? enrollments.filter((e) => e.memberId === member) : enrollments).length ? (

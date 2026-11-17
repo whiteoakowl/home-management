@@ -1,6 +1,6 @@
-import { test } from "node:test";
+import { describe, it, test } from "node:test";
 import assert from "node:assert/strict";
-import { classDates, dayOffFor, fmtTime, shiftHours } from "../src/lib/dance";
+import { classDates, dayOffFor, fmtTime, pairLifeDays, reorderDue, shiftHours } from "../src/lib/dance";
 
 const tue = { memberId: "a", weekday: 2, startsOn: null, endsOn: null };
 
@@ -27,4 +27,38 @@ test("times and hours", () => {
   assert.equal(fmtTime("16:30:00"), "4:30 PM");
   assert.equal(fmtTime("00:05"), "12:05 AM");
   assert.equal(shiftHours([{ startTime: "09:00", endTime: "17:30" }, { startTime: "22:00", endTime: "06:00" }]), 16.5);
+});
+
+describe("pointe shoes reorder", () => {
+  const today = "2026-11-17";
+  it("averages how long retired pairs lasted", () => {
+    assert.equal(
+      pairLifeDays([
+        { status: "retired", firstWornOn: "2026-09-01", retiredOn: "2026-10-01", reorderBy: null },
+        { status: "retired", firstWornOn: "2026-10-01", retiredOn: "2026-11-10", reorderBy: null },
+        { status: "in_use", firstWornOn: "2026-11-10", retiredOn: null, reorderBy: null },
+      ]),
+      35,
+    );
+  });
+  it("orders two weeks before the pair in use (plus spares) wears out", () => {
+    const pairs = [
+      { status: "retired" as const, firstWornOn: "2026-09-01", retiredOn: "2026-10-01", reorderBy: null },
+      { status: "in_use" as const, firstWornOn: "2026-11-01", retiredOn: null, reorderBy: null },
+    ];
+    assert.deepEqual(reorderDue(pairs, today), { date: "2026-11-17", status: "now", lifeDays: 30, estimated: false });
+    const withSpare = reorderDue([...pairs, { status: "on_hand", firstWornOn: null, retiredOn: null, reorderBy: null }], today);
+    assert.equal(withSpare.date, "2026-12-17");
+    assert.equal(withSpare.status, "ok");
+  });
+  it("uses 6 weeks when there's no history, and nothing is due once a pair is on order", () => {
+    const r = reorderDue([{ status: "in_use", firstWornOn: "2026-11-10", retiredOn: null, reorderBy: null }], today);
+    assert.equal(r.date, "2026-12-08");
+    assert.equal(r.estimated, true);
+    assert.equal(reorderDue([{ status: "ordered", firstWornOn: null, retiredOn: null, reorderBy: null }], today).status, "ordered");
+    assert.equal(reorderDue([], today).status, "now");
+  });
+  it("a date set by hand wins", () => {
+    assert.equal(reorderDue([{ status: "in_use", firstWornOn: "2026-11-10", retiredOn: null, reorderBy: "2026-11-20" }], today).status, "soon");
+  });
 });

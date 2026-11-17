@@ -125,6 +125,13 @@ export function buildNav(viewer: Viewer): NavSection[] {
     label: "Home",
     icon: "LayoutDashboard",
   });
+  // Cleaning & Chores: the chore board's Tasks and Rewards get their own menu entries.
+  const chores = sections.find((s) => s.group === "Cleaning & Chores");
+  if (chores && viewer.can("chores"))
+    chores.items.push(
+      { href: "/house/tasks", label: "Tasks", icon: "ListTodo" },
+      { href: "/house/rewards", label: "Rewards", icon: "Trophy" },
+    );
   // Personal spaces belong to each person (private unless shared), so everyone has them.
   const personal = sections.find((s) => s.group === "Personal");
   const hidden = viewer.member.hiddenAreas;

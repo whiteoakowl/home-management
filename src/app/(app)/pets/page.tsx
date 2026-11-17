@@ -32,7 +32,7 @@ export default async function PetsDashboard({ searchParams }: PageProps<"/pets">
   const low = supplies.filter(({ item }) => item.lowStockThreshold !== null && Number(item.quantity) <= Number(item.lowStockThreshold));
   return (
     <>
-      <PageHeader eyebrow="Care" title="Pets" description="Profiles, health, preventatives, food, care schedules and memories for every animal in the family." actions={canEdit && <PetModal members={members} defaultOpen={sp.new === "1"} />} />
+      <PageHeader eyebrow="Household" title="Pets" description="Profiles, health, preventatives, food, care schedules and memories for every animal in the family." actions={canEdit && <PetModal members={members} defaultOpen={sp.new === "1"} />} />
       <PetsTabs active="dashboard" />
       {list.length === 0 ? (
         <Card>
