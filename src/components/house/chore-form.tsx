@@ -225,7 +225,7 @@ export function ChoreFormModal({
 
       <FormRow>
         <NumberField name="estimatedMinutes" label="Estimated minutes" min={0} defaultValue={defaults?.estimatedMinutes ?? ""} />
-        {!limited && (type === "chore" || type === "cleaning" || type === "task") && (
+        {!limited && (type === "chore" || type === "cleaning" || type === "task" || type === "farm") && (
           <NumberField name="points" label="Reward points" min={0} max={1000} defaultValue={defaults?.points ?? ""} hint="Earned by whoever completes it." />
         )}
         {(showCost || type === "maintenance") && (
