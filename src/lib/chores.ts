@@ -48,6 +48,7 @@ export async function listOccurrences(
     choreId?: string;
     petIds?: string[];
     projectId?: string;
+    poolId?: string;
     order?: "asc" | "desc";
     limit?: number;
   },
@@ -92,6 +93,7 @@ export async function listOccurrences(
         opts.choreId ? eq(choreOccurrences.choreId, opts.choreId) : undefined,
         opts.petIds ? (opts.petIds.length ? inArray(chores.petId, opts.petIds) : sql`false`) : undefined,
         opts.projectId ? eq(chores.projectId, opts.projectId) : undefined,
+        opts.poolId ? eq(chores.poolId, opts.poolId) : undefined,
         opts.assigneeId
           ? or(
               eq(choreOccurrences.assigneeId, opts.assigneeId),

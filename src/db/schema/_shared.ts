@@ -40,6 +40,7 @@ export const MODULES = [
   "witchcraft",
   "maintenance",
   "library",
+  "pool",
 ] as const;
 export type Module = (typeof MODULES)[number];
 

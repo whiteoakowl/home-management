@@ -260,6 +260,18 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "Rooms & systems, preventative maintenance, repairs, remodeling and warranties.",
     highlights: ["Maintenance schedules with costs", "Repair history with photos", "Remodeling projects & warranties"],
   },
+  pool: {
+    id: "pool",
+    label: "Pool",
+    href: "/pool",
+    icon: "Waves",
+    group: "Household",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "use",
+    tagline: "Pool and spa water tests, what to add, maintenance and equipment.",
+    highlights: ["Water tests with ideal ranges", "Exact chemical doses", "Maintenance routine & equipment"],
+  },
   medical: {
     id: "medical",
     label: "Medical",

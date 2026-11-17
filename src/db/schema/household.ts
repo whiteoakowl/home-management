@@ -114,6 +114,8 @@ export const chores = pgTable(
     petId: uuid("pet_id"),
     /** Remodeling project tasks. */
     projectId: uuid("project_id"),
+    /** Pool / spa this chore cares for (pool routine). */
+    poolId: uuid("pool_id"),
     projectStageId: uuid("project_stage_id"),
     estimatedCostCents: integer("estimated_cost_cents"),
     imageFileId: uuid("image_file_id"),
