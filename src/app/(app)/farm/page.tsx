@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { AlarmClock, Map as MapIcon, PawPrint, Wheat, Tractor } from "lucide-react";
+import { AlarmClock, Map as MapIcon, PawPrint, Plane, Wheat, Tractor } from "lucide-react";
 import { db } from "@/db";
 import { animalHealthRecords, animals, farmPlans, feedLogs, productionLogs } from "@/db/schema";
 import { BarChart } from "@/components/charts";
@@ -67,7 +67,15 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
         eyebrow="Land"
         title="Farm"
         description="Animals, care, production and your farm map."
-        actions={canEdit ? <><FeedModal animals={opts} /><ProductionModal animals={opts} canKitchen={canKitchen} /></> : undefined}
+        actions={
+          <>
+            <ButtonLink href="/farm/vacation" variant="secondary" icon={<Plane className="size-4" />}>
+              Vacation instructions
+            </ButtonLink>
+            {canEdit && <FeedModal animals={opts} />}
+            {canEdit && <ProductionModal animals={opts} canKitchen={canKitchen} />}
+          </>
+        }
       />
       <FarmTabs active="overview" />
       {bySpecies.length === 0 ? (

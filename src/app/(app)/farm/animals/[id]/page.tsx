@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, desc, eq } from "drizzle-orm";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ClipboardList, Pencil, Trash2 } from "lucide-react";
 import { db } from "@/db";
 import { animalHealthRecords, animals, feedLogs, productionLogs } from "@/db/schema";
 import { deleteAnimal, deleteHealthRecord } from "@/app/actions/farm";
 import { ActionButton, DeleteButton } from "@/components/forms/inline";
 import { AnimalAvatar } from "@/components/farm/animal-avatar";
-import { AnimalFormModal, HealthRecordModal, ProductionModal } from "@/components/farm/farm-forms";
+import { AnimalCareModal, AnimalFormModal, HealthRecordModal, ProductionModal } from "@/components/farm/farm-forms";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { MainPhotoButton } from "@/components/photos/profile-photo";
@@ -81,6 +81,26 @@ export default async function AnimalPage({ params }: PageProps<"/farm/animals/[i
           />
         </div>
       </div>
+      <Card>
+        <CardHeader title="Care instructions" icon={<ClipboardList className="size-4" />} action={canEdit ? <AnimalCareModal id={id} instructions={a.careInstructions} steps={a.careSteps} /> : undefined} />
+        {a.careSteps.length === 0 && !a.careInstructions ? (
+          <p className="text-sm text-muted">{canEdit ? `Write down how to look after ${a.name}: daily steps, feeding amounts and anything a sitter should know.` : "No care instructions yet."}</p>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-[1.2fr_1fr]">
+            {a.careSteps.length > 0 && (
+              <ol className="flex flex-col gap-2">
+                {a.careSteps.map((step, i) => (
+                  <li key={i} className="flex gap-3 text-[15px]">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-700">{i + 1}</span>
+                    <span className="pt-0.5">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {a.careInstructions && <p className="text-[15px] whitespace-pre-line text-ink-soft">{a.careInstructions}</p>}
+          </div>
+        )}
+      </Card>
       <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
         <Card>
           <CardHeader title="Details" />

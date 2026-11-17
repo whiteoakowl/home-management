@@ -8,6 +8,7 @@ export function FarmTabs({ active }: { active: string }) {
         { key: "overview", href: "/farm", label: "Overview" },
         { key: "chores", href: "/farm/chores", label: "Chores" },
         { key: "animals", href: "/farm/animals", label: "Animals" },
+        { key: "feed", href: "/farm/feed", label: "Feed" },
         { key: "production", href: "/farm/production", label: "Production" },
       ]}
     />

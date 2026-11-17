@@ -7,6 +7,7 @@ import { listItems } from "@/db/schema";
 import { putAwayChecked, restockLowItems } from "@/app/actions/kitchen";
 import { ActionButton } from "@/components/forms/inline";
 import { ListDetail } from "@/components/lists/list-detail";
+import { FeedNeeded } from "@/components/farm/feed-needed";
 import { ShoppingExpenseModal } from "@/components/budget/budget-forms";
 import { budgetCategories } from "@/lib/budget";
 import { todayIn } from "@/lib/dates";
@@ -29,6 +30,7 @@ export default async function ShoppingListPage({ params }: PageProps<"/shopping/
     <ListDetail
       viewer={viewer}
       id={id}
+      aside={list.ownerMemberId ? undefined : <FeedNeeded viewer={viewer} />}
       backHref={list.ownerMemberId ? (own ? "/shopping?space=mine&all=1" : `/shopping?space=${list.ownerMemberId}&all=1`) : "/shopping?all=1"}
       extraActions={
         <>

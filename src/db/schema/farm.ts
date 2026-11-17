@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   index,
   integer,
@@ -7,10 +8,11 @@ import {
   pgEnum,
   pgTable,
   text,
+  timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
-import { families, familyMembers, files } from "./core";
+import { families, familyMembers, files, visibility } from "./core";
 import type { BlueprintLayout } from "./garden";
 
 export const animalSex = pgEnum("animal_sex", ["female", "male", "unknown"]);
@@ -46,6 +48,10 @@ export const animals = pgTable(
     feed: text("feed"),
     status: animalStatus("status").notNull().default("active"),
     notes: text("notes"),
+    /** How to look after this animal (for the family and sitters). */
+    careInstructions: text("care_instructions"),
+    /** Care routine, one step per entry, in order. */
+    careSteps: text("care_steps").array().notNull().default([]),
     ...timestamps,
   },
   (t) => [index("animals_family_idx").on(t.familyId)],
@@ -122,4 +128,40 @@ export const farmPlans = pgTable(
     ...timestamps,
   },
   (t) => [index("farm_plans_family_idx").on(t.familyId)],
+);
+
+/** Feed we need to buy, by a due date: one order with several items. Visibility like other records. */
+export const feedOrders = pgTable(
+  "feed_orders",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    dueDate: date("due_date").notNull(),
+    store: text("store"),
+    notes: text("notes"),
+    visibility: visibility("visibility").notNull().default("family"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("feed_orders_family_due_idx").on(t.familyId, t.dueDate)],
+);
+
+export const feedOrderItems = pgTable(
+  "feed_order_items",
+  {
+    id: id(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => feedOrders.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    quantity: text("quantity"),
+    got: boolean("got").notNull().default(false),
+    position: integer("position").notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [index("feed_order_items_order_idx").on(t.orderId)],
 );

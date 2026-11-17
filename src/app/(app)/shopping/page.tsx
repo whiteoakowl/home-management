@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ShoppingBasket, Store } from "lucide-react";
 import { ListFormModal } from "@/components/lists/list-form";
+import { FeedNeeded } from "@/components/farm/feed-needed";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { mainShoppingListId } from "@/lib/automation";
@@ -41,6 +42,11 @@ export default async function ShoppingPage({ searchParams }: PageProps<"/shoppin
       />
       <FoodSpaceNav viewer={viewer} active="shopping" space={space} others={others} />
       <PrivateSpaceNote space={space} viewer={viewer} />
+      {!owner && (
+        <div className="mb-5">
+          <FeedNeeded viewer={viewer} />
+        </div>
+      )}
       {lists.length === 0 ? (
         <Card>
           <EmptyState icon={<ShoppingBasket />} title="No shopping lists" description="Create a list per store, or one for everything." action={canEdit ? cloneElement(add, { defaultOpen: false }) : undefined} />

@@ -225,3 +225,18 @@ export async function deleteFarmPlan(fd: FormData) {
   revalidateFarm();
   redirect("/farm");
 }
+
+/** Care instructions and the step-by-step routine for one animal (for the family and sitters). */
+export async function saveAnimalCare(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("farm", "edit");
+    const a = await ownAnimal(viewer, String(fd.get("id")));
+    const steps = (f.str(fd, "careSteps") ?? "")
+      .split(/\r?\n/)
+      .map((l) => l.replace(/^\s*(?:\d+[.)]|[-•*])\s*/, "").trim())
+      .filter(Boolean);
+    await db.update(animals).set({ careInstructions: f.str(fd, "careInstructions"), careSteps: steps }).where(eq(animals.id, a.id));
+    revalidateFarm();
+    return ok("Care instructions saved.");
+  });
+}

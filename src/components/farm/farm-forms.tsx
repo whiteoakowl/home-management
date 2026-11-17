@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { createFarmPlan, logFeed, logProduction, saveAnimal, saveHealthRecord } from "@/app/actions/farm";
+import { createFarmPlan, logFeed, logProduction, saveAnimal, saveAnimalCare, saveHealthRecord } from "@/app/actions/farm";
 import { FormModal } from "@/components/forms/action-form";
 import { CheckboxField, DateField, FormRow, ImageField, NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { LOCATION_OPTIONS } from "@/components/kitchen/inventory-form";
@@ -132,6 +132,30 @@ export function NewFarmPlanModal() {
         <NumberField name="width" label="Width (ft)" defaultValue={300} min={20} />
         <NumberField name="height" label="Depth (ft)" defaultValue={200} min={20} />
       </FormRow>
+    </FormModal>
+  );
+}
+
+/** Edit an animal's care instructions and routine steps. */
+export function AnimalCareModal({ id, instructions, steps, triggerContent }: { id: string; instructions: string | null; steps: string[]; triggerContent?: ReactNode }) {
+  return (
+    <FormModal title="Care instructions" triggerLabel={steps.length || instructions ? "Edit" : "Add care instructions"} triggerVariant="ghost" triggerSize="sm" triggerContent={triggerContent} action={saveAnimalCare}>
+      <input type="hidden" name="id" value={id} />
+      <TextAreaField
+        name="careSteps"
+        label="Daily care steps"
+        rows={6}
+        defaultValue={steps.join("\n")}
+        placeholder={"Let the hens out at 7am\nFill feeder with 1 scoop layer pellets\nTop up water; scrub the base weekly\nCollect eggs at 4pm\nClose the coop door at dusk"}
+        hint="One step per line, in order."
+      />
+      <TextAreaField
+        name="careInstructions"
+        label="Instructions & things to know"
+        rows={5}
+        defaultValue={instructions ?? ""}
+        placeholder="Feeding amounts, treats allowed, quirks, signs of trouble, vet phone number…"
+      />
     </FormModal>
   );
 }

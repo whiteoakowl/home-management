@@ -43,6 +43,7 @@ export const entityType = pgEnum("entity_type", [
   "pet",
   "craft_item",
   "book",
+  "feed_order",
 ]);
 
 // ─── Identity ────────────────────────────────────────────────────────────────

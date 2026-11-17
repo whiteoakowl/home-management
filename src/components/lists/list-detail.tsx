@@ -17,7 +17,7 @@ import { ListView } from "./list-view";
 const KIND_LABEL = { checklist: "Checklist", bullet: "Bullet list", numbered: "Numbered list", todo: "To-do list", shopping: "Shopping list" };
 
 /** Shared detail page for /lists/[id] and /shopping/[id]. */
-export async function ListDetail({ viewer, id, backHref, extraActions }: { viewer: Viewer; id: string; backHref: string; extraActions?: ReactNode }) {
+export async function ListDetail({ viewer, id, backHref, extraActions, aside }: { viewer: Viewer; id: string; backHref: string; extraActions?: ReactNode; aside?: ReactNode }) {
   const list = await loadList(viewer, id).catch(() => null);
   if (!list) notFound();
   const mod = listModule(list.kind);
@@ -97,6 +97,7 @@ export async function ListDetail({ viewer, id, backHref, extraActions }: { viewe
           ) : undefined
         }
       />
+      {aside}
       {frequent.length > 0 && (
         <section aria-label="Buy again" className="-mt-1">
           <p className="mb-2 text-xs font-semibold tracking-[0.12em] text-muted uppercase">Buy again</p>
