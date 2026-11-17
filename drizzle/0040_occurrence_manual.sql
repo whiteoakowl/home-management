@@ -1,0 +1,1 @@
+ALTER TABLE "chore_occurrences" ADD COLUMN "assigned_manually" boolean DEFAULT false NOT NULL;

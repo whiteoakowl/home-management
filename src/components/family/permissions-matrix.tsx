@@ -2,27 +2,25 @@ import type { AccessLevel, Module } from "@/db/schema/_shared";
 import { Avatar } from "@/components/ui/display";
 import { Icon } from "@/components/icons";
 import { MODULE_META } from "@/lib/modules";
-import { ADD_LEVEL_MODULES, PARENT_ONLY_MODULES } from "@/lib/permissions";
+import { PARENT_ONLY_MODULES, USE_ONLY_MODULES } from "@/lib/permissions";
 
 const LEVELS: { value: AccessLevel; label: string }[] = [
   { value: "none", label: "No access" },
   { value: "view", label: "View only" },
   { value: "use", label: "Use" },
-  { value: "add", label: "Add own" },
   { value: "edit", label: "Add & edit" },
 ];
 /** "Add" (add new things, change only their own) is offered for the Family Pantry areas. */
-const levelsFor = (m: Module) => LEVELS.filter((l) => l.value !== "add" || ADD_LEVEL_MODULES.includes(m));
+const levelsFor = (m: Module) => (USE_ONLY_MODULES.includes(m) ? LEVELS.filter((l) => l.value === "none" || l.value === "use") : LEVELS);
 
 /** Plain-language meaning of each access level, shown under the permission selects. */
 export function PermissionLegend() {
   return (
     <dl className="grid gap-1.5 rounded-xl bg-sunken/60 px-3.5 py-3 text-sm text-ink-soft">
       <div><dt className="inline font-semibold text-ink">No access:</dt> <dd className="inline">the area is hidden.</dd></div>
-      <div><dt className="inline font-semibold text-ink">View only:</dt> <dd className="inline">can open the tab and see what&apos;s shared with the family, but can&apos;t check anything off, add or change anything.</dd></div>
-      <div><dt className="inline font-semibold text-ink">Use:</dt> <dd className="inline">can check off chores and list items, mark things done and earn and spend points, but can&apos;t add to or edit the lists.</dd></div>
-      <div><dt className="inline font-semibold text-ink">Add own</dt> <dd className="inline">(Family Pantry areas): everything in Use, plus add new things and change only what they added.</dd></div>
-      <div><dt className="inline font-semibold text-ink">Add &amp; edit:</dt> <dd className="inline">everything in Use, plus create new things (lists, events, goals…) and change or delete the things they added. Only parents can change what someone else added, and nobody sees someone else&apos;s &ldquo;Only me&rdquo; items.</dd></div>
+      <div><dt className="inline font-semibold text-ink">View only:</dt> <dd className="inline">can open the tab and see what&apos;s shared with them or the whole family, but can&apos;t check anything off, add or change anything.</dd></div>
+      <div><dt className="inline font-semibold text-ink">Use:</dt> <dd className="inline">can open the tab, see what&apos;s shared with them or the whole family, add their own things, change what they added, check things off and earn points. They can&apos;t change what someone else added (animals and pets are shared, so they can update those).</dd></div>
+      <div><dt className="inline font-semibold text-ink">Add &amp; edit:</dt> <dd className="inline">everything in Use, plus manage the area&apos;s shared setup (chore schedules, rooms, plant database…). Only parents change what someone else added, and nobody sees someone else&apos;s &ldquo;Only me&rdquo; items.</dd></div>
     </dl>
   );
 }

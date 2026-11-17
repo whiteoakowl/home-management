@@ -7,7 +7,6 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getViewer, listFamilyMembers } from "@/lib/dal";
 import { runDailyAutomation } from "@/lib/automation";
-import { ADD_LEVEL_MODULES } from "@/lib/permissions";
 import { themeStyle } from "@/lib/theme";
 import { fileUrl } from "@/lib/files";
 
@@ -24,7 +23,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
   const sections = buildNav(viewer);
   // Quick Add: modules the member can add to (Family Pantry areas accept the "Add" level).
-  const editable = MODULES.filter((m) => viewer.can(m, ADD_LEVEL_MODULES.includes(m) ? "add" : "edit"));
+  // Areas where "Use" can already add their own things; the rest still need Add & edit.
+  const USE_ADDS: readonly string[] = ["kitchen", "recipes", "meals", "shopping", "calendar", "chores", "cleaning", "plans", "work", "dance"];
+  const editable = MODULES.filter((m) => viewer.can(m, USE_ADDS.includes(m) ? "use" : "edit"));
   const pick = (m: (typeof members)[number]) => ({ id: m.id, displayName: m.displayName, color: m.color, photoUrl: fileUrl(m.avatarFileId, true) });
 
   return (

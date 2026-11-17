@@ -18,7 +18,7 @@ import { ruleFromForm } from "@/lib/recurrence";
 
 export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("calendar", "edit");
+    const viewer = await requireModule("calendar", "use");
     const tz = viewer.family.timezone;
     const title = f.str(fd, "title");
     const date = f.date(fd, "date");
@@ -87,7 +87,7 @@ export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionSta
 
 /** Repeating event: remove just one date from the series ("Delete this one"). */
 export async function deleteEventOccurrence(fd: FormData) {
-  const viewer = await requireModule("calendar", "edit");
+  const viewer = await requireModule("calendar", "use");
   const id = String(fd.get("id"));
   const date = String(fd.get("date") ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
@@ -106,7 +106,7 @@ export async function deleteEventOccurrence(fd: FormData) {
 }
 
 export async function deleteEvent(fd: FormData) {
-  const viewer = await requireModule("calendar", "edit");
+  const viewer = await requireModule("calendar", "use");
   const id = String(fd.get("id"));
   const [old] = await db.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id)));
   if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;

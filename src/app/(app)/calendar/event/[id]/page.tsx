@@ -48,7 +48,7 @@ export default async function EventPage({ params, searchParams }: PageProps<"/ca
   const people = attendees.map((a) => members.find((m) => m.id === a.id)).filter(Boolean) as typeof members;
   const shared = (access.get(id) ?? []).map((a) => members.find((m) => m.id === a)?.displayName).filter(Boolean);
   const color = memberColor(e.color ?? row.catColor ?? people[0]?.color);
-  const canEdit = viewer.can("calendar", "edit") && (viewer.isParent || e.createdByMemberId === viewer.member.id);
+  const canEdit = viewer.can("calendar", "use") && (viewer.isParent || e.createdByMemberId === viewer.member.id);
   const fmt = (t: string) => new Date(`2000-01-01T${t}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   return (

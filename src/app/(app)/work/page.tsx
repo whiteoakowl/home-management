@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { workShifts } from "@/db/schema";
 import { copyLastWeek, deleteShift } from "@/app/actions/work";
 import { ActionButton, DeleteButton } from "@/components/forms/inline";
-import { ShiftModal } from "@/components/work/shift-form";
+import { ShiftModal, WorkSharingModal } from "@/components/work/shift-form";
 import { Card } from "@/components/ui/card";
 import { Avatar, EmptyState, PageHeader } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
@@ -15,6 +15,7 @@ import { getViewer } from "@/lib/dal";
 import { fmtTime, shiftHours, WEEKDAYS } from "@/lib/dance";
 import { addDays, formatShortDate, startOfWeek, todayIn } from "@/lib/dates";
 import { memberOptions } from "@/lib/queries";
+import { myWorkSharing, visibleWorkers } from "@/lib/work";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Work schedules" };
@@ -33,10 +34,14 @@ export default async function WorkPage({ searchParams }: PageProps<"/work">) {
   const canChange = (id: string) => canAll || (canUse && id === viewer.member.id);
   const member = typeof sp.member === "string" && members.some((m) => m.id === sp.member) ? sp.member : "";
 
-  const [shifts, recentJobs] = await Promise.all([
+  const [allShifts, recentJobs, seeWork, share] = await Promise.all([
     db.select().from(workShifts).where(and(eq(workShifts.familyId, viewer.family.id), gte(workShifts.date, week), lte(workShifts.date, addDays(week, 6)))).orderBy(asc(workShifts.date), asc(workShifts.startTime)),
     db.selectDistinct({ job: workShifts.job, date: workShifts.date }).from(workShifts).where(eq(workShifts.familyId, viewer.family.id)).orderBy(desc(workShifts.date)).limit(40),
+    visibleWorkers(viewer),
+    myWorkSharing(viewer),
   ]);
+  // Each person chooses who sees their schedule.
+  const shifts = allShifts.filter((s) => seeWork.has(s.memberId));
   const jobs = [...new Set(recentJobs.map((r) => r.job).filter((j): j is string => !!j))].slice(0, 8);
   // People shown: anyone with shifts this week, plus yourself if you can add.
   const ids = [...new Set([...(canUse ? [viewer.member.id] : []), ...shifts.map((s) => s.memberId)])];
@@ -46,7 +51,15 @@ export default async function WorkPage({ searchParams }: PageProps<"/work">) {
 
   return (
     <>
-      <PageHeader eyebrow="Activities" title="Work schedules" description="Everyone's shifts, week by week. They show on the family calendar." actions={workers.length ? <ShiftModal workers={workers} weekDays={days} defaultMember={member || viewer.member.id} jobs={jobs} defaultOpen={sp.new === "1"} /> : undefined} />
+      <PageHeader eyebrow="Activities" title="Work schedules" description="Everyone's shifts, week by week. They show on the family calendar." actions={
+          workers.length ? (
+            <>
+              <WorkSharingModal members={members.filter((m) => m.id !== viewer.member.id)} visibility={share.visibility} shared={share.memberIds} />
+              <ShiftModal workers={workers} weekDays={days} defaultMember={member || viewer.member.id} jobs={jobs} defaultOpen={sp.new === "1"} />
+            </>
+          ) : undefined
+        }
+      />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link href={href({ week: addDays(week, -7) })} aria-label="Previous week" className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-surface hover:bg-sunken">
           <ChevronLeft className="size-5" />

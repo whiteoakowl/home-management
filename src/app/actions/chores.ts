@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { choreChecklistItems, choreOccurrenceItems, choreOccurrences, chores, pets } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { materializeChore, rematerializeChore } from "@/lib/automation";
+import { rebalanceRotations } from "@/lib/rotation-db";
 import { kindModule, type ChoreKind } from "@/lib/chores";
 import { AuthorizationError, getViewer, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
@@ -29,8 +30,14 @@ function revalidateHouse() {
 /** The chore's current points, captured at completion so later edits don't rewrite history. */
 const pointsOf = (choreId: string) => sql<number | null>`(select nullif(${chores.points}, 0) from ${chores} where ${chores.id} = ${choreId})`;
 
-function requireKindEdit(viewer: Viewer, kind: ChoreKind) {
-  if (!viewer.can(kindModule(kind), "edit")) throw new AuthorizationError("You don't have permission to manage these.");
+/**
+ * "Add & edit" manages every chore. "Use" may add their own (assigned to
+ * themselves, no points) and change or delete only the ones they added.
+ */
+function requireChoreChange(viewer: Viewer, kind: ChoreKind, createdBy?: string | null) {
+  if (viewer.can(kindModule(kind), "edit")) return;
+  if (!viewer.can(kindModule(kind), "use")) throw new AuthorizationError("You don't have permission to add these.");
+  if (createdBy !== undefined && createdBy !== viewer.member.id) throw new AuthorizationError("Only the person who added this (or a parent) can change it.");
 }
 
 /** Create or update a chore / cleaning / maintenance / task template. */
@@ -40,7 +47,8 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
     const id = f.str(fd, "id");
     const kind = (f.str(fd, "kind") ?? "chore") as ChoreKind;
     if (!KINDS.includes(kind)) return fail("Unknown type.");
-    requireKindEdit(viewer, kind);
+    requireChoreChange(viewer, kind);
+    const manager = viewer.can(kindModule(kind), "edit");
 
     const title = f.str(fd, "title");
     if (!title) return fail("Please give it a name.", "title");
@@ -73,11 +81,12 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       cleaningCadence: kind === "cleaning" ? (cadence ?? "custom") : null,
       priority: (["low", "normal", "high"].includes(f.str(fd, "priority") ?? "") ? f.str(fd, "priority") : "normal") as "low" | "normal" | "high",
       estimatedMinutes: f.int(fd, "estimatedMinutes"),
-      defaultAssigneeId: await familyMemberIdOrNull(viewer.family.id, f.str(fd, "assigneeId")),
+      // Members with Use add their own: assigned to themselves, no points.
+      defaultAssigneeId: manager ? await familyMemberIdOrNull(viewer.family.id, f.str(fd, "assigneeId")) : viewer.member.id,
       dueDate: rule ? null : f.date(fd, "dueDate"),
       notes: f.str(fd, "notes"),
-      points: Math.max(0, Math.min(1000, f.int(fd, "points") ?? 0)) || null,
-      rotationMemberIds: await familyMemberIds(viewer.family.id, f.list(fd, "rotation")),
+      points: manager ? Math.max(0, Math.min(1000, f.int(fd, "points") ?? 0)) || null : null,
+      rotationMemberIds: manager ? await familyMemberIds(viewer.family.id, f.list(fd, "rotation")) : [],
       ...(fd.has("estimatedCost") ? { estimatedCostCents: f.cents(fd, "estimatedCost") } : {}),
       // Cross-module links are only touched when the form carries them.
       ...(fd.has("petId") ? { petId: await ownedId(viewer, pets, f.str(fd, "petId")) } : {}),
@@ -91,7 +100,7 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
     const checklist: { text: string; assigneeId: string | null }[] = [];
     for (let i = 0; i < texts.length; i++) {
       if (!texts[i]) continue;
-      checklist.push({ text: texts[i]!.slice(0, 200), assigneeId: await familyMemberIdOrNull(viewer.family.id, assignees[i] || null) });
+      checklist.push({ text: texts[i]!.slice(0, 200), assigneeId: manager ? await familyMemberIdOrNull(viewer.family.id, assignees[i] || null) : null });
     }
 
     let choreId = id;
@@ -99,8 +108,9 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       if (id) {
         const [existing] = await tx.select().from(chores).where(and(eq(chores.id, id), eq(chores.familyId, viewer.family.id)));
         if (!existing) throw new AuthorizationError("Not found.");
+        requireChoreChange(viewer, existing.kind, existing.createdByMemberId);
         // Changing the type (e.g. chore → cleaning) needs rights over both areas.
-        if (existing.kind !== kind) requireKindEdit(viewer, existing.kind);
+        if (existing.kind !== kind) requireChoreChange(viewer, existing.kind, existing.createdByMemberId);
         const ruleId = await upsertRule(tx, viewer.family.id, rule, existing.recurrenceRuleId);
         await tx.update(chores).set({ ...values, recurrenceRuleId: ruleId }).where(eq(chores.id, id));
         await tx.delete(choreChecklistItems).where(eq(choreChecklistItems.choreId, id));
@@ -118,8 +128,9 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
     });
 
     if (id) await rematerializeChore(choreId!, today);
-    else {
-      await materializeChore(choreId!, today);
+    else await materializeChore(choreId!, today);
+    await rebalanceRotations(viewer.family.id, today);
+    if (!id) {
       const noun = { chore: "a chore", cleaning: "a cleaning task", maintenance: "a maintenance task", task: "a task", farm: "a farm chore" }[kind];
       await logActivity(db, viewer.family.id, viewer.member.id, "chore.created", `added ${noun}: "${title}"`, { module: kindModule(kind), entityId: choreId! });
     }
@@ -133,10 +144,11 @@ export async function archiveChore(fd: FormData) {
   const id = String(fd.get("id"));
   const [c] = await db.select().from(chores).where(and(eq(chores.id, id), eq(chores.familyId, viewer.family.id)));
   if (!c) return;
-  requireKindEdit(viewer, c.kind);
+  requireChoreChange(viewer, c.kind, c.createdByMemberId);
   await db.update(chores).set({ archivedAt: new Date() }).where(eq(chores.id, id));
   // Drop pending occurrences; completed history stays.
   await db.delete(choreOccurrences).where(and(eq(choreOccurrences.choreId, id), eq(choreOccurrences.status, "pending")));
+  await rebalanceRotations(viewer.family.id, todayIn(viewer.family.timezone));
   revalidateHouse();
   const back = String(fd.get("redirectTo") ?? "");
   if (back.startsWith("/house")) redirect(back);
@@ -146,7 +158,7 @@ async function editableChore(viewer: Viewer, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [c] = await db.select().from(chores).where(and(eq(chores.id, id), eq(chores.familyId, viewer.family.id)));
   if (!c) return null;
-  requireKindEdit(viewer, c.kind);
+  requireChoreChange(viewer, c.kind, c.createdByMemberId);
   return c;
 }
 
@@ -162,6 +174,7 @@ export async function deleteChore(fd: FormData) {
   const now = new Date();
   await db.update(chores).set({ archivedAt: c.archivedAt ?? now, deletedAt: now }).where(eq(chores.id, c.id));
   await db.delete(choreOccurrences).where(and(eq(choreOccurrences.choreId, c.id), eq(choreOccurrences.status, "pending")));
+  await rebalanceRotations(viewer.family.id, todayIn(viewer.family.timezone));
   await logActivity(db, viewer.family.id, viewer.member.id, "chore.deleted", `deleted "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
   revalidateHouse();
   const back = String(fd.get("redirectTo") ?? "");
@@ -175,6 +188,7 @@ export async function restoreChore(fd: FormData) {
   if (!c) return;
   await db.update(chores).set({ archivedAt: null, deletedAt: null }).where(eq(chores.id, c.id));
   await materializeChore(c.id, todayIn(viewer.family.timezone));
+  await rebalanceRotations(viewer.family.id, todayIn(viewer.family.timezone));
   await logActivity(db, viewer.family.id, viewer.member.id, "chore.restored", `restored "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
   revalidateHouse();
 }
@@ -243,7 +257,10 @@ export async function reassignOccurrence(fd: FormData) {
   const { occ, canEdit } = await occurrenceForViewer(viewer, String(fd.get("id")));
   if (!canEdit) throw new AuthorizationError("Only people who manage chores can reassign them.");
   const assigneeId = await familyMemberIdOrNull(viewer.family.id, String(fd.get("assigneeId") || "") || null);
-  await db.update(choreOccurrences).set({ assigneeId }).where(eq(choreOccurrences.id, occ.id));
+  // A day changed by hand stays put; the rest of the rotation carries on from this person.
+  await db.update(choreOccurrences).set({ assigneeId, assignedManually: true }).where(eq(choreOccurrences.id, occ.id));
+  const today = todayIn(viewer.family.timezone);
+  await rebalanceRotations(viewer.family.id, occ.dueDate > today ? occ.dueDate : today);
   revalidateHouse();
 }
 

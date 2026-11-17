@@ -170,6 +170,8 @@ export const choreOccurrences = pgTable(
     actualCostCents: integer("actual_cost_cents"),
     /** Points credited to completedByMemberId (kept even if the chore's points change later). */
     pointsAwarded: integer("points_awarded"),
+    /** Someone picked this day's person by hand: rotation keeps it and carries on from them. */
+    assignedManually: boolean("assigned_manually").notNull().default(false),
     ...timestamps,
   },
   (t) => [

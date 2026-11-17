@@ -35,7 +35,9 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
   const state = t.chore.deletedAt ? "deleted" : t.chore.archivedAt ? "archived" : "active";
   const kind = t.chore.kind;
   const mod = kindModule(kind);
-  const canManage = viewer.can(mod, "edit");
+  const manager = viewer.can(mod, "edit");
+  // Members with Use manage the chores they added themselves.
+  const canManage = manager || (viewer.can(mod, "use") && t.chore.createdByMemberId === viewer.member.id);
 
   const [members, rooms, cats, upcoming, history] = await Promise.all([
     memberOptions(viewer),
@@ -73,7 +75,7 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
             </>
           ) : canManage ? (
             <>
-              <ChoreFormModal kind={kind} members={members} rooms={rooms} categories={cats} defaults={toChoreDefaults(t)} />
+              <ChoreFormModal kind={kind} members={members} rooms={rooms} categories={cats} defaults={toChoreDefaults(t)} limited={!manager} />
               <ActionButton
                 action={archiveChore}
                 fields={{ id, redirectTo: back }}
@@ -158,7 +160,7 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
       {upcoming.length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-semibold">Coming up</h2>
-          <OccurrenceList items={upcoming} today={today} members={members} canManage={canManage} />
+          <OccurrenceList items={upcoming} today={today} members={members} canManage={manager} />
         </section>
       )}
 

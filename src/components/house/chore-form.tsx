@@ -42,7 +42,7 @@ export type ChoreDefaults = {
 
 const KIND_LABEL = { chore: "chore", cleaning: "cleaning task", maintenance: "maintenance task", task: "task", farm: "farm chore" } as const;
 
-function ChecklistEditor({ members, initial }: { members: MemberOption[]; initial: { text: string; assigneeId: string | null }[] }) {
+function ChecklistEditor({ members, initial, limited }: { members: MemberOption[]; initial: { text: string; assigneeId: string | null }[]; limited?: boolean }) {
   const [rows, setRows] = useState(initial.length ? initial.map((r, i) => ({ ...r, key: i })) : []);
   const [next, setNext] = useState(initial.length);
   return (
@@ -58,7 +58,7 @@ function ChecklistEditor({ members, initial }: { members: MemberOption[]; initia
             placeholder="e.g. Clean refrigerator"
             className="h-10 min-w-0 flex-1 rounded-lg border border-line-strong bg-surface px-3 text-[15px] focus:border-primary-500 focus:outline-none"
           />
-          <Select name="itemAssignee" defaultValue={r.assigneeId ?? ""} aria-label="Assigned to" className="h-10 w-36 text-sm">
+          <Select name="itemAssignee" defaultValue={r.assigneeId ?? ""} aria-label="Assigned to" className={limited ? "hidden" : "h-10 w-36 text-sm"}>
             <option value="">Same as chore</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
@@ -98,7 +98,10 @@ export function ChoreFormModal({
   showCost,
   label,
   presetRoomId,
+  limited,
 }: {
+  /** A member with Use adding their own: it's theirs, with no points or turns. */
+  limited?: boolean;
   kind: keyof typeof KIND_LABEL;
   members: MemberOption[];
   rooms: Opt[];
@@ -167,7 +170,7 @@ export function ChoreFormModal({
         placeholder={{ chore: "Empty the dishwasher", cleaning: "Kitchen deep clean", maintenance: "Replace HVAC filter", task: "Call the plumber", farm: "Feed the chickens and collect eggs" }[type]}
       />
       <FormRow>
-        <MemberSelect name="assigneeId" members={members} defaultValue={defaults?.defaultAssigneeId} />
+        {!limited && <MemberSelect name="assigneeId" members={members} defaultValue={defaults?.defaultAssigneeId} />}
         {rooms.length > 0 && (
           <SelectField name="roomId" label="Room" defaultValue={defaults?.roomId ?? presetRoomId ?? ""} placeholder="No room" options={rooms.map((r) => ({ value: r.id, label: r.name }))} />
         )}
@@ -222,7 +225,7 @@ export function ChoreFormModal({
 
       <FormRow>
         <NumberField name="estimatedMinutes" label="Estimated minutes" min={0} defaultValue={defaults?.estimatedMinutes ?? ""} />
-        {(type === "chore" || type === "cleaning" || type === "task") && (
+        {!limited && (type === "chore" || type === "cleaning" || type === "task") && (
           <NumberField name="points" label="Reward points" min={0} max={1000} defaultValue={defaults?.points ?? ""} hint="Earned by whoever completes it." />
         )}
         {(showCost || type === "maintenance") && (
@@ -230,14 +233,14 @@ export function ChoreFormModal({
         )}
       </FormRow>
       <TextAreaField name="instructions" label="Instructions" rows={2} defaultValue={defaults?.instructions ?? ""} placeholder="How to do it well…" />
-      {type !== "task" && (
+      {!limited && type !== "task" && (
         <fieldset className="flex flex-col gap-1.5">
           <legend className="mb-1.5 text-sm font-medium text-ink-soft">Take turns (optional)</legend>
           <MemberChips name="rotation" members={members} defaultValue={defaults?.rotationMemberIds ?? []} />
-          <p className="text-xs text-muted">Pick two or more people and each occurrence goes to the next person in turn. Leave empty to use the assignee above.</p>
+          <p className="text-xs text-muted">Pick two or more people and they take turns evenly. On any day, everyone gets one chore before anyone gets a second. Change who&apos;s on a day and the turns after it follow on. Leave empty to use the assignee above.</p>
         </fieldset>
       )}
-      <ChecklistEditor members={members} initial={defaults?.checklist ?? []} />
+      <ChecklistEditor members={members} initial={defaults?.checklist ?? []} limited={limited} />
       <TextAreaField name="notes" label="Notes" rows={2} defaultValue={defaults?.notes ?? ""} />
     </FormModal>
   );

@@ -1,9 +1,9 @@
 "use client";
 
-import { Pencil, Plus } from "lucide-react";
-import { saveShift } from "@/app/actions/work";
+import { Eye, Pencil, Plus } from "lucide-react";
+import { saveShift, saveWorkSharing } from "@/app/actions/work";
 import { FormModal } from "@/components/forms/action-form";
-import { ChipSelect, DateField, FormRow, SelectField, TextField, type MemberOption } from "@/components/forms/fields";
+import { ChipSelect, DateField, FormRow, SelectField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
 import { Field } from "@/components/ui/form";
 
 const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -48,6 +48,29 @@ export function ShiftModal({ workers, weekDays, defaultMember, item, jobs = [], 
         ))}
       </datalist>
       <TextField name="notes" label="Notes" defaultValue={item?.notes ?? ""} placeholder="Opening shift, on call…" />
+    </FormModal>
+  );
+}
+
+const SHARE_LABEL: Record<string, string> = { family: "Whole family", selected: "Selected people", parents: "Parents & me", private: "Only me" };
+
+/** "Who sees my schedule" — each person decides for their own shifts. */
+export function WorkSharingModal({ members, visibility, shared }: { members: MemberOption[]; visibility: "family" | "selected" | "parents" | "private"; shared: string[] }) {
+  return (
+    <FormModal
+      title="Who sees my work schedule"
+      triggerContent={
+        <>
+          <Eye className="size-4" /> {SHARE_LABEL[visibility]}
+        </>
+      }
+      triggerAriaLabel={`Who sees my work schedule: ${SHARE_LABEL[visibility]}`}
+      triggerClassName="inline-flex h-10 items-center gap-1.5 rounded-[var(--radius-control)] border border-line bg-surface px-3 text-sm font-medium whitespace-nowrap hover:bg-sunken"
+      action={saveWorkSharing}
+      size="sm"
+      description="Your shifts show on the Work page and the family calendar only for the people you choose."
+    >
+      <VisibilityField members={members} defaultValue={visibility} defaultSelected={shared} privateHint="Only you will see your schedule. Nobody else, parents included." />
     </FormModal>
   );
 }

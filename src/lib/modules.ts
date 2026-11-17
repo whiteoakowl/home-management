@@ -308,6 +308,18 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "Car profiles, mileage, maintenance due, repairs, parts and loan payoff.",
     highlights: ["Maintenance due by miles or date", "Service & repair log", "Loan payoff countdown"],
   },
+  plans: {
+    id: "plans",
+    label: "Plans",
+    href: "/plans",
+    icon: "Plane",
+    group: "Today",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "use",
+    tagline: "Vacations, trips and big events: itinerary, flights, hotels, cars and a countdown.",
+    highlights: ["Day-by-day itinerary", "Flights, hotels & rental cars", "Countdown and savings goal"],
+  },
   medical: {
     id: "medical",
     label: "Medical",

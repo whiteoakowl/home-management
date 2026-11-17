@@ -39,11 +39,13 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
     listChoreTemplates(viewer, ["cleaning"], today),
     listOccurrences(viewer, { kinds: ["cleaning"], from: addDays(today, -7), to: addDays(today, 6), statuses: ["pending"] }),
   ]);
-  const form = <ChoreFormModal kind="cleaning" members={members} rooms={rooms} categories={cats} defaultOpen={sp.new === "1"} />;
+  // "Use" adds their own cleaning jobs (assigned to themselves, no points).
+  const canAdd = viewer.can("cleaning", "use");
+  const form = <ChoreFormModal kind="cleaning" members={members} rooms={rooms} categories={cats} defaultOpen={sp.new === "1"} limited={!canManage} />;
 
   return (
     <>
-      <PageHeader eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canManage ? form : undefined} />
+      <PageHeader eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canAdd ? form : undefined} />
       <HouseTabs active="cleaning" viewer={viewer} />
       <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("cleaning", "use")} />
       {thisWeek.length > 0 && (
@@ -62,7 +64,7 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
               title="No cleaning schedule yet"
               description="Add daily, weekly, seasonal and annual cleaning with checklists, and assign steps to different people."
               example="“Kitchen deep clean”: clean fridge, oven, cabinets, mop floor…"
-              action={canManage ? cloneElement(form, { defaultOpen: false }) : undefined}
+              action={canAdd ? cloneElement(form, { defaultOpen: false }) : undefined}
             />
           </Card>
         }

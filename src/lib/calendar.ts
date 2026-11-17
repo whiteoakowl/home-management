@@ -31,6 +31,7 @@ import {
   danceDaysOff,
   danceEvents,
   workShifts,
+  planItems,
   vehicles,
 } from "@/db/schema";
 import { automationOn } from "./automation";
@@ -41,12 +42,14 @@ import { addDays, todayIn, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { classDates, fmtTime, minutesOf } from "./dance";
 import { pointeSummary } from "./pointe";
+import { visibleWorkers } from "./work";
+import { listPlans } from "./trips";
 import { addMonths as vAddMonths, loanStatus } from "./vehicles";
 import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 
-export const LAYERS = ["events", "chores", "workouts", "dance", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
+export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -236,9 +239,29 @@ export async function getCalendarItems(
     }
   }
 
+  // Plans: each day of a trip, plus its flights.
+  if (want("plans") && viewer.can("plans")) {
+    const rows = (await listPlans(viewer)).filter((r) => r.p.startDate && r.p.startDate <= to && (r.p.endDate ?? r.p.startDate) >= from && (!subject || r.p.memberIds.includes(subject) || r.p.createdByMemberId === subject));
+    const colorOf = await memberColorMap(fid);
+    for (const { p } of rows) {
+      for (let d = p.startDate!; d <= (p.endDate ?? p.startDate!); d = addDays(d, 1)) {
+        if (d >= from && d <= to) out.push({ key: `pl:${p.id}:${d}`, id: p.id, layer: "plans", title: `✈️ ${p.title}`, date: d, startMin: null, endMin: null, color: colorOf.get(p.createdByMemberId ?? "") ?? "cornflower", location: p.destination, href: `/plans/${p.id}`, people: p.memberIds, type: "plans", description: p.description });
+      }
+    }
+    if (rows.length) {
+      const flights = await db.select().from(planItems).where(and(inArray(planItems.planId, rows.map((r) => r.p.id)), eq(planItems.kind, "flight"), gte(planItems.date, from), lte(planItems.date, to)));
+      for (const fl of flights) {
+        const plan = rows.find((r) => r.p.id === fl.planId)!.p;
+        const start = minutesOf(fl.startTime);
+        out.push({ key: `pf:${fl.id}`, id: fl.id, layer: "plans", title: `🛫 ${fl.title}${fl.provider ? ` (${fl.provider})` : ""}`, date: fl.date!, startMin: start, endMin: start !== null ? start + 90 : null, color: colorOf.get(plan.createdByMemberId ?? "") ?? "cornflower", location: fl.location, href: `/plans/${plan.id}`, people: plan.memberIds, type: "plans" });
+      }
+    }
+  }
+
   // Work shifts.
   if (want("work") && viewer.can("work")) {
-    const shifts = await db.select().from(workShifts).where(and(eq(workShifts.familyId, fid), gte(workShifts.date, from), lte(workShifts.date, to), subject ? eq(workShifts.memberId, subject) : undefined));
+    const seeWork = await visibleWorkers(viewer);
+    const shifts = (await db.select().from(workShifts).where(and(eq(workShifts.familyId, fid), gte(workShifts.date, from), lte(workShifts.date, to), subject ? eq(workShifts.memberId, subject) : undefined))).filter((s) => seeWork.has(s.memberId));
     const colorOf = await memberColorMap(fid);
     const names = new Map((await db.select({ id: familyMembers.id, name: familyMembers.displayName }).from(familyMembers).where(eq(familyMembers.familyId, fid))).map((m) => [m.id, m.name.split(" ")[0]!]));
     for (const s of shifts) {

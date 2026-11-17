@@ -274,6 +274,27 @@
       "when": 1794929748445,
       "tag": "0038_dance_pointe",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794930711207,
+      "tag": "0039_work_visibility",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794930959912,
+      "tag": "0040_occurrence_manual",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794931285563,
+      "tag": "0041_plans",
+      "breakpoints": true
     }
   ]
 }

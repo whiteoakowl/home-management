@@ -48,6 +48,7 @@ import { moonForDate } from "./astro";
 import { upcomingSabbats } from "./sabbats";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { MODULE_META } from "./modules";
+import { rebalanceRotations } from "./rotation-db";
 
 /** Every automation can be switched off per family (Settings → Automations). */
 export const AUTOMATIONS = [
@@ -198,6 +199,7 @@ export async function runDailyAutomation(family: Family, force = false) {
       .from(chores)
       .where(and(eq(chores.familyId, fid), isNull(chores.archivedAt)));
     for (const t of templates) await materializeChore(t.id, today);
+    await rebalanceRotations(fid, today);
   }
 
   if (on("missedChores")) {

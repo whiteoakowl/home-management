@@ -7,7 +7,7 @@ import { familyMembers, workShifts } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
 import { addDays } from "@/lib/dates";
-import { f } from "@/lib/records";
+import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
 /**
  * Work schedules. Everyone with Work "Use" keeps their own shifts; "Add & edit"
@@ -80,4 +80,18 @@ export async function copyLastWeek(fd: FormData) {
   const rows = prev.map((s) => ({ familyId: viewer.family.id, memberId, date: addDays(s.date, 7), startTime: s.startTime, endTime: s.endTime, job: s.job, notes: s.notes })).filter((r) => !have.has(`${r.date}|${r.startTime.slice(0, 5)}`));
   if (rows.length) await db.insert(workShifts).values(rows);
   revalidateWork();
+}
+
+/** Who sees my work schedule: the whole family, selected people, Parents & me, or only me. */
+export async function saveWorkSharing(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("work", "use");
+    const { visibility, memberIds } = visibilityFromForm(fd);
+    await db.transaction(async (tx) => {
+      await tx.update(familyMembers).set({ workVisibility: visibility }).where(eq(familyMembers.id, viewer.member.id));
+      await saveRecordAccess(tx, viewer.family.id, "work_schedule", viewer.member.id, memberIds.filter((id) => id !== viewer.member.id));
+    });
+    revalidateWork();
+    return ok("Saved.");
+  });
 }

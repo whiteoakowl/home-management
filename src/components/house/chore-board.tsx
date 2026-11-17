@@ -63,6 +63,8 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
   // Farm chores belong to the Farm area; chores and tasks to Chores.
   const mod = kind === "farm" ? "farm" : "chores";
   const canManage = viewer.can(mod, "edit");
+  // "Use" adds their own (assigned to themselves, no points).
+  const canAdd = viewer.can(mod, "use");
   // Members default to their own; parents to everyone.
   const who = typeof sp.who === "string" ? sp.who : viewer.isParent ? "everyone" : "mine";
   const assigneeId = who === "mine" ? viewer.member.id : who === "everyone" ? undefined : who;
@@ -107,7 +109,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
           .filter((m) => m.total > 0)
       : [];
   const grouped = Map.groupBy(occurrences, (o) => o.dueDate);
-  const form = (open = false) => <ChoreFormModal kind={kind} members={members} rooms={rooms} categories={cats} defaultOpen={open} />;
+  const form = (open = false) => <ChoreFormModal kind={kind} members={members} rooms={rooms} categories={cats} defaultOpen={open} limited={!canManage} />;
 
   return (
     <>
@@ -116,9 +118,9 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
         title={tab === "archived" ? `Archived ${copy.many}` : who === "mine" ? copy.mine : copy.title}
         description={tab === "archived" ? `${copy.title} you've put away. Restore one to bring it back.` : copy.description}
         actions={
-          canManage ? (
+          canAdd ? (
             <>
-              {tab === "archived" ? (
+              {!canManage ? null : tab === "archived" ? (
                 <ButtonLink href={basePath} variant="secondary" icon={<Repeat className="size-4" />}>
                   Back to {copy.many}
                 </ButtonLink>
@@ -211,7 +213,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
             {tab === "all" ? (
               templates.length === 0 ? (
                 <Card>
-                  <EmptyState icon={copy.icon} title={`No ${copy.many} yet`} description={copy.empty} example={copy.example} action={canManage ? form() : undefined} />
+                  <EmptyState icon={copy.icon} title={`No ${copy.many} yet`} description={copy.empty} example={copy.example} action={canAdd ? form() : undefined} />
                 </Card>
               ) : (
                 <ul className="grid gap-3 md:grid-cols-2">
@@ -247,7 +249,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
                   icon={<CheckCircle2 />}
                   title={{ today: "Nothing due today", upcoming: "Nothing coming up", overdue: "Nothing overdue", done: "Nothing completed yet" }[tab as "today"]}
                   description={tab === "overdue" ? "Everyone is caught up. Nice!" : tab === "done" ? `Completed ${copy.many} from the last 30 days show here.` : `${copy.title} appear here based on their due dates.`}
-                  action={canManage && tab !== "overdue" ? form() : undefined}
+                  action={canAdd && tab !== "overdue" ? form() : undefined}
                 />
               </Card>
             ) : (

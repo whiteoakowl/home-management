@@ -46,6 +46,8 @@ export const entityType = pgEnum("entity_type", [
   "feed_order",
   "farm_plan",
   "garden_plan",
+  "work_schedule",
+  "plan",
 ]);
 
 // ─── Identity ────────────────────────────────────────────────────────────────
@@ -141,6 +143,8 @@ export const familyMembers = pgTable(
     calendarLayers: text("calendar_layers").array(),
     /** Event categories this member hid on the calendar ("none" = events without a category). */
     calendarHiddenCategories: text("calendar_hidden_categories").array(),
+    /** Who sees this member's work schedule (selected people are in record_access as "work_schedule"). */
+    workVisibility: visibility("work_visibility").notNull().default("family"),
     /**
      * Parent oversight for a minor: personal areas (privacy categories) parents may view
      * even if the member keeps them private. Set by parents; always shown to the member.

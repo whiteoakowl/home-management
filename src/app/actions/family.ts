@@ -1,6 +1,6 @@
 "use server";
 
-import { ADD_LEVEL_MODULES } from "@/lib/permissions";
+import { USE_ONLY_MODULES } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
@@ -189,7 +189,7 @@ function parsePermissionForm(formData: FormData) {
     if (!MODULES.includes(mod as Module) || !ACCESS_LEVELS.includes(value as AccessLevel)) continue;
     const entry = byMember.get(memberId) ?? {};
     // "Add" only exists for the Family Pantry areas.
-    entry[mod as Module] = value === "add" && !ADD_LEVEL_MODULES.includes(mod as Module) ? "use" : (value as AccessLevel);
+    entry[mod as Module] = value === "add" || (USE_ONLY_MODULES.includes(mod as Module) && value !== "none") ? "use" : (value as AccessLevel);
     byMember.set(memberId, entry);
   }
   return byMember;
