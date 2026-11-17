@@ -200,15 +200,18 @@ async function occurrenceForViewer(viewer: Viewer, id: string) {
   const canEdit = viewer.can(kindModule(row.kind), "edit");
   // Ticking things off (and earning points) needs "Use" access or better.
   if (!viewer.can(kindModule(row.kind), "use")) throw new AuthorizationError("You can view this but not check it off.");
-  if (!mine && !assignedItem && !canEdit) throw new AuthorizationError("That isn't assigned to you.");
-  return { ...row, mine, canEdit };
+  // Cleaning is shared work: anyone with Use access may finish any cleaning task.
+  const shared = !mine && !assignedItem && !canEdit && row.kind === "cleaning";
+  if (!mine && !assignedItem && !canEdit && !shared) throw new AuthorizationError("That isn't assigned to you.");
+  return { ...row, mine, canEdit, shared };
 }
 
 export async function setOccurrenceDone(fd: FormData) {
   const viewer = await getViewer();
   const id = String(fd.get("id"));
   const done = fd.get("done") === "true";
-  const { occ, title, kind } = await occurrenceForViewer(viewer, id);
+  const { occ, title, kind, shared } = await occurrenceForViewer(viewer, id);
+  if (shared && !done && occ.completedByMemberId !== viewer.member.id) throw new AuthorizationError("Only the person who finished it (or a parent) can undo that.");
   await db
     .update(choreOccurrences)
     .set(
@@ -229,7 +232,8 @@ export async function setOccurrenceDone(fd: FormData) {
 
 export async function skipOccurrence(fd: FormData) {
   const viewer = await getViewer();
-  const { occ } = await occurrenceForViewer(viewer, String(fd.get("id")));
+  const { occ, shared } = await occurrenceForViewer(viewer, String(fd.get("id")));
+  if (shared) throw new AuthorizationError("Only the person it's assigned to (or a parent) can skip it.");
   await db.update(choreOccurrences).set({ status: occ.status === "skipped" ? "pending" : "skipped" }).where(eq(choreOccurrences.id, occ.id));
   revalidateHouse();
 }
@@ -250,8 +254,9 @@ export async function setOccurrenceItemDone(fd: FormData) {
   const done = fd.get("done") === "true";
   const [item] = await db.select().from(choreOccurrenceItems).where(eq(choreOccurrenceItems.id, itemId));
   if (!item) return;
-  const { occ, mine, canEdit, title, kind } = await occurrenceForViewer(viewer, item.occurrenceId);
-  if (!mine && !canEdit && item.assigneeId !== viewer.member.id) throw new AuthorizationError("That item isn't assigned to you.");
+  const { occ, mine, canEdit, shared, title, kind } = await occurrenceForViewer(viewer, item.occurrenceId);
+  if (!mine && !canEdit && !shared && item.assigneeId !== viewer.member.id) throw new AuthorizationError("That item isn't assigned to you.");
+  if (shared && !done && item.completedByMemberId !== viewer.member.id) throw new AuthorizationError("Only the person who checked it (or a parent) can undo that.");
   await db
     .update(choreOccurrenceItems)
     .set(done ? { completedAt: new Date(), completedByMemberId: viewer.member.id } : { completedAt: null, completedByMemberId: null })
@@ -285,7 +290,7 @@ export async function cleanNow(fd: FormData) {
   const [own] = due ? [] : await db.select().from(choreOccurrences).where(and(eq(choreOccurrences.choreId, c.id), eq(choreOccurrences.dueDate, today)));
   const target = due ?? own;
   if (!viewer.can(kindModule(c.kind), "use")) throw new AuthorizationError("You can view this but not check it off.");
-  if (target && target.assigneeId !== viewer.member.id && !viewer.can(kindModule(c.kind), "edit")) throw new AuthorizationError("That isn't assigned to you.");
+  if (target && target.assigneeId !== viewer.member.id && c.kind !== "cleaning" && !viewer.can(kindModule(c.kind), "edit")) throw new AuthorizationError("That isn't assigned to you.");
   if (!target && !viewer.can(kindModule(c.kind))) throw new AuthorizationError("You can't log this.");
   const done = { status: "done" as const, completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(c.id) };
   if (target) await db.update(choreOccurrences).set(done).where(eq(choreOccurrences.id, target.id));
