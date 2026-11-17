@@ -31,18 +31,21 @@ import {
   danceDaysOff,
   danceEvents,
   workShifts,
+  vehicles,
 } from "@/db/schema";
 import { automationOn } from "./automation";
 import { fitnessVisibleIds } from "./fitness";
 import { personalSubjects } from "./privacy";
 import { visibleTo, type Viewer } from "./dal";
-import { addDays, utcToZoned, zonedToUtc } from "./dates";
+import { addDays, todayIn, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { classDates, fmtTime, minutesOf } from "./dance";
+import { addMonths as vAddMonths, loanStatus } from "./vehicles";
+import { vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 
-export const LAYERS = ["events", "chores", "workouts", "dance", "work", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
+export const LAYERS = ["events", "chores", "workouts", "dance", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -236,6 +239,34 @@ export async function getCalendarItems(
       const start = minutesOf(s.startTime)!;
       const end = minutesOf(s.endTime)!;
       out.push({ key: `ws:${s.id}`, id: s.id, layer: "work", title: `${names.get(s.memberId) ?? ""} works${s.job ? `: ${s.job}` : ""}`, date: s.date, startMin: start, endMin: end > start ? end : 24 * 60, color: colorOf.get(s.memberId) ?? "slate", href: `/work?week=${s.date}`, people: [s.memberId], type: "work", description: s.notes });
+    }
+  }
+
+  // Vehicles: paperwork deadlines, loan payments and (estimated) maintenance due dates.
+  if (want("vehicles") && viewer.can("vehicles") && !subject) {
+    const cars = await db.select().from(vehicles).where(and(eq(vehicles.familyId, fid), eq(vehicles.active, true)));
+    for (const v of cars) {
+      const href = `/vehicles/${v.id}`;
+      const add = (key: string, title: string, date: string | null) => {
+        if (date && date >= from && date <= to) out.push({ key: `vh:${v.id}:${key}:${date}`, id: v.id, layer: "vehicles", title: `${v.nickname}: ${title}`, date, startMin: null, endMin: null, color: "slate", href, people: v.driverMemberId ? [v.driverMemberId] : [], type: "vehicles" });
+      };
+      add("reg", "registration expires", v.registrationExpiresOn);
+      add("ins", "insurance renews", v.insuranceRenewsOn);
+      add("insp", "inspection due", v.inspectionDueOn);
+      if (v.loanStartDate && v.loanTermMonths && v.loanAmountCents && v.loanPaymentCents) {
+        const loan = loanStatus({ amountCents: v.loanAmountCents, aprPercent: v.loanApr ?? 0, paymentCents: v.loanPaymentCents, startDate: v.loanStartDate, termMonths: v.loanTermMonths }, from);
+        for (let i = 0, d = loan.nextPaymentDate; d && d <= to && d <= loan.payoffDate && i < 24; i++, d = vAddMonths(loan.nextPaymentDate!, i)) add("loan", "car payment", d);
+      }
+    }
+    if (cars.length) {
+      const today = todayIn(tz);
+      for (const v of cars) {
+        const { due } = await vehicleSummary(viewer, v, today);
+        for (const { s, d } of due) if (d.dueDate && d.status !== "unknown") add2(v, s.title, d.dueDate);
+      }
+    }
+    function add2(v: (typeof vehicles.$inferSelect), title: string, date: string) {
+      if (date >= from && date <= to) out.push({ key: `vm:${v.id}:${title}`, id: v.id, layer: "vehicles", title: `${v.nickname}: ${title} due`, date, startMin: null, endMin: null, color: "slate", href: `/vehicles/${v.id}`, people: v.driverMemberId ? [v.driverMemberId] : [], type: "vehicles" });
     }
   }
 

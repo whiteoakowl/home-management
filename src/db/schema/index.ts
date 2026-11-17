@@ -18,3 +18,4 @@ export * from "./library";
 export * from "./health";
 export * from "./pool";
 export * from "./activities";
+export * from "./vehicles";

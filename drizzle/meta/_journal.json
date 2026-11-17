@@ -225,6 +225,13 @@
       "when": 1794896725216,
       "tag": "0031_dance_and_work",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794897474457,
+      "tag": "0032_vehicles",
+      "breakpoints": true
     }
   ]
 }

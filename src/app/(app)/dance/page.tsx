@@ -83,7 +83,7 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
 
       {!hasAny ? (
         <Card>
-          <EmptyState icon={<Music />} title="Set up the dance schedule" description="Add each dancer's teams or levels, their weekly classes, days off and upcoming performances. Classes repeat every week and show on the calendar." example="Serenity · Junior Competition Team · Tue & Thu 4:30–6:00 PM" action={actions} />
+          <EmptyState icon={<Music />} title="Set up the dance schedule" description="Add each dancer's teams or levels, their weekly classes, days off and upcoming performances. Classes repeat every week and show on the calendar." example="Serenity · Junior Competition Team · Tue & Thu 4:30–6:00 PM" action={canUse ? <DanceClassModal dancers={dancersForForms} enrollments={enrollments.filter((e) => e.active)} defaultMember={member || undefined} /> : undefined} />
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">

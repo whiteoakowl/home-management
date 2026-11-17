@@ -296,6 +296,18 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "Pool and spa water tests, what to add, maintenance and equipment.",
     highlights: ["Water tests with ideal ranges", "Exact chemical doses", "Maintenance routine & equipment"],
   },
+  vehicles: {
+    id: "vehicles",
+    label: "Vehicles",
+    href: "/vehicles",
+    icon: "Car",
+    group: "Household",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "view",
+    tagline: "Car profiles, mileage, maintenance due, repairs, parts and loan payoff.",
+    highlights: ["Maintenance due by miles or date", "Service & repair log", "Loan payoff countdown"],
+  },
   medical: {
     id: "medical",
     label: "Medical",
