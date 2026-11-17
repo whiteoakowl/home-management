@@ -18,6 +18,13 @@ const FLOW_OPTIONS = [
   { key: "medium", label: "Medium", dots: 2 },
   { key: "heavy", label: "Heavy", dots: 3 },
 ];
+/** Each flow has its own shade, pale to deep, so days are easy to tell apart at a glance. */
+const FLOW_SHADE: Record<string, { bg: string; ink: string; label: string }> = {
+  spotting: { bg: "#f7d9e0", ink: "#7a2e44", label: "Spotting" },
+  light: { bg: "#e99aab", ink: "#4d1c2b", label: "Light" },
+  medium: { bg: "#c2405c", ink: "#ffffff", label: "Medium" },
+  heavy: { bg: "#741a31", ink: "#ffffff", label: "Heavy" },
+};
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const isFlow = (f: string | null) => f === "light" || f === "medium" || f === "heavy";
 
@@ -74,6 +81,7 @@ export function PeriodCalendar({
           const rec = days[d];
           const mark = marks[d];
           const recorded = isFlow(rec?.flow ?? null);
+          const shade = rec?.flow ? FLOW_SHADE[rec.flow] : undefined;
           const describe = [recorded ? `Period (${rec!.flow})` : rec?.flow === "spotting" ? "Spotting" : mark === "predicted" ? "Predicted period (estimate)" : mark === "fertile" ? `Estimated ${windowWord.toLowerCase()} window` : mark === "ovulation" ? "Estimated ovulation day" : null, rec?.symptoms.length ? `${rec.symptoms.length} symptoms` : null, rec?.note ? "note" : null].filter(Boolean).join(", ");
           return (
             <button
@@ -82,10 +90,10 @@ export function PeriodCalendar({
               disabled={!canEdit}
               onClick={() => setOpen(d)}
               aria-label={`${label(d)}${describe ? `: ${describe}` : ""}`}
+              style={shade ? { backgroundColor: shade.bg, color: shade.ink } : undefined}
               className={cn(
                 "relative flex aspect-square min-h-11 flex-col items-center justify-center rounded-xl text-sm tabular-nums transition-colors disabled:cursor-default",
-                recorded && "bg-wine-500 font-semibold text-white",
-                !recorded && rec?.flow === "spotting" && "bg-wine-50 text-wine-700",
+                shade && "font-semibold",
                 !recorded && !rec?.flow && mark === "predicted" && "border-2 border-dashed border-wine-400 text-wine-700",
                 !recorded && !rec?.flow && mark === "fertile" && "bg-olive-50 text-olive-700",
                 !recorded && !rec?.flow && mark === "ovulation" && "bg-olive-100 font-semibold text-olive-700 ring-2 ring-olive-500 ring-inset",
@@ -95,15 +103,17 @@ export function PeriodCalendar({
             >
               {Number(d.slice(8))}
               <span className="absolute bottom-1 flex gap-0.5" aria-hidden>
-                {(rec?.symptoms.length || rec?.feelings.length) ? <span className={cn("size-1.5 rounded-full", recorded ? "bg-white" : "bg-primary-500")} /> : null}
-                {rec?.note ? <NotebookPen className={cn("size-2.5", recorded ? "text-white" : "text-primary-600")} /> : null}
+                {(rec?.symptoms.length || rec?.feelings.length) ? <span className={cn("size-1.5 rounded-full", !shade && "bg-primary-500")} style={shade ? { backgroundColor: shade.ink } : undefined} /> : null}
+                {rec?.note ? <NotebookPen className={cn("size-2.5", !shade && "text-primary-600")} style={shade ? { color: shade.ink } : undefined} /> : null}
               </span>
             </button>
           );
         })}
       </div>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft">
-        <li className="flex items-center gap-1.5"><span className="size-3 rounded bg-wine-500" /> Period (recorded)</li>
+        {Object.values(FLOW_SHADE).map((f) => (
+          <li key={f.label} className="flex items-center gap-1.5"><span className="size-3 rounded" style={{ backgroundColor: f.bg }} /> {f.label}</li>
+        ))}
         <li className="flex items-center gap-1.5"><span className="size-3 rounded border-2 border-dashed border-wine-400" /> Predicted period</li>
         {showOvulation && <li className="flex items-center gap-1.5"><span className="size-3 rounded bg-olive-50 ring-1 ring-olive-400" /> {windowWord} window (estimate)</li>}
         {showOvulation && <li className="flex items-center gap-1.5"><span className="size-3 rounded bg-olive-100 ring-2 ring-olive-500" /> Ovulation day (estimate)</li>}
@@ -149,7 +159,7 @@ export function DayEditor({
               <label key={o.key} className={cn("relative flex min-h-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border text-xs font-medium", flow === o.key ? "border-wine-500 bg-wine-50 text-wine-700" : "border-line-strong hover:bg-sunken")}>
                 <input type="radio" name="flow" value={o.key} checked={flow === o.key} onChange={() => setFlow(o.key)} className="sr-only" />
                 <span className="flex gap-0.5" aria-hidden>
-                  {o.dots === 0 ? <span className="size-2 rounded-full border border-line-strong" /> : Array.from({ length: o.dots }, (_, i) => <span key={i} className={cn("size-2 rounded-full", o.key === "spotting" ? "bg-wine-400" : "bg-wine-500")} />)}
+                  {o.dots === 0 ? <span className="size-2 rounded-full border border-line-strong" /> : Array.from({ length: o.dots }, (_, i) => <span key={i} className="size-2.5 rounded-full ring-1 ring-black/10" style={{ backgroundColor: FLOW_SHADE[o.key]?.bg }} />)}
                 </span>
                 {o.label}
               </label>

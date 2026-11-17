@@ -10,7 +10,7 @@ import { AuthorizationError, isOthersPrivate, requireModule } from "@/lib/dal";
 import { zonedToUtc } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { saveUpload } from "@/lib/files";
-import { MEMBER_COLOR_KEYS } from "@/lib/colors";
+import { cleanColor } from "@/lib/colors";
 import { ownedCategoryId } from "@/lib/queries";
 import { f, familyMemberIds, saveRecordAccess, upsertRule, visibilityFromForm } from "@/lib/records";
 import { ruleFromForm } from "@/lib/recurrence";
@@ -53,7 +53,7 @@ export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionSta
       endsAt,
       allDay,
       categoryId: await ownedCategoryId(viewer, "calendar", f.str(fd, "categoryId")),
-      color: color && (MEMBER_COLOR_KEYS as string[]).includes(color) ? color : null,
+      color: cleanColor(color),
       reminderMinutes: f.int(fd, "reminderMinutes"),
       notes: f.str(fd, "notes"),
       visibility,

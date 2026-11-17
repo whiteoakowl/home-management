@@ -5,7 +5,7 @@ import { and, eq, ne } from "drizzle-orm";
 import * as z from "zod";
 import { db } from "@/db";
 import { familyMembers, users } from "@/db/schema";
-import { MEMBER_COLORS } from "@/lib/colors";
+import { cleanColor } from "@/lib/colors";
 import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { hashPassword, revokeSessions, verifyPassword } from "@/lib/auth/session";
 import { getFamilyMember, getViewer, requireParent } from "@/lib/dal";
@@ -90,7 +90,7 @@ export async function setMemberEmail(_: ActionState, fd: FormData): Promise<Acti
 export async function saveAppTheme(_: ActionState, fd: FormData): Promise<ActionState> {
   const viewer = await getViewer();
   const raw = String(fd.get("theme") ?? "");
-  const theme = raw && raw in MEMBER_COLORS ? raw : null;
+  const theme = raw ? cleanColor(raw) : null;
   await db.update(familyMembers).set({ appTheme: theme }).where(eq(familyMembers.id, viewer.member.id));
   revalidatePath("/", "layout");
   return { ok: true, message: theme ? "Your app colors are updated." : "Back to the family's default colors." };

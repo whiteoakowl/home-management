@@ -54,7 +54,44 @@ export function onSolid(key: string | null | undefined) {
   return contrastRatio("#ffffff", c.solid) >= 3 ? "#ffffff" : c.ink;
 }
 
-export function memberColor(key: string | null | undefined) {
+// ─── Custom colours ("#rrggbb", chosen on the colour wheel) ─────────────────
+
+export const isHexColor = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+/** A palette name or an exact "#rrggbb" colour. */
+export const isMemberColor = (v: unknown): v is string => isHexColor(v) || (typeof v === "string" && v in MEMBER_COLORS);
+/** Normalise a submitted colour: palette key as-is, hex lowercased; anything else → null. */
+export const cleanColor = (v: unknown) => (isHexColor(v) ? v.toLowerCase() : isMemberColor(v) ? (v as string) : null);
+
+export function hexToHsl(hex: string): [number, number, number] {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s * 100, l * 100];
+}
+
+export function hslToHex(h: number, s: number, l: number) {
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+/** Solid / soft / ink for a palette key or an exact "#rrggbb" colour. */
+export function memberColor(key: string | null | undefined): { label: string; solid: string; soft: string; ink: string } {
+  if (typeof key === "string" && /^#[0-9a-f]{6}$/i.test(key)) {
+    const [h, s] = hexToHsl(key);
+    return { label: "Custom", solid: key.toLowerCase(), soft: hslToHex(h, Math.min(s, 60), 94), ink: hslToHex(h, Math.min(s, 60), 20) };
+  }
   return MEMBER_COLORS[(key as MemberColor) ?? "plum"] ?? MEMBER_COLORS.plum;
 }
 

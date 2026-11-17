@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { changeEmail, changePassword, resetMemberPassword, saveAppTheme, setMemberEmail } from "@/app/actions/account";
 import { MEMBER_COLORS, MEMBER_COLOR_KEYS } from "@/lib/colors";
+import { CustomColorSwatch, ThemePreview } from "@/components/ui/custom-color";
 import { cn } from "@/lib/utils";
 import { Field, FormMessage, Input, SubmitButton } from "@/components/ui/form";
 
@@ -108,7 +109,9 @@ export function AppThemeForm({ current }: { current: string | null }) {
             style={{ backgroundColor: MEMBER_COLORS[key].solid }}
           />
         ))}
+        <CustomColorSwatch value={value} onChange={setValue} size="lg" />
       </div>
+      <ThemePreview value={value} />
       <p className="text-sm text-muted">Changes buttons, highlights and tabs in your app only. Your member color on the calendar and avatars (set by parents) stays the same.</p>
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Saving…">Save colors</SubmitButton>

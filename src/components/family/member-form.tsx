@@ -5,11 +5,13 @@ import { createMember, updateMember } from "@/app/actions/family";
 import { Field, FormMessage, Input, Select, SubmitButton } from "@/components/ui/form";
 import { MEMBER_COLORS, MEMBER_COLOR_KEYS } from "@/lib/colors";
 import { cn } from "@/lib/utils";
+import { CustomColorSwatch, MemberColorPreview } from "@/components/ui/custom-color";
 
-export function ColorPicker({ name = "color", defaultValue }: { name?: string; defaultValue?: string }) {
+export function ColorPicker({ name = "color", defaultValue, previewName }: { name?: string; defaultValue?: string; previewName?: string }) {
   const [value, setValue] = useState(defaultValue ?? "");
   return (
-    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Colour">
+    <div className="flex flex-col gap-3">
+    <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Colour">
       <input type="hidden" name={name} value={value} />
       {MEMBER_COLOR_KEYS.map((key) => {
         const c = MEMBER_COLORS[key];
@@ -31,6 +33,9 @@ export function ColorPicker({ name = "color", defaultValue }: { name?: string; d
           />
         );
       })}
+      <CustomColorSwatch value={value} onChange={setValue} />
+    </div>
+    <MemberColorPreview value={value} name={previewName} />
     </div>
   );
 }
@@ -140,7 +145,7 @@ export function EditMemberForm({
         </Field>
       </div>
       <Field label="Colour">
-        <ColorPicker defaultValue={member.color} />
+        <ColorPicker defaultValue={member.color} previewName={member.displayName} />
       </Field>
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Saving…">Save changes</SubmitButton>

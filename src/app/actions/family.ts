@@ -20,7 +20,7 @@ import {
   type Module,
 } from "@/db/schema";
 import { fieldErrors, guard, type ActionState } from "@/lib/action-state";
-import { MEMBER_COLOR_KEYS } from "@/lib/colors";
+import { cleanColor, isMemberColor } from "@/lib/colors";
 import { healthProfile } from "@/lib/personal-health";
 import { getFamilyMember, getMembership, getViewer, requireParent } from "@/lib/dal";
 import {
@@ -87,7 +87,7 @@ const MemberSchema = z
   .object({
     displayName: z.string().trim().min(1, "Please enter a name.").max(60),
     role: z.enum(["parent", "member"]),
-    color: z.preprocess((v) => (v === "" ? undefined : v), z.enum(MEMBER_COLOR_KEYS as [string, ...string[]]).optional()),
+    color: z.preprocess((v) => (v === "" ? undefined : cleanColor(v) ?? v), z.string().refine(isMemberColor, "Choose a colour.").optional()),
     birthday: z.string().optional(),
     email: z.string().trim().toLowerCase().optional(),
     password: z.string().optional(),
@@ -126,7 +126,7 @@ const UpdateMemberSchema = z.object({
   memberId: z.uuid(),
   displayName: z.string().trim().min(1, "Please enter a name.").max(60),
   role: z.enum(["parent", "member"]),
-  color: z.enum(MEMBER_COLOR_KEYS as [string, ...string[]]),
+  color: z.preprocess((v) => cleanColor(v) ?? v, z.string().refine(isMemberColor, "Choose a colour.")),
   birthday: z.string().optional(),
 });
 
@@ -410,7 +410,7 @@ export async function saveCategory(_: ActionState, formData: FormData): Promise<
   const domain = String(formData.get("domain")) as (typeof CATEGORY_DOMAINS)[number];
   if (!name) return { ok: false, errors: { name: ["Name the category."] } };
   if (!CATEGORY_DOMAINS.includes(domain)) return { ok: false, message: "Unknown area." };
-  const color = String(formData.get("color") ?? "") || null;
+  const color = cleanColor(formData.get("color"));
   const id = String(formData.get("id") ?? "");
   if (id) {
     await db.update(categories).set({ name, color }).where(and(eq(categories.id, id), eq(categories.familyId, viewer.family.id)));

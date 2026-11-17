@@ -7,7 +7,7 @@ import { EventFormModal } from "@/components/calendar/event-form";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form";
-import { MEMBER_COLORS, memberColor } from "@/lib/colors";
+import { memberColor, isMemberColor } from "@/lib/colors";
 import { Avatar, EmptyState, PageHeader } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
 import { ensureCalendarCategories, getCalendarItems, LAYERS, type Layer } from "@/lib/calendar";
@@ -91,7 +91,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
             (!needle || [i.title, i.location, i.category, i.description].some((x) => x?.toLowerCase().includes(needle))),
         );
   const typeOptions = [...new Set(allItems.map(typeOf))].sort();
-  const colorOptions = [...new Set(allItems.map((i) => i.color))].filter((c) => c in MEMBER_COLORS);
+  const colorOptions = [...new Set(allItems.map((i) => i.color))].filter((c) => isMemberColor(c));
   const filtered = Object.values(f).some(Boolean);
 
   const q = (p: Record<string, string>) => {
