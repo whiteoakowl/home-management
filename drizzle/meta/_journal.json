@@ -330,6 +330,13 @@
       "when": 1795114971415,
       "tag": "0046_family_hub",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1795115470294,
+      "tag": "0047_wishlists_reviews",
+      "breakpoints": true
     }
   ]
 }

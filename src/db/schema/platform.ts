@@ -59,3 +59,26 @@ export const feedback = pgTable(
   },
   (t) => [index("feedback_status_idx").on(t.status, t.createdAt)],
 );
+
+/**
+ * Customer reviews written in the app. Platform admins approve them before
+ * they appear on the public Reviews page.
+ */
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: id(),
+    familyId: uuid("family_id").references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    rating: integer("rating").notNull(),
+    title: text("title"),
+    body: text("body").notNull(),
+    /** How the reviewer is shown publicly, e.g. "Sarah, mom of three". */
+    displayName: text("display_name").notNull(),
+    /** pending | approved | hidden */
+    status: text("status").notNull().default("pending"),
+    featured: boolean("featured").notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [index("reviews_status_idx").on(t.status)],
+);

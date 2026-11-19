@@ -1,4 +1,4 @@
-import { boolean, date, index, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgTable, primaryKey, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { families, familyMembers, files } from "./core";
 
@@ -76,4 +76,35 @@ export const photoAlbums = pgTable(
     ...timestamps,
   },
   (t) => [index("photo_albums_family_idx").on(t.familyId)],
+);
+
+/**
+ * Gift wishlists. Everyone keeps their own; others can quietly claim or mark
+ * an item bought, which the wishlist's owner never sees (keeps the surprise).
+ */
+export const wishlistItems = pgTable(
+  "wishlist_items",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    link: text("link"),
+    priceCents: integer("price_cents"),
+    /** 1 = really want · 2 = would love · 3 = nice to have */
+    priority: smallint("priority").notNull().default(2),
+    /** Size, color, model… */
+    details: text("details"),
+    occasion: text("occasion").notNull().default("Holidays"),
+    claimedByMemberId: uuid("claimed_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    purchased: boolean("purchased").notNull().default(false),
+    /** The owner marks it received; it moves to their "Got it" list. */
+    received: boolean("received").notNull().default(false),
+    ...timestamps,
+  },
+  (t) => [index("wishlist_items_member_idx").on(t.familyId, t.memberId)],
 );

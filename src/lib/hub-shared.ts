@@ -20,3 +20,6 @@ export function nextBirthday(birthday: string, today: string) {
   const thisYear = fix(y);
   return thisYear >= today ? thisYear : fix(y + 1);
 }
+
+/** Wishlist priorities. */
+export const PRIORITY: Record<number, string> = { 1: "Really want", 2: "Would love", 3: "Nice to have" };
