@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
-import { Bell, ShieldCheck } from "lucide-react";
+import { Bell, CreditCard, ShieldCheck } from "lucide-react";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { PageHeader } from "@/components/ui/display";
 import { AUTOMATIONS } from "@/lib/automation";
 import { requireParent } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
+import { AppThemeForm } from "../account/forms";
+import { saveFamilyTheme } from "@/app/actions/account";
 import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, ModulesForm } from "./forms";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -45,12 +47,19 @@ export default async function SettingsPage() {
           <FamilyPhotoForm currentUrl={fileUrl(f.imageFileId, true)} />
         </Card>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Link href="/family" className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-primary-300">
           <ShieldCheck className="size-5 text-primary-600" />
           <span>
             <span className="block font-semibold">Members & permissions</span>
             <span className="text-sm text-muted">Open a member, then “Profile & access”.</span>
+          </span>
+        </Link>
+        <Link href="/settings/billing" className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-primary-300">
+          <CreditCard className="size-5 text-primary-600" />
+          <span>
+            <span className="block font-semibold">Subscription</span>
+            <span className="text-sm text-muted">Your plan, card, receipts or cancel.</span>
           </span>
         </Link>
         <Link href="/notifications" className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-primary-300">
@@ -62,9 +71,22 @@ export default async function SettingsPage() {
         </Link>
       </div>
       <Card>
-        <CardHeader title="Areas" />
-        <p className="mb-2 text-[15px] text-muted">Turn off anything your family doesn&apos;t use. It disappears from navigation, the dashboard, search and Quick Add.</p>
-        <ModulesForm enabled={f.enabledModules} />
+        <CardHeader title="Sections" />
+        <p className="mb-2 text-[15px] text-muted">
+          {viewer.isOwner
+            ? "Turn off anything your family doesn't use (pool, farm, pets, dance, sports…). It disappears from the menu, the dashboard, search and Quick Add for everyone. Turn it back on anytime; nothing is deleted."
+            : "Only the account owner (the person who created the family) can turn sections on or off."}
+        </p>
+        <ModulesForm enabled={f.enabledModules} readOnly={!viewer.isOwner} />
+      </Card>
+      <Card>
+        <CardHeader title="Family colors" />
+        <AppThemeForm
+          current={f.theme?.accent ?? null}
+          formAction={saveFamilyTheme}
+          defaultLabel="Standard"
+          note="Recolors buttons, highlights and tabs for the whole family. Anyone who picked their own colors in My settings keeps theirs."
+        />
       </Card>
       <Card>
         <CardHeader title="Automations" />

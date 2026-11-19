@@ -62,19 +62,21 @@ export function FamilyPhotoForm({ currentUrl }: { currentUrl: string | null }) {
   );
 }
 
-export function ModulesForm({ enabled }: { enabled: string[] }) {
+export function ModulesForm({ enabled, readOnly = false }: { enabled: string[]; readOnly?: boolean }) {
   const [state, action] = useActionState(updateEnabledModules, undefined);
   return (
     <form action={action} className="flex flex-col gap-2">
       <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
       <div className="grid gap-x-8 divide-y divide-line sm:grid-cols-2 sm:divide-y-0">
         {MODULES.map((m) => (
-          <Toggle key={m} name={`module:${m}`} label={MODULE_META[m].label} description={MODULE_META[m].tagline} defaultChecked={enabled.includes(m)} />
+          <Toggle key={m} name={`module:${m}`} label={MODULE_META[m].label} description={MODULE_META[m].tagline} defaultChecked={enabled.includes(m)} disabled={readOnly} />
         ))}
       </div>
-      <div className="mt-2 flex justify-end">
-        <SubmitButton pendingLabel="Saving…">Save areas</SubmitButton>
-      </div>
+      {!readOnly && (
+        <div className="mt-2 flex justify-end">
+          <SubmitButton pendingLabel="Saving…">Save sections</SubmitButton>
+        </div>
+      )}
     </form>
   );
 }

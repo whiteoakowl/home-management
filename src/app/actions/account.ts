@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import * as z from "zod";
 import { db } from "@/db";
-import { familyMembers, users } from "@/db/schema";
+import { families, familyMembers, users } from "@/db/schema";
 import { cleanColor } from "@/lib/colors";
 import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { hashPassword, revokeSessions, verifyPassword } from "@/lib/auth/session";
@@ -94,4 +94,18 @@ export async function saveAppTheme(_: ActionState, fd: FormData): Promise<Action
   await db.update(familyMembers).set({ appTheme: theme }).where(eq(familyMembers.id, viewer.member.id));
   revalidatePath("/", "layout");
   return { ok: true, message: theme ? "Your app colors are updated." : "Back to the family's default colors." };
+}
+
+/** The whole family's colour theme (parents). People who picked their own colour keep it. */
+export async function saveFamilyTheme(_: ActionState, fd: FormData): Promise<ActionState> {
+  const viewer = await getViewer();
+  if (!viewer.isParent) return { ok: false, message: "Only parents can change the family's colors." };
+  const raw = String(fd.get("theme") ?? "");
+  const accent = raw ? cleanColor(raw) : null;
+  await db
+    .update(families)
+    .set({ theme: { ...(viewer.family.theme ?? {}), accent: accent ?? undefined } })
+    .where(eq(families.id, viewer.family.id));
+  revalidatePath("/", "layout");
+  return { ok: true, message: accent ? "The family's colors are updated." : "Back to the standard colors." };
 }

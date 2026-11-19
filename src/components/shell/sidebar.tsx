@@ -20,7 +20,7 @@ export function Sidebar({ sections, familyName }: { sections: NavSection[]; fami
       <div className="sticky top-0 flex h-dvh flex-col">
       <div className="flex h-16 items-center px-4 lg:px-5">
         <Link href="/" aria-label={`${familyName} Family`} className="hidden lg:block">
-          <Brand />
+          <Brand title={familyName} subtitle="Family" />
         </Link>
         <Link href="/" aria-label="Home" className="mx-auto lg:hidden">
           <BrandMark />

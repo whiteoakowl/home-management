@@ -75,6 +75,8 @@ export async function updateFamily(_: ActionState, formData: FormData): Promise<
 
 export async function updateEnabledModules(_: ActionState, formData: FormData): Promise<ActionState> {
   const viewer = await requireParent();
+  // Which sections the family has is the account owner's choice (the person who created it).
+  if (!viewer.isOwner) return { ok: false, message: "Only the account owner can turn sections on or off." };
   const enabled = MODULES.filter((m) => formData.get(`module:${m}`) === "on");
   await db.update(families).set({ enabledModules: enabled }).where(eq(families.id, viewer.family.id));
   revalidatePath("/", "layout");

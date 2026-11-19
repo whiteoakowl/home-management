@@ -42,6 +42,7 @@ export const MODULES = [
   "library",
   "pool",
   "dance",
+  "sports",
   "work",
   "vehicles",
   "plans",

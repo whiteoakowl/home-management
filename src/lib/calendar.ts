@@ -30,6 +30,9 @@ import {
   danceClasses,
   danceDaysOff,
   danceEvents,
+  sportGames,
+  sportPractices,
+  sportTeams,
   workShifts,
   planItems,
   vehicles,
@@ -49,7 +52,7 @@ import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 
-export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
+export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -236,6 +239,34 @@ export async function getCalendarItems(
     for (const p of await pointeSummary(viewer, subject ? [subject] : null, todayIn(viewer.family.timezone))) {
       if (p.due.status !== "ordered" && p.due.date && p.due.date >= from && p.due.date <= to)
         out.push({ key: `pt:${p.memberId}`, id: p.memberId, layer: "dance", title: "🩰 Order pointe shoes", date: p.due.date, startMin: null, endMin: null, color: colorOf.get(p.memberId) ?? "plum", href: `/dance/pointe?member=${p.memberId}`, people: [p.memberId], type: "dance" });
+    }
+  }
+
+  // Sports: weekly practices for active teams, plus games and events.
+  if (want("sports") && viewer.can("sports")) {
+    const teams = await db.select().from(sportTeams).where(and(eq(sportTeams.familyId, fid), subject ? eq(sportTeams.memberId, subject) : undefined));
+    if (teams.length) {
+      const ids = teams.map((t) => t.id);
+      const [practices, games] = await Promise.all([
+        db.select().from(sportPractices).where(inArray(sportPractices.teamId, ids)),
+        db.select().from(sportGames).where(and(inArray(sportGames.teamId, ids), gte(sportGames.date, from), lte(sportGames.date, to))),
+      ]);
+      const colorOf = await memberColorMap(fid);
+      const teamOf = new Map(teams.map((t) => [t.id, t]));
+      for (const p of practices) {
+        const t = teamOf.get(p.teamId)!;
+        if (!t.active) continue;
+        for (const date of classDates({ memberId: t.memberId, weekday: p.weekday, startsOn: p.startsOn, endsOn: p.endsOn }, from, to, [])) {
+          const start = minutesOf(p.startTime)!;
+          out.push({ key: `sp:${p.id}:${date}`, id: p.id, layer: "sports", title: `${t.name} practice`, date, startMin: start, endMin: minutesOf(p.endTime) ?? start + 90, color: colorOf.get(t.memberId) ?? "olive", location: p.location, href: `/sports/${t.id}`, recurring: true, people: [t.memberId], type: "sports" });
+        }
+      }
+      for (const g of games) {
+        const t = teamOf.get(g.teamId)!;
+        const start = minutesOf(g.arriveTime ?? g.startTime);
+        const label = g.opponent ? `${t.name} ${g.homeAway === "away" ? "@" : "vs"} ${g.opponent}` : t.name;
+        out.push({ key: `sg:${g.id}`, id: g.id, layer: "sports", title: `🏆 ${label}${g.arriveTime ? ` (arrive ${fmtTime(g.arriveTime)})` : ""}`, date: g.date, startMin: start, endMin: start !== null ? start + 120 : null, color: colorOf.get(t.memberId) ?? "olive", location: g.location, href: `/sports/${t.id}`, people: [t.memberId], type: "sports", description: g.details });
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { db } from "@/db";
 import { categories, rooms } from "@/db/schema";
 import { Brand } from "@/components/brand";
+import { getBrand } from "@/lib/billing";
 import { AddMemberForm } from "@/components/family/member-form";
 import { PermissionsMatrix } from "@/components/family/permissions-matrix";
 import { Button } from "@/components/ui/button";
@@ -76,11 +77,11 @@ export default async function OnboardingPage({ searchParams }: PageProps<"/onboa
   );
 }
 
-function Shell({ step, children }: { step: number | null; children: React.ReactNode }) {
+async function Shell({ step, children }: { step: number | null; children: React.ReactNode }) {
   return (
     <main className="bg-hearth min-h-dvh px-4 py-8 sm:py-12">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <Brand />
+        <Brand title={await getBrand()} />
         {step && (
           <ol className="flex gap-1.5" aria-label="Setup progress">
             {ONBOARDING_STEPS.map((s) => (

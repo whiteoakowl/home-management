@@ -6,7 +6,7 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
   return (
     <html lang="en">
       <body style={{ margin: 0, minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#f6f3ef", color: "#2d0f26", fontFamily: "system-ui, sans-serif" }}>
-        <title>Something went wrong · Vanderbilt Family</title>
+        <title>Something went wrong</title>
         <main style={{ maxWidth: 380, textAlign: "center" }}>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26 }}>Something went wrong</h1>
           <p style={{ color: "#6b5d68", lineHeight: 1.5 }}>

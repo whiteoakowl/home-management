@@ -32,6 +32,18 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "One calendar for the whole family, with per-event privacy.",
     highlights: ["Day, week, month & agenda views", "Colour by person or category", "Choose exactly who can see each event"],
   },
+  sports: {
+    id: "sports",
+    label: "Sports",
+    href: "/sports",
+    icon: "Trophy",
+    group: "Today",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "use",
+    tagline: "Teams, practices, games and stats for every athlete in the family.",
+    highlights: ["Practices & games on the calendar", "Scores and win-loss records", "Per-game stats and season totals"],
+  },
   dance: {
     id: "dance",
     label: "Dance",

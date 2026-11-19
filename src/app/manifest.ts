@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
+import { getBrand } from "@/lib/billing";
 
 /** Makes the app installable ("Add to Home Screen" / "Install app"). */
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const brand = await getBrand();
   return {
     id: "/",
-    name: "Vanderbilt Family",
-    short_name: "Vanderbilt",
+    name: brand,
+    short_name: brand.slice(0, 12),
     description: "Your family's home, organised in one place.",
     start_url: "/",
     scope: "/",

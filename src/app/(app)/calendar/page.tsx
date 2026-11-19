@@ -32,7 +32,7 @@ const PRESETS = [
 type Preset = (typeof PRESETS)[number]["key"];
 const isoDate = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
-const LAYER_LABEL: Record<Layer, string> = { events: "Events", plans: "Plans", chores: "Chores", workouts: "Workouts", dance: "Dance", work: "Work", vehicles: "Vehicles", meals: "Meals", garden: "Garden", farm: "Farm", pets: "Pets", home: "Home projects", moon: "Moon & sabbats", cycle: "My cycle (private)" };
+const LAYER_LABEL: Record<Layer, string> = { events: "Events", plans: "Plans", chores: "Chores", workouts: "Workouts", dance: "Dance", sports: "Sports", work: "Work", vehicles: "Vehicles", meals: "Meals", garden: "Garden", farm: "Farm", pets: "Pets", home: "Home projects", moon: "Moon & sabbats", cycle: "My cycle (private)" };
 
 export default async function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   const viewer = await getViewer();
@@ -45,7 +45,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   const member = typeof sp.member === "string" ? sp.member : "";
   // Categories shown: the link's choice, else what this member last picked (kept until they change it), else the default set.
   const saved = viewer.member.calendarLayers;
-  const layers = (typeof sp.layers === "string" ? sp.layers.split(",") : (saved ?? ["events", "plans", "chores", "workouts", "dance", "work", "vehicles"])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
+  const layers = (typeof sp.layers === "string" ? sp.layers.split(",") : (saved ?? ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles"])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
   const savedHide = viewer.member.calendarHiddenCategories ?? [];
   const hidden = typeof sp.hide === "string" ? sp.hide.split(",").filter((x) => x === "none" || /^[0-9a-f-]{36}$/i.test(x)) : savedHide;
   const layersChanged = (typeof sp.layers === "string" && layers.join(",") !== (saved ?? []).join(",")) || (typeof sp.hide === "string" && hidden.join(",") !== savedHide.join(","));
@@ -121,7 +121,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
       : view === "day"
         ? new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })
         : `${new Date(`${range.from}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${new Date(`${range.to}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
-  const availableLayers = LAYERS.filter((l) => ({ events: true, plans: viewer.can("plans"), chores: viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"), workouts: viewer.can("fitness"), dance: viewer.can("dance"), work: viewer.can("work"), vehicles: viewer.can("vehicles") || (!viewer.isParent && viewer.member.privateVehicles), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft"), cycle: true })[l]);
+  const availableLayers = LAYERS.filter((l) => ({ events: true, plans: viewer.can("plans"), chores: viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"), workouts: viewer.can("fitness"), dance: viewer.can("dance"), sports: viewer.can("sports"), work: viewer.can("work"), vehicles: viewer.can("vehicles") || (!viewer.isParent && viewer.member.privateVehicles), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft"), cycle: true })[l]);
   const canEdit = viewer.can("calendar", "use");
 
   return (

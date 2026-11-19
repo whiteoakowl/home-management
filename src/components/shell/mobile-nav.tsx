@@ -67,7 +67,7 @@ export function MobileNav({
       <Modal open={more} onClose={() => setMore(false)} title="Everything" size="lg">
         <div className="flex flex-col gap-5">
           <InstallAppButton
-            label="Install the Vanderbilt Family app"
+            label="Install the app"
             className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-[15px] font-semibold text-white hover:bg-primary-700"
           />
           {sections.map((s) => (
