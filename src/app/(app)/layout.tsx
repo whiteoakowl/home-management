@@ -9,6 +9,7 @@ import { TopBar } from "@/components/shell/top-bar";
 import { getViewer, listFamilyMembers } from "@/lib/dal";
 import { familyAccess, isPlatformAdmin } from "@/lib/billing";
 import { redirect } from "next/navigation";
+import { unreadMessages } from "@/lib/hub";
 import Link from "next/link";
 import { runDailyAutomation } from "@/lib/automation";
 import { themeStyle } from "@/lib/theme";
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .where(and(eq(notifications.memberId, viewer.member.id), isNull(notifications.readAt))),
   ]);
   const sections = buildNav(viewer);
+  const unreadChat = viewer.can("messages") ? await unreadMessages(viewer.family.id, viewer.member.id) : 0;
   // Quick Add: modules the member can add to (Family Pantry areas accept the "Add" level).
   // Areas where "Use" can already add their own things; the rest still need Add & edit.
   const USE_ADDS: readonly string[] = ["kitchen", "recipes", "meals", "shopping", "calendar", "chores", "cleaning", "plans", "work", "dance", "sports"];
@@ -50,7 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-4 focus:py-2">
         Skip to content
       </a>
-      <Sidebar sections={sections} familyName={viewer.family.name} />
+      <Sidebar sections={sections} familyName={viewer.family.name} badges={unreadChat ? { "/messages": unreadChat } : undefined} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar
           platformAdmin={isPlatformAdmin(viewer.user.email)}

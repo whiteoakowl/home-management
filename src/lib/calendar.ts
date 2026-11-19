@@ -30,6 +30,7 @@ import {
   danceClasses,
   danceDaysOff,
   danceEvents,
+  contacts,
   sportGames,
   sportPractices,
   sportTeams,
@@ -45,6 +46,7 @@ import { addDays, todayIn, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { classDates, fmtTime, minutesOf } from "./dance";
 import { pointeSummary } from "./pointe";
+import { nextBirthday } from "./hub";
 import { visibleWorkers } from "./work";
 import { listPlans } from "./trips";
 import { addMonths as vAddMonths, loanStatus } from "./vehicles";
@@ -239,6 +241,20 @@ export async function getCalendarItems(
     for (const p of await pointeSummary(viewer, subject ? [subject] : null, todayIn(viewer.family.timezone))) {
       if (p.due.status !== "ordered" && p.due.date && p.due.date >= from && p.due.date <= to)
         out.push({ key: `pt:${p.memberId}`, id: p.memberId, layer: "dance", title: "🩰 Order pointe shoes", date: p.due.date, startMin: null, endMin: null, color: colorOf.get(p.memberId) ?? "plum", href: `/dance/pointe?member=${p.memberId}`, people: [p.memberId], type: "dance" });
+    }
+  }
+
+  // Contacts' birthdays (shared contacts, plus your own private ones).
+  if (want("events") && viewer.can("contacts") && !subject) {
+    const people = await db
+      .select({ id: contacts.id, name: contacts.name, birthday: contacts.birthday })
+      .from(contacts)
+      .where(and(eq(contacts.familyId, fid), isNotNull(contacts.birthday), or(eq(contacts.private, false), eq(contacts.createdByMemberId, viewer.member.id))));
+    for (const c of people) {
+      for (let y = Number(from.slice(0, 4)); y <= Number(to.slice(0, 4)); y++) {
+        const date = nextBirthday(c.birthday!, `${y}-01-01`);
+        if (date >= from && date <= to) out.push({ key: `cb:${c.id}:${date}`, id: c.id, layer: "events", title: `🎂 ${c.name}'s birthday`, date, startMin: null, endMin: null, color: "rose", href: "/contacts", people: [], type: "birthday" });
+      }
     }
   }
 

@@ -35,6 +35,9 @@ import {
   Music,
   Briefcase,
   Car,
+  Contact,
+  Images,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
 
@@ -75,6 +78,9 @@ const ICONS: Record<string, LucideIcon> = {
   Music,
   Briefcase,
   Car,
+  Contact,
+  Images,
+  MessagesSquare,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {

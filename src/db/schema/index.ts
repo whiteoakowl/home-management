@@ -21,3 +21,4 @@ export * from "./activities";
 export * from "./vehicles";
 export * from "./plans";
 export * from "./platform";
+export * from "./hub";

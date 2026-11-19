@@ -13,7 +13,7 @@ export function isActive(pathname: string, href: string) {
 }
 
 /** Desktop sidebar (lg+) and tablet icon rail (sm–lg). */
-export function Sidebar({ sections, familyName }: { sections: NavSection[]; familyName: string }) {
+export function Sidebar({ sections, familyName, badges = {} }: { sections: NavSection[]; familyName: string; badges?: Record<string, number> }) {
   const pathname = usePathname();
   return (
     <aside className="hidden shrink-0 border-r border-line bg-surface/70 sm:block sm:w-[76px] lg:w-64 print:hidden">
@@ -44,8 +44,16 @@ export function Sidebar({ sections, familyName }: { sections: NavSection[]; fami
                         active ? "bg-primary-600 text-white shadow-sm" : "text-ink-soft hover:bg-primary-50 hover:text-primary-700",
                       )}
                     >
-                      <Icon name={item.icon} className="size-5 shrink-0" />
+                      <span className="relative">
+                        <Icon name={item.icon} className="size-5 shrink-0" />
+                        {!!badges[item.href] && <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-wine-500 ring-2 ring-surface lg:hidden" aria-hidden />}
+                      </span>
                       <span className="hidden lg:inline">{item.label}</span>
+                      {!!badges[item.href] && (
+                        <span className={cn("ml-auto hidden min-w-5 rounded-full px-1.5 text-center text-xs font-semibold lg:inline", active ? "bg-white/25 text-white" : "bg-wine-500 text-white")} aria-label={`${badges[item.href]} new`}>
+                          {badges[item.href]! > 99 ? "99+" : badges[item.href]}
+                        </span>
+                      )}
                     </Link>
                     {active && item.children && (
                       <ul className="mt-1 mb-2 ml-6 hidden flex-col border-l border-line pl-3 lg:flex" aria-label={`${item.label} sections`}>
