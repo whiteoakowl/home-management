@@ -108,6 +108,8 @@ export const chores = pgTable(
     notes: text("notes"),
     /** Reward points earned per completion (0/null = none). */
     points: integer("points"),
+    /** Everyone assigned (a team). defaultAssigneeId mirrors the first; all of them earn the points. */
+    assigneeIds: uuid("assignee_ids").array().notNull().default([]),
     /** Round-robin rotation: occurrences are assigned to these members in turn. */
     rotationMemberIds: uuid("rotation_member_ids").array().notNull().default([]),
     /** Pet care chores (feeding, grooming…). */
@@ -168,8 +170,12 @@ export const choreOccurrences = pgTable(
     }),
     notes: text("notes"),
     actualCostCents: integer("actual_cost_cents"),
-    /** Points credited to completedByMemberId (kept even if the chore's points change later). */
+    /** Everyone assigned to this day (assigneeId mirrors the first). */
+    assigneeIds: uuid("assignee_ids").array().notNull().default([]),
+    /** Points each person earned (kept even if the chore's points change later). */
     pointsAwarded: integer("points_awarded"),
+    /** Who earned pointsAwarded: every assignee. Empty on older records = completedByMemberId. */
+    awardedMemberIds: uuid("awarded_member_ids").array().notNull().default([]),
     /** Someone picked this day's person by hand: rotation keeps it and carries on from them. */
     assignedManually: boolean("assigned_manually").notNull().default(false),
     ...timestamps,

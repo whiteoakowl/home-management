@@ -197,7 +197,7 @@ export default async function ChoreDetailPage({ params }: PageProps<"/house/chor
                     <td className="py-2 text-muted">
                       {h.completedAt?.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: viewer.family.timezone }) ?? "—"}
                     </td>
-                    <td className="py-2 pr-4 tabular-nums">{h.pointsAwarded ?? "—"}</td>
+                    <td className="py-2 pr-4 tabular-nums">{h.pointsAwarded == null ? "—" : h.awardedMemberIds.length > 1 ? `${h.pointsAwarded} each (${h.awardedMemberIds.length} people)` : h.pointsAwarded}</td>
                     {kind === "maintenance" && (
                       <td className="py-2">
                         <span className="inline-flex items-center gap-1">

@@ -174,7 +174,7 @@ export async function getCalendarItems(
   if (want("chores") && (viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"))) {
     const a = alias(familyMembers, "a");
     const rows = await db
-      .select({ id: choreOccurrences.id, choreId: chores.id, title: chores.title, date: choreOccurrences.dueDate, status: choreOccurrences.status, assigneeId: choreOccurrences.assigneeId, color: a.color })
+      .select({ id: choreOccurrences.id, choreId: chores.id, title: chores.title, date: choreOccurrences.dueDate, status: choreOccurrences.status, assigneeId: choreOccurrences.assigneeId, assigneeIds: choreOccurrences.assigneeIds, color: a.color })
       .from(choreOccurrences)
       .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
       .leftJoin(a, eq(a.id, choreOccurrences.assigneeId))
@@ -184,11 +184,11 @@ export async function getCalendarItems(
           gte(choreOccurrences.dueDate, from),
           lte(choreOccurrences.dueDate, to),
           inArray(choreOccurrences.status, ["pending", "done"]),
-          subject ? eq(choreOccurrences.assigneeId, subject) : undefined,
+          subject ? or(eq(choreOccurrences.assigneeId, subject), sql`${subject}::uuid = any(${choreOccurrences.assigneeIds})`) : undefined,
         ),
       );
     for (const r of rows) {
-      out.push({ key: `c:${r.id}`, id: r.id, layer: "chores", title: r.title, date: r.date, startMin: null, endMin: null, color: r.color ?? "slate", href: `/house/chores/${r.choreId}`, people: r.assigneeId ? [r.assigneeId] : [], done: r.status === "done" });
+      out.push({ key: `c:${r.id}`, id: r.id, layer: "chores", title: r.title, date: r.date, startMin: null, endMin: null, color: r.color ?? "slate", href: `/house/chores/${r.choreId}`, people: r.assigneeIds.length ? r.assigneeIds : r.assigneeId ? [r.assigneeId] : [], done: r.status === "done" });
     }
   }
 

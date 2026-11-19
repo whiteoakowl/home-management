@@ -29,6 +29,22 @@ function revalidateHouse() {
 const pointsOf = (choreId: string) => sql<number | null>`(select nullif(${chores.points}, 0) from ${chores} where ${chores.id} = ${choreId})`;
 
 /**
+ * Fields for a finished occurrence. Every person assigned earns the chore's
+ * points; with nobody assigned, whoever finished it earns them.
+ */
+function doneBy(occ: { choreId: string; assigneeIds: string[] | null; assigneeId: string | null }, memberId: string) {
+  const team = occ.assigneeIds?.length ? occ.assigneeIds : occ.assigneeId ? [occ.assigneeId] : [];
+  return {
+    status: "done" as const,
+    completedAt: new Date(),
+    completedByMemberId: memberId,
+    pointsAwarded: pointsOf(occ.choreId),
+    awardedMemberIds: team.length ? team : [memberId],
+  };
+}
+const notDone = { status: "pending" as const, completedAt: null, completedByMemberId: null, pointsAwarded: null, awardedMemberIds: [] as string[] };
+
+/**
  * "Add & edit" manages every chore. "Use" may add their own (assigned to
  * themselves, no points) and change or delete only the ones they added.
  */
@@ -39,6 +55,16 @@ function requireChoreChange(viewer: Viewer, kind: ChoreKind, createdBy?: string 
 }
 
 /** Create or update a chore / cleaning / maintenance / task template. */
+/** Assignees from the form: checkboxes (assigneeIds) or the older single select (assigneeId). */
+async function teamFromForm(viewer: Viewer, fd: FormData, manager: boolean) {
+  if (!manager) return { defaultAssigneeId: viewer.member.id, assigneeIds: [viewer.member.id] }; // Use access: their own, no points
+  const picked = fd.has("assigneeIds") ? f.list(fd, "assigneeIds") : [f.str(fd, "assigneeId")].filter((x): x is string => !!x);
+  const team = [...new Set(await familyMemberIds(viewer.family.id, picked))];
+  // Keep the order people were picked in.
+  team.sort((a, b) => picked.indexOf(a) - picked.indexOf(b));
+  return { defaultAssigneeId: team[0] ?? null, assigneeIds: team };
+}
+
 export async function saveChore(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await getViewer();
@@ -80,7 +106,8 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       priority: (["low", "normal", "high"].includes(f.str(fd, "priority") ?? "") ? f.str(fd, "priority") : "normal") as "low" | "normal" | "high",
       estimatedMinutes: f.int(fd, "estimatedMinutes"),
       // Members with Use add their own: assigned to themselves, no points.
-      defaultAssigneeId: manager ? await familyMemberIdOrNull(viewer.family.id, f.str(fd, "assigneeId")) : viewer.member.id,
+      // Several people can share it (checkboxes); the first is the "main" assignee.
+      ...(await teamFromForm(viewer, fd, manager)),
       dueDate: rule ? null : f.date(fd, "dueDate"),
       notes: f.str(fd, "notes"),
       points: manager ? Math.max(0, Math.min(1000, f.int(fd, "points") ?? 0)) || null : null,
@@ -203,7 +230,7 @@ async function occurrenceForViewer(viewer: Viewer, id: string) {
     .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
     .where(and(eq(choreOccurrences.id, id), eq(choreOccurrences.familyId, viewer.family.id)));
   if (!row) throw new AuthorizationError("Not found.");
-  const mine = row.occ.assigneeId === viewer.member.id;
+  const mine = row.occ.assigneeId === viewer.member.id || row.occ.assigneeIds.includes(viewer.member.id);
   const assignedItem =
     !mine &&
     (
@@ -218,7 +245,7 @@ async function occurrenceForViewer(viewer: Viewer, id: string) {
   if (!viewer.can(kindModule(row.kind), "use")) throw new AuthorizationError("You can view this but not check it off.");
   // Cleaning is shared work, and anything assigned to nobody is open to anyone:
   // either may be finished by anyone with Use access.
-  const shared = !mine && !assignedItem && !canEdit && (row.kind === "cleaning" || !row.occ.assigneeId);
+  const shared = !mine && !assignedItem && !canEdit && (row.kind === "cleaning" || (!row.occ.assigneeId && !row.occ.assigneeIds.length));
   if (!mine && !assignedItem && !canEdit && !shared) throw new AuthorizationError("That isn't assigned to you.");
   return { ...row, mine, canEdit, shared };
 }
@@ -233,8 +260,8 @@ export async function setOccurrenceDone(fd: FormData) {
     .update(choreOccurrences)
     .set(
       done
-        ? { status: "done", completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(occ.choreId) }
-        : { status: "pending", completedAt: null, completedByMemberId: null, pointsAwarded: null },
+        ? doneBy(occ, viewer.member.id)
+        : notDone,
     )
     .where(eq(choreOccurrences.id, occ.id));
   if (done) {
@@ -259,9 +286,11 @@ export async function reassignOccurrence(fd: FormData) {
   const viewer = await getViewer();
   const { occ, canEdit } = await occurrenceForViewer(viewer, String(fd.get("id")));
   if (!canEdit) throw new AuthorizationError("Only people who manage chores can reassign them.");
-  const assigneeId = await familyMemberIdOrNull(viewer.family.id, String(fd.get("assigneeId") || "") || null);
+  const team = fd.has("assigneeIds")
+    ? await familyMemberIds(viewer.family.id, f.list(fd, "assigneeIds"))
+    : [await familyMemberIdOrNull(viewer.family.id, String(fd.get("assigneeId") || "") || null)].filter((x): x is string => !!x);
   // A day changed by hand stays put; the rest of the rotation carries on from this person.
-  await db.update(choreOccurrences).set({ assigneeId, assignedManually: true }).where(eq(choreOccurrences.id, occ.id));
+  await db.update(choreOccurrences).set({ assigneeId: team[0] ?? null, assigneeIds: team, assignedManually: true }).where(eq(choreOccurrences.id, occ.id));
   const today = todayIn(viewer.family.timezone);
   await rebalanceRotations(viewer.family.id, occ.dueDate > today ? occ.dueDate : today);
   revalidateHouse();
@@ -287,10 +316,10 @@ export async function setOccurrenceItemDone(fd: FormData) {
     .from(choreOccurrenceItems)
     .where(and(eq(choreOccurrenceItems.occurrenceId, occ.id), isNull(choreOccurrenceItems.completedAt)));
   if (remaining.length === 0 && occ.status !== "done") {
-    await db.update(choreOccurrences).set({ status: "done", completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(occ.choreId) }).where(eq(choreOccurrences.id, occ.id));
+    await db.update(choreOccurrences).set(doneBy(occ, viewer.member.id)).where(eq(choreOccurrences.id, occ.id));
     await logActivity(db, viewer.family.id, viewer.member.id, "chore.completed", `completed "${title}"`, { module: kindModule(kind), entityId: occ.choreId });
   } else if (remaining.length > 0 && occ.status === "done") {
-    await db.update(choreOccurrences).set({ status: "pending", completedAt: null, completedByMemberId: null }).where(eq(choreOccurrences.id, occ.id));
+    await db.update(choreOccurrences).set(notDone).where(eq(choreOccurrences.id, occ.id));
   }
   revalidateHouse();
 }
@@ -310,11 +339,10 @@ export async function cleanNow(fd: FormData) {
   const [own] = due ? [] : await db.select().from(choreOccurrences).where(and(eq(choreOccurrences.choreId, c.id), eq(choreOccurrences.dueDate, today)));
   const target = due ?? own;
   if (!viewer.can(kindModule(c.kind), "use")) throw new AuthorizationError("You can view this but not check it off.");
-  if (target && target.assigneeId !== viewer.member.id && c.kind !== "cleaning" && !viewer.can(kindModule(c.kind), "edit")) throw new AuthorizationError("That isn't assigned to you.");
+  if (target && target.assigneeId !== viewer.member.id && !target.assigneeIds.includes(viewer.member.id) && c.kind !== "cleaning" && !viewer.can(kindModule(c.kind), "edit")) throw new AuthorizationError("That isn't assigned to you.");
   if (!target && !viewer.can(kindModule(c.kind))) throw new AuthorizationError("You can't log this.");
-  const done = { status: "done" as const, completedAt: new Date(), completedByMemberId: viewer.member.id, pointsAwarded: pointsOf(c.id) };
-  if (target) await db.update(choreOccurrences).set(done).where(eq(choreOccurrences.id, target.id));
-  else await db.insert(choreOccurrences).values({ familyId: viewer.family.id, choreId: c.id, dueDate: today, assigneeId: viewer.member.id, ...done });
+  if (target) await db.update(choreOccurrences).set(doneBy(target, viewer.member.id)).where(eq(choreOccurrences.id, target.id));
+  else await db.insert(choreOccurrences).values({ familyId: viewer.family.id, choreId: c.id, dueDate: today, assigneeId: viewer.member.id, assigneeIds: [viewer.member.id], ...doneBy({ choreId: c.id, assigneeIds: [viewer.member.id], assigneeId: viewer.member.id }, viewer.member.id) });
   await logActivity(db, viewer.family.id, viewer.member.id, "chore.completed", `completed "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
   revalidateHouse();
 }
@@ -343,7 +371,7 @@ export async function undoCompletion(fd: FormData) {
   const who = occ.completedByMemberId;
   await db
     .update(choreOccurrences)
-    .set({ status: "pending", completedAt: null, completedByMemberId: null, pointsAwarded: null })
+    .set(notDone)
     .where(eq(choreOccurrences.id, occ.id));
   await db.update(choreOccurrenceItems).set({ completedAt: null, completedByMemberId: null }).where(eq(choreOccurrenceItems.occurrenceId, occ.id));
   if (who && who !== viewer.member.id)

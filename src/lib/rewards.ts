@@ -4,14 +4,20 @@ import { db } from "@/db";
 import { choreOccurrences, chores, familyMembers, pointAdjustments, rewardRedemptions, rewards } from "@/db/schema";
 import type { Viewer } from "./dal";
 
+/**
+ * One row per person who earned a completion: everyone on the team when the
+ * chore was shared, otherwise whoever finished it (older records too).
+ */
+const earners = sql`${choreOccurrences} cross join lateral unnest(case when cardinality(${choreOccurrences.awardedMemberIds}) > 0 then ${choreOccurrences.awardedMemberIds} else array[${choreOccurrences.completedByMemberId}] end) as earner(id)`;
+
 /** Points balance per member: earned from chores + adjustments − redemptions (pending ones are held). */
 export async function pointBalances(familyId: string) {
   const [earned, adj, spent] = await Promise.all([
     db
-      .select({ memberId: choreOccurrences.completedByMemberId, n: sql<number>`coalesce(sum(${choreOccurrences.pointsAwarded}),0)::int` })
-      .from(choreOccurrences)
+      .select({ memberId: sql<string | null>`earner.id`, n: sql<number>`coalesce(sum(${choreOccurrences.pointsAwarded}),0)::int` })
+      .from(earners)
       .where(and(eq(choreOccurrences.familyId, familyId), eq(choreOccurrences.status, "done"), isNotNull(choreOccurrences.pointsAwarded)))
-      .groupBy(choreOccurrences.completedByMemberId),
+      .groupBy(sql`earner.id`),
     db.select({ memberId: pointAdjustments.memberId, n: sql<number>`sum(${pointAdjustments.points})::int` }).from(pointAdjustments).where(eq(pointAdjustments.familyId, familyId)).groupBy(pointAdjustments.memberId),
     db
       .select({ memberId: rewardRedemptions.memberId, n: sql<number>`sum(${rewardRedemptions.points})::int` })
@@ -32,18 +38,18 @@ export async function pointBalances(familyId: string) {
 export async function workShare(familyId: string, from: string) {
   return db
     .select({
-      memberId: choreOccurrences.completedByMemberId,
+      memberId: familyMembers.id,
       name: familyMembers.displayName,
       color: familyMembers.color,
       done: sql<number>`count(*)::int`,
       points: sql<number>`coalesce(sum(${choreOccurrences.pointsAwarded}),0)::int`,
       minutes: sql<number>`coalesce(sum(coalesce(${chores.estimatedMinutes}, 15)),0)::int`,
     })
-    .from(choreOccurrences)
+    .from(earners)
     .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
-    .innerJoin(familyMembers, eq(familyMembers.id, choreOccurrences.completedByMemberId))
+    .innerJoin(familyMembers, sql`${familyMembers.id} = earner.id`)
     .where(and(eq(choreOccurrences.familyId, familyId), eq(choreOccurrences.status, "done"), gte(choreOccurrences.dueDate, from)))
-    .groupBy(choreOccurrences.completedByMemberId, familyMembers.displayName, familyMembers.color)
+    .groupBy(familyMembers.id, familyMembers.displayName, familyMembers.color)
     .orderBy(desc(sql`4`));
 }
 

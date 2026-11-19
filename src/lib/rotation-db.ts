@@ -26,10 +26,10 @@ export async function rebalanceRotations(familyId: string, from: string) {
       .where(and(eq(choreOccurrences.familyId, familyId), inArray(choreOccurrences.choreId, ids), gte(choreOccurrences.dueDate, from))),
     // Everything else already on those days (one-off chores, tasks with an assignee…).
     db
-      .select({ date: choreOccurrences.dueDate, assigneeId: choreOccurrences.assigneeId, n: sql<number>`count(*)::int` })
-      .from(choreOccurrences)
+      .select({ date: sql<string>`${choreOccurrences.dueDate}`, assigneeId: sql<string | null>`m.id`, n: sql<number>`count(*)::int` })
+      .from(sql`${choreOccurrences} cross join lateral unnest(case when cardinality(${choreOccurrences.assigneeIds}) > 0 then ${choreOccurrences.assigneeIds} else array[${choreOccurrences.assigneeId}] end) as m(id)`)
       .where(and(eq(choreOccurrences.familyId, familyId), notInArray(choreOccurrences.choreId, ids), gte(choreOccurrences.dueDate, from), sql`${choreOccurrences.status} <> 'skipped'`))
-      .groupBy(choreOccurrences.dueDate, choreOccurrences.assigneeId),
+      .groupBy(choreOccurrences.dueDate, sql`m.id`),
     // Who had each chore last before the start date.
     db
       .selectDistinctOn([choreOccurrences.choreId], { choreId: choreOccurrences.choreId, assigneeId: choreOccurrences.assigneeId })
@@ -51,6 +51,6 @@ export async function rebalanceRotations(familyId: string, from: string) {
 
   const current = new Map(occ.map((o) => [o.id, o.assigneeId]));
   for (const [id, who] of plan) {
-    if (current.get(id) !== who) await db.update(choreOccurrences).set({ assigneeId: who }).where(eq(choreOccurrences.id, id));
+    if (current.get(id) !== who) await db.update(choreOccurrences).set({ assigneeId: who, assigneeIds: who ? [who] : [] }).where(eq(choreOccurrences.id, id));
   }
 }

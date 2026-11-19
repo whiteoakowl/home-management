@@ -20,6 +20,9 @@ export type ChoreKind = (typeof chores.$inferSelect)["kind"];
 /** Module that governs a chore kind. */
 export const kindModule = (kind: ChoreKind) => (kind === "cleaning" ? "cleaning" : kind === "maintenance" ? "maintenance" : kind === "farm" ? "farm" : "chores");
 
+/** Occurrences this member is on the team for. */
+export const onTeam = (memberId: string) => sql`${memberId}::uuid = any(${choreOccurrences.assigneeIds})`;
+
 /**
  * Members without module access still see work assigned to them
  * (permission layer 4). Returns a filter on occurrences.
@@ -30,6 +33,7 @@ function accessFilter(viewer: Viewer, kinds: ChoreKind[]): SQL | undefined {
   if (canAll) return undefined;
   return or(
     eq(choreOccurrences.assigneeId, viewer.member.id),
+    onTeam(viewer.member.id),
     inArray(
       choreOccurrences.id,
       db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, viewer.member.id)),
@@ -75,6 +79,10 @@ export async function listOccurrences(
       assigneeId: choreOccurrences.assigneeId,
       assigneeName: assignee.displayName,
       assigneeColor: assignee.color,
+      assigneeIds: choreOccurrences.assigneeIds,
+      /** Everyone on the team, in the order they were picked. */
+      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', fm.display_name, 'color', fm.color) order by array_position(${choreOccurrences.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${choreOccurrences.assigneeIds})), '[]'::json)`,
+      awardedMemberIds: choreOccurrences.awardedMemberIds,
       completedByName: completer.displayName,
       pointsAwarded: choreOccurrences.pointsAwarded,
     })
@@ -98,8 +106,9 @@ export async function listOccurrences(
         opts.assigneeId
           ? or(
               eq(choreOccurrences.assigneeId, opts.assigneeId),
+              onTeam(opts.assigneeId),
               // Open to anyone (nobody assigned): it's on everyone's list.
-              isNull(choreOccurrences.assigneeId),
+              and(isNull(choreOccurrences.assigneeId), sql`cardinality(${choreOccurrences.assigneeIds}) = 0`),
               inArray(
                 choreOccurrences.id,
                 db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, opts.assigneeId)),
@@ -153,6 +162,7 @@ export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], tod
       categoryName: categories.name,
       assigneeName: assignee.displayName,
       assigneeColor: assignee.color,
+      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', fm.display_name, 'color', fm.color) order by array_position(${chores.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${chores.assigneeIds})), '[]'::json)`,
       nextDue: sql<string | null>`(select min(o.due_date) from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'pending' and o.due_date >= ${today})`,
       lastDone: sql<string | null>`(select max(o.completed_at)::text from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'done')`,
       doneCount: sql<number>`(select count(*)::int from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'done')`,

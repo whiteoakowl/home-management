@@ -103,7 +103,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
     who === "everyone"
       ? members
           .map((m) => {
-            const mine = todays.filter((o) => o.assigneeId === m.id && o.status !== "skipped");
+            const mine = todays.filter((o) => (o.assigneeId === m.id || o.assigneeIds?.includes(m.id)) && o.status !== "skipped");
             return { ...m, done: mine.filter((o) => o.status === "done").length, total: mine.length };
           })
           .filter((m) => m.total > 0)
@@ -147,7 +147,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
                   </p>
                   <p className="text-sm text-muted">
                     {t.chore.deletedAt ? "Deleted" : "Archived"} {formatShortDate(((t.chore.deletedAt ?? t.chore.archivedAt) as Date).toISOString().slice(0, 10))}
-                    {t.assigneeName ? ` · ${t.assigneeName}` : ""}
+                    {t.team.length ? ` · ${t.team.map((p) => p.name).join(", ")}` : t.assigneeName ? ` · ${t.assigneeName}` : ""}
                   </p>
                 </Link>
                 <ActionButton action={restoreChore} fields={{ id: t.chore.id }} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line-strong px-3 text-sm font-medium hover:bg-sunken">
@@ -227,7 +227,16 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
                         </p>
                         <div className="mt-auto flex items-center justify-between pt-1 text-sm">
                           <span className="flex items-center gap-2">
-                            {t.assigneeName ? (
+                            {t.team.length > 1 ? (
+                              <>
+                                <span className="flex -space-x-1.5">
+                                  {t.team.slice(0, 3).map((p) => (
+                                    <Avatar key={p.id} name={p.name} color={p.color} size="xs" className="ring-2 ring-surface" />
+                                  ))}
+                                </span>
+                                {t.team.map((p) => p.name).join(", ")}
+                              </>
+                            ) : t.assigneeName ? (
                               <>
                                 <Avatar name={t.assigneeName} color={t.assigneeColor} size="xs" />
                                 {t.assigneeName}

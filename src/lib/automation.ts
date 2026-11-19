@@ -101,7 +101,13 @@ export async function materializeChore(choreId: string, today: string) {
   }
   const inserted = await db
     .insert(choreOccurrences)
-    .values(dates.map((dueDate) => ({ familyId: chore.familyId, choreId: chore.id, dueDate, assigneeId: assigneeFor(dueDate) })))
+    .values(
+      dates.map((dueDate) => {
+        // Rotation: one person per day. Otherwise the whole team (everyone assigned) gets the day.
+        const team = rotation.length > 1 ? [assigneeFor(dueDate)].filter((x): x is string => !!x) : chore.assigneeIds?.length ? chore.assigneeIds : [chore.defaultAssigneeId].filter((x): x is string => !!x);
+        return { familyId: chore.familyId, choreId: chore.id, dueDate, assigneeId: team[0] ?? null, assigneeIds: team };
+      }),
+    )
     .onConflictDoNothing()
     .returning({ id: choreOccurrences.id });
   if (items.length && inserted.length) {
@@ -212,10 +218,11 @@ export async function runDailyAutomation(family: Family, force = false) {
 
   if (on("choreReminders") && enabled("chores")) {
     const due = await db
-      .select({ assigneeId: choreOccurrences.assigneeId, n: sql<number>`count(*)::int` })
-      .from(choreOccurrences)
+      // Everyone on a shared chore gets the reminder.
+      .select({ assigneeId: sql<string | null>`who.id`, n: sql<number>`count(*)::int` })
+      .from(sql`${choreOccurrences} cross join lateral unnest(case when cardinality(${choreOccurrences.assigneeIds}) > 0 then ${choreOccurrences.assigneeIds} else array[${choreOccurrences.assigneeId}] end) as who(id)`)
       .where(and(eq(choreOccurrences.familyId, fid), eq(choreOccurrences.dueDate, today), eq(choreOccurrences.status, "pending")))
-      .groupBy(choreOccurrences.assigneeId);
+      .groupBy(sql`who.id`);
     for (const d of due) {
       if (!d.assigneeId) continue;
       await notify(fid, [d.assigneeId], { kind: "chore_due", title: `${d.n} chore${d.n === 1 ? "" : "s"} due today`, href: "/house/chores" }, today);

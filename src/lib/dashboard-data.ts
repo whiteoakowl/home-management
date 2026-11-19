@@ -72,7 +72,7 @@ export async function getChoreSummary(s: Scope, kind: "all" | "chore" | "cleanin
         kindFilter,
         lte(choreOccurrences.dueDate, addDays(s.today, kind === "task" ? 7 : 0)),
         or(eq(choreOccurrences.status, "pending"), eq(choreOccurrences.dueDate, s.today)),
-        s.subjectId ? or(eq(choreOccurrences.assigneeId, s.subjectId), isNull(choreOccurrences.assigneeId)) : undefined,
+        s.subjectId ? or(eq(choreOccurrences.assigneeId, s.subjectId), sql`${s.subjectId}::uuid = any(${choreOccurrences.assigneeIds})`, isNull(choreOccurrences.assigneeId)) : undefined,
       ),
     )
     .orderBy(asc(choreOccurrences.dueDate), desc(chores.priority))
