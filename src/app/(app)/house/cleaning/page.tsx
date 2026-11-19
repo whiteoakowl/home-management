@@ -8,7 +8,7 @@ import { OccurrenceList } from "@/components/house/occurrence-list";
 import { TemplateBoard } from "@/components/house/template-board";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
-import { listChoreTemplates, listOccurrences } from "@/lib/chores";
+import { listChoreTemplates, listOccurrences, overdueQuery } from "@/lib/chores";
 import { getViewer } from "@/lib/dal";
 import { addDays, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
@@ -32,13 +32,17 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
   const sp = await searchParams;
   const today = todayIn(viewer.family.timezone);
   const canManage = viewer.can("cleaning", "edit");
+  // Parents see the whole family's cleaning; everyone else sees their own (and jobs open to anyone), like the home page.
+  const mine = viewer.isParent ? undefined : viewer.member.id;
   const [members, rooms, cats, templates, thisWeek] = await Promise.all([
     memberOptions(viewer),
     roomOptions(viewer),
     categoryOptions(viewer, "household"),
     listChoreTemplates(viewer, ["cleaning"], today),
-    listOccurrences(viewer, { kinds: ["cleaning"], from: addDays(today, -7), to: addDays(today, 6), statuses: ["pending"] }),
+    listOccurrences(viewer, { kinds: ["cleaning"], from: today, to: addDays(today, 6), statuses: ["pending"], assigneeId: mine }),
   ]);
+  // Every overdue cleaning job (the home page's "cleaning overdue" count links here).
+  const overdue = await listOccurrences(viewer, { ...overdueQuery(today, ["cleaning"], mine), limit: 200 });
   // "Use" adds their own cleaning jobs (assigned to themselves, no points).
   const canAdd = viewer.can("cleaning", "use");
   const form = <ChoreFormModal kind="cleaning" members={members} rooms={rooms} categories={cats} defaultOpen={sp.new === "1"} limited={!canManage} />;
@@ -48,6 +52,14 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
       <PageHeader eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canAdd ? form : undefined} />
       <HouseTabs active="cleaning" viewer={viewer} />
       <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("cleaning", "use")} />
+      {overdue.length > 0 && (
+        <section id="overdue" className="mb-8 scroll-mt-20">
+          <h2 className="mb-3 flex items-center gap-2 text-xl font-semibold">
+            Overdue <span className="rounded-full bg-wine-50 px-2.5 py-0.5 text-sm font-semibold text-wine-700">{overdue.length}</span>
+          </h2>
+          <OccurrenceList items={overdue} today={today} members={members} canManage={canManage} />
+        </section>
+      )}
       {thisWeek.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-xl font-semibold">Due this week</h2>

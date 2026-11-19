@@ -8,7 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, Badge, EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
-import { listChoreTemplates, listOccurrences } from "@/lib/chores";
+import { countOccurrences, listChoreTemplates, listOccurrences, overdueQuery } from "@/lib/chores";
 import type { Viewer } from "@/lib/dal";
 import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
@@ -94,7 +94,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
       : tab === "archived"
         ? [...(await listChoreTemplates(viewer, [...kinds], today, { state: "archived" })), ...(await listChoreTemplates(viewer, [...kinds], today, { state: "deleted" }))]
         : [];
-  const overdueCount = (await listOccurrences(viewer, { kinds: [...kinds], to: addDays(today, -1), statuses: ["pending"], assigneeId, limit: 99 })).length;
+  const overdueCount = await countOccurrences(viewer, overdueQuery(today, [...kinds], assigneeId));
 
   const doneToday = todays.filter((o) => o.status === "done").length;
   const totalToday = todays.filter((o) => o.status !== "skipped").length;

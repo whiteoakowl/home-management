@@ -13,6 +13,7 @@ import {
   rooms,
 } from "@/db/schema";
 import type { Viewer } from "./dal";
+import { addDays } from "./dates";
 import { nextOccurrence, type Rule } from "./recurrence";
 
 export type ChoreKind = (typeof chores.$inferSelect)["kind"];
@@ -41,22 +42,68 @@ function accessFilter(viewer: Viewer, kinds: ChoreKind[]): SQL | undefined {
   );
 }
 
-export async function listOccurrences(
-  viewer: Viewer,
-  opts: {
-    kinds: ChoreKind[];
-    from?: string;
-    to?: string;
-    statuses?: ("pending" | "done" | "skipped" | "missed")[];
-    assigneeId?: string;
-    choreId?: string;
-    petIds?: string[];
-    projectId?: string;
-    poolId?: string;
-    order?: "asc" | "desc";
-    limit?: number;
-  },
-) {
+type OccurrenceQuery = {
+  kinds: ChoreKind[];
+  from?: string;
+  to?: string;
+  statuses?: ("pending" | "done" | "skipped" | "missed")[];
+  assigneeId?: string;
+  choreId?: string;
+  petIds?: string[];
+  projectId?: string;
+  poolId?: string;
+  order?: "asc" | "desc";
+  limit?: number;
+};
+
+/** The one filter behind every occurrence list and count, so lists and counts always agree. */
+function occurrenceWhere(viewer: Viewer, opts: OccurrenceQuery) {
+  return and(
+    eq(choreOccurrences.familyId, viewer.family.id),
+    inArray(chores.kind, opts.kinds),
+    // Deleted chores keep their history on their own page, but leave every list and count.
+    opts.choreId ? undefined : isNull(chores.deletedAt),
+    opts.from ? gte(choreOccurrences.dueDate, opts.from) : undefined,
+    opts.to ? lte(choreOccurrences.dueDate, opts.to) : undefined,
+    opts.statuses ? inArray(choreOccurrences.status, opts.statuses) : undefined,
+    opts.choreId ? eq(choreOccurrences.choreId, opts.choreId) : undefined,
+    opts.petIds ? (opts.petIds.length ? inArray(chores.petId, opts.petIds) : sql`false`) : undefined,
+    opts.projectId ? eq(chores.projectId, opts.projectId) : undefined,
+    opts.poolId ? eq(chores.poolId, opts.poolId) : undefined,
+    opts.assigneeId
+      ? or(
+          eq(choreOccurrences.assigneeId, opts.assigneeId),
+          onTeam(opts.assigneeId),
+          // Open to anyone (nobody assigned): it's on everyone's list.
+          and(isNull(choreOccurrences.assigneeId), sql`cardinality(${choreOccurrences.assigneeIds}) = 0`),
+          inArray(
+            choreOccurrences.id,
+            db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, opts.assigneeId)),
+          ),
+        )
+      : undefined,
+    accessFilter(viewer, opts.kinds),
+  );
+}
+
+/** How many occurrences match (no cap), using exactly the same rules as listOccurrences. */
+export async function countOccurrences(viewer: Viewer, opts: Omit<OccurrenceQuery, "order" | "limit">) {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(choreOccurrences)
+    .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
+    .where(occurrenceWhere(viewer, opts));
+  return r?.n ?? 0;
+}
+
+/**
+ * Overdue = still to do (pending) and due before today. After a week the
+ * "Mark missed chores" automation files them as missed (history), so they
+ * stop counting as overdue.
+ */
+export const overdueQuery = (today: string, kinds: ChoreKind[], assigneeId?: string) => ({ kinds, to: addDays(today, -1), statuses: ["pending" as const], assigneeId });
+
+export async function listOccurrences(viewer: Viewer, opts: OccurrenceQuery) {
   const assignee = alias(familyMembers, "assignee");
   const completer = alias(familyMembers, "completer");
   const rows = await db
@@ -92,32 +139,7 @@ export async function listOccurrences(
     .leftJoin(categories, eq(categories.id, chores.categoryId))
     .leftJoin(assignee, eq(assignee.id, choreOccurrences.assigneeId))
     .leftJoin(completer, eq(completer.id, choreOccurrences.completedByMemberId))
-    .where(
-      and(
-        eq(choreOccurrences.familyId, viewer.family.id),
-        inArray(chores.kind, opts.kinds),
-        opts.from ? gte(choreOccurrences.dueDate, opts.from) : undefined,
-        opts.to ? lte(choreOccurrences.dueDate, opts.to) : undefined,
-        opts.statuses ? inArray(choreOccurrences.status, opts.statuses) : undefined,
-        opts.choreId ? eq(choreOccurrences.choreId, opts.choreId) : undefined,
-        opts.petIds ? (opts.petIds.length ? inArray(chores.petId, opts.petIds) : sql`false`) : undefined,
-        opts.projectId ? eq(chores.projectId, opts.projectId) : undefined,
-        opts.poolId ? eq(chores.poolId, opts.poolId) : undefined,
-        opts.assigneeId
-          ? or(
-              eq(choreOccurrences.assigneeId, opts.assigneeId),
-              onTeam(opts.assigneeId),
-              // Open to anyone (nobody assigned): it's on everyone's list.
-              and(isNull(choreOccurrences.assigneeId), sql`cardinality(${choreOccurrences.assigneeIds}) = 0`),
-              inArray(
-                choreOccurrences.id,
-                db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, opts.assigneeId)),
-              ),
-            )
-          : undefined,
-        accessFilter(viewer, opts.kinds),
-      ),
-    )
+    .where(occurrenceWhere(viewer, opts))
     .orderBy(
       opts.order === "desc" ? desc(choreOccurrences.dueDate) : asc(choreOccurrences.dueDate),
       sql`case ${chores.priority} when 'high' then 0 when 'normal' then 1 else 2 end`,

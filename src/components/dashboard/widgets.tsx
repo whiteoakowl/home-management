@@ -61,16 +61,17 @@ function dueLabel(today: string, date: string | null) {
 
 export async function TodayWidget({ scope, name }: { scope: Scope; name: string }) {
   const { viewer, today } = scope;
-  const showChores = viewer.can("chores");
   const showEvents = viewer.can("calendar");
-  const [chores, events] = await Promise.all([
-    showChores ? data.getChoreSummary(scope) : null,
-    showEvents ? data.getEvents(scope, 1) : null,
-  ]);
+  const [work, events] = await Promise.all([data.getHouseworkCounts(scope), showEvents ? data.getEvents(scope, 1) : null]);
+  const { chore, cleaning } = work;
+  // Today's progress ring covers chores and cleaning together.
+  const chores = chore || cleaning ? { done: (chore?.done ?? 0) + (cleaning?.done ?? 0), total: (chore?.done ?? 0) + (chore?.left ?? 0) + (cleaning?.done ?? 0) + (cleaning?.left ?? 0) } : null;
   const remaining = chores ? chores.total - chores.done : 0;
   const stats = [
-    showChores && { label: "chores left today", value: remaining, href: "/house/chores" },
-    showChores && chores!.overdue.length > 0 && { label: "overdue", value: chores!.overdue.length, href: "/house/chores", tone: "wine" },
+    chore && { label: chore.left === 1 ? "chore left today" : "chores left today", value: chore.left, href: "/house/chores" },
+    cleaning && (cleaning.left > 0 || cleaning.done > 0) && { label: "cleaning left today", value: cleaning.left, href: "/house/cleaning" },
+    chore && chore.overdue > 0 && { label: chore.overdue === 1 ? "chore overdue" : "chores overdue", value: chore.overdue, href: "/house/chores?tab=overdue", tone: "wine" },
+    cleaning && cleaning.overdue > 0 && { label: "cleaning overdue", value: cleaning.overdue, href: "/house/cleaning#overdue", tone: "wine" },
     showEvents && { label: plural(events!.today.length, "event").replace(/^\d+ /, "") + " today", value: events!.today.length, href: "/calendar" },
   ].filter(Boolean) as { label: string; value: number; href: string; tone?: string }[];
 
@@ -148,6 +149,11 @@ export async function ChoresWidget({ scope, kind = "chore" }: { scope: Scope; ki
             {s.done}/{s.total}
           </span>
         </div>
+      )}
+      {s.overdueCount > 0 && (
+        <Link href={kind === "cleaning" ? "/house/cleaning#overdue" : `${k.href}?tab=overdue`} className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-wine-50 px-2.5 py-0.5 text-xs font-semibold text-wine-700 hover:underline">
+          {s.overdueCount} overdue
+        </Link>
       )}
       {items.length === 0 ? (
         <EmptyState
