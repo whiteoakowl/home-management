@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, FileDown, Printer, Search } from "lucide-react";
 import { ListView, MonthView, TimeGridView, TYPE_LABEL, VIS_LABEL } from "@/components/calendar/views";
 import { EventFormModal } from "@/components/calendar/event-form";
 import { Card } from "@/components/ui/card";
@@ -109,6 +109,16 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
     if (!params.get("member")) params.delete("member");
     return `/calendar?${params}`;
   };
+  // Print / PDF: the same view, dates, person, categories and filters, on a page with the family header.
+  const printHref = (auto: "print" | "pdf") => {
+    const params = new URLSearchParams({ view, date, ...(member ? { member } : {}), layers: layers.join(","), hide: hidden.join(","), auto });
+    if (view === "list") {
+      params.set("from", range.from);
+      params.set("to", range.to);
+      for (const [k, v] of Object.entries(f)) if (v) params.set(k, v);
+    }
+    return `/calendar/print?${params}`;
+  };
   const step = (n: number) => (view === "month" ? addMonths(date, n) : view === "week" ? addDays(date, 7 * n) : addDays(date, n));
   const short = (d: string, year = false) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", ...(year ? { year: "numeric" } : {}), timeZone: "UTC" });
   const title =
@@ -156,7 +166,15 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
           )}
           <h2 className="ml-2 text-xl font-semibold sm:text-2xl">{title}</h2>
         </div>
-        <SegmentLinks active={view} items={VIEWS.map((v) => ({ key: v, href: q({ view: v }), label: v[0]!.toUpperCase() + v.slice(1) }))} />
+        <div className="flex items-center gap-2">
+          <SegmentLinks active={view} items={VIEWS.map((v) => ({ key: v, href: q({ view: v }), label: v[0]!.toUpperCase() + v.slice(1) }))} />
+          <Link href={printHref("print")} aria-label="Print calendar" title="Print" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-soft hover:bg-sunken">
+            <Printer className="size-[18px]" />
+          </Link>
+          <Link href={printHref("pdf")} aria-label="Save calendar as PDF" title="Save as PDF" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-soft hover:bg-sunken">
+            <FileDown className="size-[18px]" />
+          </Link>
+        </div>
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3">
