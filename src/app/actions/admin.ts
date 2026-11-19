@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { familyBilling, feedback, platformSettings } from "@/db/schema";
+import { familyBilling, feedback, platformSettings, reviews } from "@/db/schema";
 import { fail, ok, type ActionState } from "@/lib/action-state";
 import { isPlatformAdmin } from "@/lib/billing";
 import { getViewer } from "@/lib/dal";
@@ -64,4 +64,18 @@ export async function setFeedbackStatus(fd: FormData) {
   if (!["new", "read", "done"].includes(status)) return;
   await db.update(feedback).set({ status, adminNote: f.str(fd, "adminNote"), updatedAt: new Date() }).where(eq(feedback.id, String(fd.get("id"))));
   revalidatePath("/admin/feedback");
+}
+
+/** Approve, hide or feature a customer review for the public Reviews page. */
+export async function setReviewStatus(fd: FormData) {
+  await requirePlatformAdmin();
+  const id = String(fd.get("id") ?? "");
+  const op = String(fd.get("op"));
+  const set =
+    op === "approve" ? { status: "approved" } : op === "hide" ? { status: "hidden", featured: false } : op === "feature" ? { status: "approved", featured: true } : op === "unfeature" ? { featured: false } : null;
+  if (!set || !/^[0-9a-f-]{36}$/i.test(id)) return;
+  await db.update(reviews).set({ ...set, updatedAt: new Date() }).where(eq(reviews.id, id));
+  revalidatePath("/admin/reviews");
+  revalidatePath("/reviews");
+  revalidatePath("/welcome");
 }

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { MessageSquareHeart } from "lucide-react";
-import { sendFeedback } from "@/app/actions/feedback";
+import { and, eq } from "drizzle-orm";
+import { saveReview, sendFeedback } from "@/app/actions/feedback";
+import { db } from "@/db";
+import { reviews } from "@/db/schema";
 import { ActionForm } from "@/components/forms/action-form";
-import { CheckboxField, SelectField, TextAreaField } from "@/components/forms/fields";
+import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
 import { getBrand } from "@/lib/billing";
@@ -14,6 +17,7 @@ export default async function FeedbackPage({ searchParams }: PageProps<"/feedbac
   const viewer = await getViewer();
   const brand = await getBrand();
   const sp = await searchParams;
+  const [review] = await db.select().from(reviews).where(and(eq(reviews.memberId, viewer.member.id), eq(reviews.familyId, viewer.family.id)));
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <PageHeader title="Send feedback" description={`Ideas, problems, questions or kind words: they go straight to the people who make ${brand}.`} />
@@ -37,6 +41,21 @@ export default async function FeedbackPage({ searchParams }: PageProps<"/feedbac
           </div>
           <TextAreaField name="message" label="Your feedback" rows={6} required placeholder="Tell us what happened, or what would make your family's life easier…" />
           <CheckboxField name="contactOk" label={`You may reply to me at ${viewer.user.email}`} defaultChecked />
+        </ActionForm>
+      </Card>
+      <Card id="review">
+        <h2 className="mb-1 text-lg font-semibold">Write a review</h2>
+        <p className="mb-4 text-sm text-muted">
+          Help other families decide. Approved reviews appear on our website.
+          {review && ` Your review is ${review.status === "approved" ? "live on the website" : review.status === "hidden" ? "not shown on the website" : "waiting for approval"}; editing it sends it for approval again.`}
+        </p>
+        <ActionForm action={saveReview} submitLabel={review ? "Update review" : "Post review"} showSuccess resetOnSuccess={false}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField name="rating" label="Your rating" required defaultValue={review ? String(review.rating) : "5"} options={[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${"★".repeat(n)}${"☆".repeat(5 - n)}` }))} />
+            <TextField name="displayName" label="Show my name as" required defaultValue={review?.displayName ?? `${viewer.member.displayName.split(" ")[0]}, ${viewer.family.name} family`} hint="First name is plenty." />
+          </div>
+          <TextField name="title" label="Headline (optional)" defaultValue={review?.title ?? ""} placeholder="Finally, one place for everything" />
+          <TextAreaField name="body" label="Your review" rows={4} required defaultValue={review?.body ?? ""} placeholder="What has it changed for your family?" />
         </ActionForm>
       </Card>
       <p className="flex items-center gap-2 text-sm text-muted">

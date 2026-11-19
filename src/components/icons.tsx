@@ -38,6 +38,7 @@ import {
   Contact,
   Images,
   MessagesSquare,
+  Gift,
   type LucideIcon,
 } from "lucide-react";
 
@@ -81,6 +82,7 @@ const ICONS: Record<string, LucideIcon> = {
   Contact,
   Images,
   MessagesSquare,
+  Gift,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {

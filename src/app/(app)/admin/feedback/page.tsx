@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Feedback" };
 
-const KIND: Record<string, string> = { idea: "💡 Idea", problem: "🐞 Problem", praise: "💜 Praise", question: "❓ Question", other: "💬 Other" };
+const KIND: Record<string, string> = { idea: "💡 Idea", problem: "🐞 Problem", praise: "💜 Praise", question: "❓ Question", other: "💬 Other", contact: "✉️ Website contact" };
 
 export default async function AdminFeedbackPage({ searchParams }: PageProps<"/admin/feedback">) {
   await requirePlatformAdmin();
@@ -32,7 +32,7 @@ export default async function AdminFeedbackPage({ searchParams }: PageProps<"/ad
       <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
         <ArrowLeft className="size-4" /> Admin
       </Link>
-      <PageHeader title="Customer feedback" description="Everything families send from the Feedback page." />
+      <PageHeader title="Customer feedback" description="Messages from the Feedback page and the website's contact form." />
       <nav className="flex gap-1">
         {(["open", "done", "all"] as const).map((k) => (
           <Link key={k} href={`/admin/feedback?show=${k}`} className={cn("rounded-full px-3 py-1.5 text-sm font-medium", show === k ? "bg-ink text-white" : "text-muted hover:bg-sunken")}>
@@ -54,7 +54,7 @@ export default async function AdminFeedbackPage({ searchParams }: PageProps<"/ad
                   {f.rating ? <span aria-label={`${f.rating} of 5`}>{"★".repeat(f.rating)}</span> : null}
                   {f.status === "new" && <Badge tone="olive">New</Badge>}
                   <span className="text-muted">
-                    {member ?? "Someone"} · {family ?? "deleted family"} · {f.createdAt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    {f.kind === "contact" ? `${f.meta.name ?? "Visitor"}${f.meta.topic ? ` (${f.meta.topic})` : ""}` : `${member ?? "Someone"} · ${family ?? "deleted family"}`} · {f.createdAt.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                     {f.page ? ` · from ${f.page}` : ""}
                   </span>
                 </div>

@@ -1,6 +1,6 @@
-# Vanderbilt Family
+# Family Bubble
 
-A family home-management app: chores, cleaning, calendar, lists, kitchen inventory, recipes, meal
+A family home-management app sold as a subscription (the product name is set in Admin): chores, cleaning, calendar, lists, kitchen inventory, recipes, meal
 planning, shopping, garden, farm, journal, goals, fitness, budget and reports, all connected, with
 per-member portals and parent-controlled permissions.
 
@@ -56,7 +56,11 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Pets | Pet profiles & photos, vet records, flea/tick/heartworm reminders, food & supplies, care chores, memories |
 | Book Library | Scan a book's barcode (camera, incl. iPhone) or type the ISBN → details, cover and description from Open Library / Google Books → confirm & edit → save; manual add; your own categories (multi-category, reorder, rename, move, delete); grid / list / by category / author / status views with search & filters; reading status, progress, start/finish dates, ratings, notes; yearly stats; customizable dashboard |
 | Spiritual | Dark celestial theme; customizable dashboard; moon phases, Wheel of the Year, celebrations, spells, rituals, printable grimoire, crystals, herbs (with safety notes), tools, wellness, supplies |
-| Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared |
+| Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared; **Wishlists** tab: everyone's gift wishlist (link, price, priority, details, occasion), editable anytime; others quietly claim or mark items bought without the owner seeing |
+| Sports | Teams per athlete, weekly practices, games/meets/tournaments with arrive-by times, scores and win-loss records, per-game stats for 13 sports (plus custom stats) and season totals, all on the calendar |
+| Family Chat | One group chat for the family with photos, unread count in the menu |
+| Contacts | Family address book with groups, favorites, private contacts, tap to call/text/email, birthdays on the calendar |
+| Photo Albums | Shared albums anyone can add to |
 | Family Pantry | FAMILY space (Family Pantry, Family Recipes, Family Meal Plans, Family Shopping) with per-member No access / View / Add / Edit, and an optional MY PRIVATE space per member (My Pantry, My Recipes, My Meal Plans, My Shopping List) that only they see. Pantry / fridge / freezer / supplies, gentle expiration alerts, barcode scanning, waste tracking, “What can I cook?” with use-it-up suggestions |
 | Meals & recipes | Recipe book with pantry check and printable books, import from a link or pasted text, cook mode with step-by-step view and timers, weekly planner (copy last week), auto-built shopping lists with prices, totals and “buy again” |
 | Garden | Plant database, drag-and-drop bed planner, plantings, garden log, harvest totals, seeds |
@@ -69,7 +73,8 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Personal Health | Privacy Center (private by default; share with parents or selected people; parent oversight for minors), Period Tracker (simple tracking or ovulation estimates), Food Journal (day/week/month/timeline) |
 | Mental Wellness | Daily check-ins, wellness journal with prompts, gratitude, self-care, gentle goals, daily quotes, mood history, per-item sharing, safety support, gentle reminders |
 | Imports | Grocery receipts (on-device OCR → review → pantry, history, optional expense) and recipes from Word documents (one per page) |
-| Everywhere | Global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
+| Settings | Owner turns sections on/off, family colors, family name (shown as the app title on phones), subscription |
+| Everywhere | Send feedback, write a review, global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
 
 ## Supported devices
 
@@ -125,6 +130,46 @@ the problem in plain English (it shows no passwords or family data).
 Then redeploy and create your family at `/signup` (or sign in with your existing account). Change passwords
 under the avatar menu → **Account & password**; parents can set a member's email and password from
 Family → person → **Manage**.
+
+## Selling the app (Family Bubble)
+
+**Public website.** Visitors who aren't signed in see the website at `/` (Home), plus `/features`,
+`/pricing`, `/reviews`, `/contact`, `/privacy-policy` and `/terms`. Signed-in people get their family's
+app at `/`. Prices and the trial length on the website come from Admin, so they always match checkout.
+The Privacy and Terms pages are plain-language starting points: have them reviewed before launch.
+
+**Accounts.** Any family can sign up at `/signup`, name their family, add members and pick colors. The
+family's name is the app's title on their phones (per-family manifest + Apple web-app title). The person
+who created the account (the owner) chooses which sections the family uses in Settings → Sections.
+
+**Payments (Stripe).** Add in Netlify:
+
+| Variable | Value |
+|---|---|
+| `STRIPE_SECRET_KEY` | Stripe secret key (`sk_live_…`, or `sk_test_…` while testing) |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret of the webhook below (`whsec_…`) |
+| `PLATFORM_ADMIN_EMAILS` | Comma-separated sign-in emails of the people who run the service |
+
+In the Stripe dashboard → Developers → Webhooks, add an endpoint `https://YOUR-SITE/api/stripe/webhook`
+for the events `checkout.session.completed`, `customer.subscription.created`,
+`customer.subscription.updated` and `customer.subscription.deleted`. Turn on the **customer portal**
+(Settings → Billing → Customer portal) so families can change card, switch plan or cancel.
+
+How it works: after onboarding, a parent chooses monthly or yearly and enters a card on Stripe Checkout.
+Trials are free for the admin-set number of days (7 by default); the card is charged when the trial ends.
+Families without an active plan or trial are sent to `/billing`. Until `STRIPE_SECRET_KEY` is set, or while
+"Charge for the app" is off in Admin, everyone uses the app free.
+
+**Admin** (avatar menu → Admin, only for `PLATFORM_ADMIN_EMAILS`): product name, monthly and yearly
+prices, trial length, the billing switch, every family's status, **Make free** for complimentary
+families (families with an admin in them are always free), the feedback/contact inbox, and **Reviews**,
+where you approve customer reviews (and feature the best on the home page) before they appear publicly.
+
+**App stores.** The app installs from the browser on iPhone, Android, tablets and computers today. Listing
+it in the App Store / Google Play needs a native wrapper (for example Capacitor or a Trusted Web Activity)
+built on a Mac / with developer accounts, which can't be done from this repository alone. Note that Apple
+generally requires in-app purchase for subscriptions bought inside an iOS app; a common approach is a
+"reader"-style app where people subscribe on the website and simply sign in on the phone.
 
 ## Project layout
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { desc, eq, sql } from "drizzle-orm";
-import { CreditCard, MessageSquareHeart, Users } from "lucide-react";
+import { CreditCard, MessageSquareHeart, Users, Star } from "lucide-react";
 import { requirePlatformAdmin, savePlatformSettings, setComplimentary } from "@/app/actions/admin";
 import { ActionForm } from "@/components/forms/action-form";
 import { CheckboxField, FormRow, NumberField, TextField } from "@/components/forms/fields";
@@ -9,7 +9,7 @@ import { ActionButton } from "@/components/forms/inline";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { db } from "@/db";
-import { families, familyBilling, familyMembers, feedback, users } from "@/db/schema";
+import { families, familyBilling, familyMembers, feedback, users, reviews } from "@/db/schema";
 import { formatPrice, getPlatformSettings } from "@/lib/billing";
 import { stripeConfigured } from "@/lib/stripe";
 
@@ -21,7 +21,7 @@ export default async function AdminPage() {
   await requirePlatformAdmin();
   const settings = await getPlatformSettings();
   const owner = db.$with("owner").as(db.select({ familyId: familyMembers.familyId, email: users.email }).from(families).innerJoin(familyMembers, eq(familyMembers.id, families.ownerMemberId)).innerJoin(users, eq(users.id, familyMembers.userId)));
-  const [rows, [newFeedback]] = await Promise.all([
+  const [rows, [newFeedback], [newReviews]] = await Promise.all([
     db
       .with(owner)
       .select({
@@ -40,6 +40,7 @@ export default async function AdminPage() {
       .leftJoin(owner, eq(owner.familyId, families.id))
       .orderBy(desc(families.createdAt)),
     db.select({ n: sql<number>`count(*)::int` }).from(feedback).where(eq(feedback.status, "new")),
+    db.select({ n: sql<number>`count(*)::int` }).from(reviews).where(eq(reviews.status, "pending")),
   ]);
   const counts = rows.reduce<Record<string, number>>((m, r) => ((m[r.status ?? "none"] = (m[r.status ?? "none"] ?? 0) + 1), m), {});
   const mrr = rows.reduce((s, r) => s + (r.status === "active" ? (r.plan === "yearly" ? settings.yearlyPriceCents / 12 : settings.monthlyPriceCents) : 0), 0);
@@ -85,9 +86,14 @@ export default async function AdminPage() {
           title="Families"
           icon={<Users className="size-4" />}
           action={
-            <Link href="/admin/feedback" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline">
-              <MessageSquareHeart className="size-4" /> Feedback{newFeedback?.n ? ` (${newFeedback.n} new)` : ""}
-            </Link>
+            <span className="flex flex-wrap gap-4">
+              <Link href="/admin/reviews" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline">
+                <Star className="size-4" /> Reviews{newReviews?.n ? ` (${newReviews.n} waiting)` : ""}
+              </Link>
+              <Link href="/admin/feedback" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline">
+                <MessageSquareHeart className="size-4" /> Feedback{newFeedback?.n ? ` (${newFeedback.n} new)` : ""}
+              </Link>
+            </span>
           }
         />
         <div className="overflow-x-auto">
