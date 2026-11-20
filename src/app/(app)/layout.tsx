@@ -10,6 +10,8 @@ import { getViewer, listFamilyMembers } from "@/lib/dal";
 import { familyAccess, isPlatformAdmin } from "@/lib/billing";
 import { redirect } from "next/navigation";
 import { unreadMessages } from "@/lib/hub";
+import { LegalFooter } from "@/components/legal-footer";
+import { getBrand } from "@/lib/billing";
 import Link from "next/link";
 import { runDailyAutomation } from "@/lib/automation";
 import { themeStyle } from "@/lib/theme";
@@ -74,6 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           )}
           {children}
+          <LegalFooter brand={await getBrand()} className="mt-12 print:hidden" />
         </main>
       </div>
       <MobileNav

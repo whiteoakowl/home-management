@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Feedback" };
 
-const KIND: Record<string, string> = { idea: "💡 Idea", problem: "🐞 Problem", praise: "💜 Praise", question: "❓ Question", other: "💬 Other", contact: "✉️ Website contact" };
+const KIND: Record<string, string> = { feature: "✨ Feature request", idea: "💡 Idea", problem: "🐞 Problem", praise: "💜 Praise", question: "❓ Question", other: "💬 Other", contact: "✉️ Website contact" };
 
 export default async function AdminFeedbackPage({ searchParams }: PageProps<"/admin/feedback">) {
   await requirePlatformAdmin();

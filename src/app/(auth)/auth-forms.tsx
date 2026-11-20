@@ -60,6 +60,17 @@ export function SignupForm() {
       <SubmitButton className="mt-2" pendingLabel="Creating account…">
         Create account
       </SubmitButton>
+      <p className="text-center text-xs text-muted">
+        By creating an account you agree to our{" "}
+        <a href="/terms" target="_blank" className="underline">
+          Terms of Service
+        </a>{" "}
+        and{" "}
+        <a href="/privacy-policy" target="_blank" className="underline">
+          Privacy Policy
+        </a>
+        .
+      </p>
       <p className="text-center text-sm text-muted">
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-primary-600 hover:underline">

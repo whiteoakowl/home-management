@@ -9,7 +9,7 @@ import { getViewer } from "@/lib/dal";
 import { f } from "@/lib/records";
 import { rateLimit } from "@/lib/rate-limit";
 
-const KINDS = ["idea", "problem", "praise", "question", "other"];
+const KINDS = ["feature", "idea", "problem", "praise", "question", "other"];
 
 /** Anyone in a family can send feedback; platform admins read it in Admin → Feedback. */
 export async function sendFeedback(_: ActionState, fd: FormData): Promise<ActionState> {

@@ -101,7 +101,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           </nav>
         </div>
         <p className="pb-8 text-center text-xs text-muted">
-          © {year} {brand}. Made for busy families.
+          © {year} {brand}. All rights reserved.
         </p>
       </footer>
     </div>

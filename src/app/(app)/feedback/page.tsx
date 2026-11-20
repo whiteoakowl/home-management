@@ -20,7 +20,7 @@ export default async function FeedbackPage({ searchParams }: PageProps<"/feedbac
   const [review] = await db.select().from(reviews).where(and(eq(reviews.memberId, viewer.member.id), eq(reviews.familyId, viewer.family.id)));
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <PageHeader title="Send feedback" description={`Ideas, problems, questions or kind words: they go straight to the people who make ${brand}.`} />
+      <PageHeader title="Feedback & feature ideas" description={`Suggest a feature, report a problem, ask a question or share kind words: it all goes straight to the people who make ${brand}. Many features started as a family's suggestion.`} />
       <Card>
         <ActionForm action={sendFeedback} submitLabel="Send feedback" showSuccess>
           <input type="hidden" name="page" value={typeof sp.from === "string" ? sp.from : ""} />
@@ -28,9 +28,10 @@ export default async function FeedbackPage({ searchParams }: PageProps<"/feedbac
             <SelectField
               name="kind"
               label="What kind of feedback?"
-              defaultValue="idea"
+              defaultValue={sp.kind === "feature" ? "feature" : "idea"}
               options={[
-                { value: "idea", label: "💡 An idea or request" },
+                { value: "feature", label: "✨ Suggest a new feature" },
+                { value: "idea", label: "💡 An idea to improve something" },
                 { value: "problem", label: "🐞 Something isn't working" },
                 { value: "question", label: "❓ A question" },
                 { value: "praise", label: "💜 Something I love" },
@@ -39,7 +40,7 @@ export default async function FeedbackPage({ searchParams }: PageProps<"/feedbac
             />
             <SelectField name="rating" label="How are we doing?" defaultValue="" placeholder="Rather not say" options={[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${"★".repeat(n)}${"☆".repeat(5 - n)}` }))} />
           </div>
-          <TextAreaField name="message" label="Your feedback" rows={6} required placeholder="Tell us what happened, or what would make your family's life easier…" />
+          <TextAreaField name="message" label="Your feedback" rows={6} required placeholder="Describe the feature you'd love (what it would do and how your family would use it), or tell us what happened…" />
           <CheckboxField name="contactOk" label={`You may reply to me at ${viewer.user.email}`} defaultChecked />
         </ActionForm>
       </Card>
