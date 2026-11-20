@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { faithPathsOf } from "@/lib/faith-config";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FileDown } from "lucide-react";
 import { BrandMark } from "@/components/brand";
@@ -41,7 +42,7 @@ export default async function PrintCalendarPage({ searchParams }: PageProps<"/ca
   const members = await memberOptions(viewer);
   const member = typeof sp.member === "string" && members.some((m) => m.id === sp.member) ? sp.member : "";
   const saved = viewer.member.calendarLayers;
-  const layers = (typeof sp.layers === "string" && sp.layers ? sp.layers.split(",") : (saved ?? ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles"])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
+  const layers = (typeof sp.layers === "string" && sp.layers ? sp.layers.split(",") : (saved ?? ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", ...faithPathsOf(viewer.member).filter((f) => f !== "spiritual")])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
   const hidden = new Set(typeof sp.hide === "string" ? sp.hide.split(",").filter(Boolean) : (viewer.member.calendarHiddenCategories ?? []));
 
   const range = (() => {

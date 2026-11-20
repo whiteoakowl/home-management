@@ -183,6 +183,8 @@ export const familyMembers = pgTable(
     appTheme: text("app_theme"),
     /** Personal areas parents turned off for this profile ("period", "wellness"). Data is kept. */
     hiddenAreas: text("hidden_areas").array().notNull().default([]),
+    /** Faith paths for the Spiritual section: spiritual, christian, jewish, hindu, buddhist. Null = not chosen yet (Spiritual); empty = none. */
+    faithPaths: text("faith_paths").array(),
     birthday: date("birthday"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,

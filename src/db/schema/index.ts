@@ -22,3 +22,4 @@ export * from "./vehicles";
 export * from "./plans";
 export * from "./platform";
 export * from "./hub";
+export * from "./faith";

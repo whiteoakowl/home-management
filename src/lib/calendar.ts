@@ -43,7 +43,7 @@ import { automationOn } from "./automation";
 import { fitnessVisibleIds } from "./fitness";
 import { personalSubjects } from "./privacy";
 import { visibleTo, type Viewer } from "./dal";
-import { addDays, todayIn, utcToZoned, zonedToUtc } from "./dates";
+import { addDays, daysBetween, todayIn, utcToZoned, zonedToUtc } from "./dates";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { classDates, fmtTime, minutesOf } from "./dance";
 import { pointeSummary } from "./pointe";
@@ -54,8 +54,9 @@ import { addMonths as vAddMonths, loanStatus } from "./vehicles";
 import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
+import { familyHolidays } from "./faith";
 
-export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "cycle"] as const;
+export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "christian", "catholic", "jewish", "hindu", "buddhist", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -427,6 +428,23 @@ export async function getCalendarItems(
       for (const x of wheelForYear(y, { tz, southern: (viewer.family.latitude ?? 1) < 0, overrides })) {
         if (x.date >= from && x.date <= to) out.push({ key: `sb:${x.key}:${y}`, id: x.key, layer: "moon", title: `${x.s.emoji} ${x.s.name}`, date: x.date, startMin: null, endMin: null, color: "orchid", href: `/spiritual/wheel/${x.key}`, people: [] });
       }
+    }
+  }
+
+  // Religious holidays (built-in plus the family's own days and date changes), per religion the viewer turned on.
+  const faithLayers = (["christian", "catholic", "jewish", "hindu", "buddhist"] as const).filter((l) => want(l));
+  if (faithLayers.length && !subject) {
+    const COLOR = { christian: "cornflower", catholic: "heather", jewish: "ocean", hindu: "tangerine", buddhist: "sunflower" } as const;
+    const list = await familyHolidays(fid, [...faithLayers], from, to);
+    // Christian and Catholic share many days: show each once (the Catholic one) when both are on.
+    const SAME: Record<string, string> = { maundy_thursday: "holy_thursday", candlemas: "presentation" };
+    const catholic = new Set(list.filter((h) => h.faith === "catholic").map((h) => `${h.key}:${h.date}`));
+    for (const h of list) {
+      if (h.faith === "christian" && catholic.has(`${SAME[h.key] ?? h.key}:${h.date}`)) continue;
+      const f = h.faith as (typeof faithLayers)[number];
+      for (let d = h.date; d <= (h.endDate ?? h.date); d = addDays(d, 1))
+        if (d >= from && d <= to)
+          out.push({ key: `fh:${f}:${h.key}:${d}`, id: h.key, layer: f, title: `${h.emoji} ${h.name}${h.endDate ? ` (day ${daysBetween(h.date, d) + 1})` : ""}`, date: d, startMin: null, endMin: null, color: COLOR[f], href: `/spiritual/faith/${f}/holidays?year=${d.slice(0, 4)}`, people: [], type: "holiday", description: h.eve && d === h.date ? `${h.about} Begins at sundown the evening before.` : h.about });
     }
   }
 

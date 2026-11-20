@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { KeyRound, Mail, Palette } from "lucide-react";
+import { KeyRound, Mail, MoonStar, Palette } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Avatar, PageHeader } from "@/components/ui/display";
 import { ProfilePhotoButton } from "@/components/photos/profile-photo";
 import { fileUrl } from "@/lib/files";
 import { getViewer } from "@/lib/dal";
-import { AppThemeForm, ChangeEmailForm, ChangePasswordForm } from "./forms";
+import { FAITHS, FAITH_META, faithPathsOf } from "@/lib/faith-config";
+import { AppThemeForm, ChangeEmailForm, ChangePasswordForm, FaithPathsForm } from "./forms";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -26,6 +27,12 @@ export default async function AccountPage() {
         <CardHeader title="My app colors" icon={<Palette className="size-4" />} />
         <AppThemeForm current={viewer.member.appTheme} />
       </Card>
+      {viewer.can("witchcraft") && (
+        <Card id="faith">
+          <CardHeader title="My spiritual paths" icon={<MoonStar className="size-4" />} />
+          <FaithPathsForm current={faithPathsOf(viewer.member)} options={FAITHS.map((k) => ({ key: k, label: FAITH_META[k].label, emoji: FAITH_META[k].emoji, blurb: FAITH_META[k].blurb }))} />
+        </Card>
+      )}
       <Card>
         <CardHeader title="Change password" icon={<KeyRound className="size-4" />} />
         <ChangePasswordForm />

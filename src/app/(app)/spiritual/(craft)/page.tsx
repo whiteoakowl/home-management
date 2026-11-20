@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { faithHref, faithPathsOf } from "@/lib/faith-config";
 import type { ReactNode } from "react";
 import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { BookOpen, CalendarHeart, Clock, Gem, Leaf, MoonStar, PackageOpen, Plus, Sparkles, Wand2 } from "lucide-react";
@@ -50,6 +52,9 @@ function Quiet({ children }: { children: ReactNode }) {
 
 export default async function SpiritualDashboard() {
   const viewer = await craftViewer();
+  // Spiritual isn't one of my paths: open my first religion's tab instead.
+  const paths = faithPathsOf(viewer.member);
+  if (paths.length && !paths.includes("spiritual")) redirect(faithHref(paths[0]!));
   await ensureCraftReference();
   const fid = viewer.family.id;
   const tz = viewer.family.timezone;

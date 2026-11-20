@@ -295,10 +295,16 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         ],
       },
       {
-        name: "Spiritual",
+        name: "Spiritual & faith",
         icon: "Moon",
-        summary: "A calm, celestial space for spiritual practice.",
+        summary: "A tab for each person's religion or path: Spiritual, Christian, Catholic, Jewish, Hindu or Buddhist (pick several, or none).",
         tabs: [
+          { name: "Today", does: "A daily verse or teaching, the church year, Hebrew date and Omer, Hindu tithi and Ekadashi, Uposatha days, and the saint and Rosary mysteries of the day." },
+          { name: "Holidays", does: "Every holiday for the year with accurate dates; add your family's own days and show any religion's holidays on the family calendar." },
+          { name: "Saints (Catholic)", does: "Feasts, memorials and holy days of obligation." },
+          { name: "Reading", does: "Track the Bible, the Catholic Bible and Catechism, Torah portions and Tanakh, the Gita and Upanishads, the Dhammapada and sutras, or your own books, chapter by chapter." },
+          { name: "Devotions & prayer", does: "A daily practice checklist with streaks (prayer, Mass, Rosary, puja, japa, meditation…) and a prayer list with answered prayers." },
+          { name: "Journal", does: "A private devotional or study journal; share an entry with the family if you like." },
           { name: "Moon phases & Wheel of the Year", does: "Lunar calendar and seasonal celebrations." },
           { name: "Spells, rituals & grimoire", does: "Your own library, printable as a grimoire." },
           { name: "Crystals, herbs & tools", does: "References with safety notes." },

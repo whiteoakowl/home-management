@@ -1,4 +1,5 @@
 import type { Viewer } from "@/lib/dal";
+import { FAITH_META, faithHref, faithPathsOf } from "@/lib/faith-config";
 import { MODULE_META, NAV_GROUPS } from "@/lib/modules";
 
 export type NavItem = {
@@ -28,20 +29,6 @@ export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
     { href: "/pets/supplies", label: "Food & supplies" },
     { href: "/pets/care", label: "Care schedule" },
     { href: "/pets/memories", label: "Memories" },
-  ],
-  "/spiritual": [
-    { href: "/spiritual", label: "Dashboard" },
-    { href: "/spiritual/moon", label: "Moon phases" },
-    { href: "/spiritual/wheel", label: "Wheel of the Year" },
-    { href: "/spiritual/celebrations", label: "Celebrations" },
-    { href: "/spiritual/library/spell", label: "Spells" },
-    { href: "/spiritual/library/ritual", label: "Rituals" },
-    { href: "/spiritual/grimoire", label: "Grimoire" },
-    { href: "/spiritual/library/crystal", label: "Crystals" },
-    { href: "/spiritual/library/herb", label: "Herbs" },
-    { href: "/spiritual/library/tool", label: "Tools" },
-    { href: "/spiritual/library/wellness", label: "Spiritual wellness" },
-    { href: "/spiritual/supplies", label: "Supplies" },
   ],
   "/library": [
     { href: "/library", label: "Dashboard" },
@@ -172,6 +159,14 @@ export function buildNav(viewer: Viewer): NavSection[] {
       : [{ href: "/wellness", label: "Mental Wellness", icon: "Smile" }]),
   ];
   if (personal) personal.items.unshift(...mine);
+  // Spiritual: one entry per path the member chose (none = hidden from their menu).
+  const paths = faithPathsOf(viewer.member);
+  for (const sec of sections) {
+    const at = sec.items.findIndex((i) => i.href === "/spiritual");
+    if (at < 0) continue;
+    if (!paths.length) sec.items.splice(at, 1);
+    else sec.items[at] = { ...sec.items[at]!, children: paths.length > 1 ? paths.map((f) => ({ href: faithHref(f), label: FAITH_META[f].tab })) : undefined };
+  }
   sections[1]!.items.unshift({
     href: "/family",
     label: "Family",

@@ -12,6 +12,12 @@ import { pool } from "@/db";
 /** Tables that are personal to one person: only the account holder's own rows are exported. */
 const PERSONAL = new Set([
   "journal_entries",
+  "faith_practices",
+  "faith_practice_logs",
+  "faith_texts",
+  "faith_reading_logs",
+  "faith_prayers",
+  "faith_entries",
   "journal_entry_members",
   "period_days",
   "personal_health_profiles",
