@@ -10,6 +10,7 @@ import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { hashPassword, revokeSessions, verifyPassword } from "@/lib/auth/session";
 import { getFamilyMember, getViewer, requireParent } from "@/lib/dal";
 import { logActivity } from "@/lib/family";
+import { rateLimit, TOO_MANY } from "@/lib/rate-limit";
 
 const NewPassword = z.string().min(8, "Use at least 8 characters.").max(200, "That's too long.");
 
@@ -21,6 +22,7 @@ const ChangePassword = z
 /** Change your own password. Other devices are signed out; this one stays signed in. */
 export async function changePassword(_: ActionState, fd: FormData): Promise<ActionState> {
   const viewer = await getViewer();
+  if (!(await rateLimit(`pw:${viewer.user.id}`, 8, 900))) return { ok: false, message: TOO_MANY };
   const parsed = ChangePassword.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return fieldErrors(parsed.error);
   const [u] = await db.select().from(users).where(eq(users.id, viewer.user.id));
@@ -34,6 +36,7 @@ const ChangeEmail = z.object({ email: z.email("Please enter a valid email.").tri
 
 export async function changeEmail(_: ActionState, fd: FormData): Promise<ActionState> {
   const viewer = await getViewer();
+  if (!(await rateLimit(`pw:${viewer.user.id}`, 8, 900))) return { ok: false, message: TOO_MANY };
   const parsed = ChangeEmail.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return fieldErrors(parsed.error);
   const [u] = await db.select().from(users).where(eq(users.id, viewer.user.id));

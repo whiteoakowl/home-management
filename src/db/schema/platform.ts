@@ -82,3 +82,10 @@ export const reviews = pgTable(
   },
   (t) => [index("reviews_status_idx").on(t.status)],
 );
+
+/** Fixed-window counters for rate limiting (sign-in attempts, sign-ups, contact form…). */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+  count: integer("count").notNull().default(0),
+});

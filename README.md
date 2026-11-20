@@ -124,8 +124,10 @@ Without these, uploads use Netlify Blobs on Netlify, or `./storage` locally. `ST
 **Book lookups (optional).** Scanning a book asks Open Library and Google Books. Google limits
 anonymous lookups; add a free `GOOGLE_BOOKS_API_KEY` in Netlify if lookups often come back empty.
 
-Something wrong? Open **`/api/health`** on your site: it checks the database and storage setup and explains
-the problem in plain English (it shows no passwords or family data).
+Something wrong? Open **`/api/health`** on your site while signed in as a platform admin (or add
+`HEALTH_CHECK_KEY` in Netlify and open `/api/health?key=…`): it checks the database and storage setup and
+explains the problem in plain English. Visitors only see `{"ok": true}`. See **[docs/SECURITY.md](docs/SECURITY.md)**
+for the security review and launch checklist.
 
 Then redeploy and create your family at `/signup` (or sign in with your existing account). Change passwords
 under the avatar menu → **Account & password**; parents can set a member's email and password from

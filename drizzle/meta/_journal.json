@@ -337,6 +337,13 @@
       "when": 1795115470294,
       "tag": "0047_wishlists_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1795133950692,
+      "tag": "0048_rate_limits",
+      "breakpoints": true
     }
   ]
 }

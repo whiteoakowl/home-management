@@ -1,5 +1,6 @@
 "use server";
 
+import { safePath } from "@/lib/safe-redirect";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, eq, isNull, lte, sql } from "drizzle-orm";
@@ -180,7 +181,7 @@ export async function archiveChore(fd: FormData) {
   await rebalanceRotations(viewer.family.id, todayIn(viewer.family.timezone));
   revalidateHouse();
   const back = String(fd.get("redirectTo") ?? "");
-  if (back.startsWith("/house")) redirect(back);
+  if (back.startsWith("/house/")) redirect(safePath(back, "/house"));
 }
 
 async function editableChore(viewer: Viewer, id: string) {
@@ -207,7 +208,7 @@ export async function deleteChore(fd: FormData) {
   await logActivity(db, viewer.family.id, viewer.member.id, "chore.deleted", `deleted "${c.title}"`, { module: kindModule(c.kind), entityId: c.id });
   revalidateHouse();
   const back = String(fd.get("redirectTo") ?? "");
-  if (back.startsWith("/house") || back.startsWith("/maintenance")) redirect(back);
+  if (back.startsWith("/house/") || back.startsWith("/maintenance")) redirect(safePath(back, "/house"));
 }
 
 /** Bring an archived or deleted chore back; its schedule starts again from today. */

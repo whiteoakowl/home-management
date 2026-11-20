@@ -41,7 +41,10 @@ export async function guard(fn: () => Promise<ActionState>): Promise<ActionState
     if (err && err.userFacing) return fail(err.message, err.field);
     unstable_rethrow(e); // redirect(), notFound() etc.
     // Anything else: log it (visible in the host's function logs) and say what happened.
-    console.error("Action failed:", e);
+    // In production people see a short reference instead of internal details (which stay in the logs).
+    const ref = Math.random().toString(36).slice(2, 8).toUpperCase();
+    console.error(`Action failed [ref ${ref}]:`, e);
+    if (process.env.NODE_ENV === "production") return fail(`This couldn't be saved. Please try again; if it keeps happening, send us feedback and mention reference ${ref}.`);
     const code = (e as { code?: unknown })?.code;
     const detail = String(err?.message ?? e).replace(/\s+/g, " ").slice(0, 220);
     return fail(`This couldn't be saved. ${typeof code === "string" && /^[0-9A-Z]{5}$/.test(code) ? `Database error ${code}: ` : ""}${detail}`);

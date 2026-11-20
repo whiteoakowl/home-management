@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { familyAccess } from "./billing";
 import { and, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db";
@@ -58,6 +59,8 @@ export const getViewer = cache(async (opts?: { allowOnboarding?: boolean }): Pro
   const { user, member, family } = await getMembership();
   if (!member || !family) redirect("/onboarding");
   if (!family.onboardingCompletedAt && !opts?.allowOnboarding) redirect("/onboarding");
+  // No plan or trial: only onboarding and billing (allowOnboarding) work, on pages and in actions alike.
+  if (!opts?.allowOnboarding && !(await familyAccess(family.id)).hasAccess) redirect("/billing");
 
   const stored = await db
     .select()

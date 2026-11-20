@@ -5,8 +5,15 @@ import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { rememberFamilyOfUser } from "@/lib/auth/device-family";
 import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth/session";
 import { fieldErrors, type ActionState } from "@/lib/action-state";
+import { clientIp, rateLimit, TOO_MANY } from "@/lib/rate-limit";
+import { safePath } from "@/lib/safe-redirect";
+
+/** Compared against when the email is unknown, so a wrong email takes as long as a wrong password. */
+let dummyHash: Promise<string> | null = null;
+const getDummyHash = () => (dummyHash ??= hashPassword("not-a-real-password"));
 
 const SignupSchema = z.object({
   name: z.string().trim().min(1, "Please enter your name.").max(80),
@@ -32,6 +39,8 @@ export async function signup(_: ActionState, formData: FormData): Promise<Action
   const parsed = SignupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fieldErrors(parsed.error);
   const { name, email, password } = parsed.data;
+  // At most 5 new accounts per hour from one address.
+  if (!(await rateLimit(`signup:${await clientIp()}`, 5, 3600))) return { ok: false, message: TOO_MANY };
 
   const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1).catch(databaseDown);
   if (!existing) return DB_DOWN;
@@ -55,17 +64,22 @@ export async function login(_: ActionState, formData: FormData): Promise<ActionS
   const parsed = LoginSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fieldErrors(parsed.error);
   const { email, password, next } = parsed.data;
+  // Slow down password guessing: per account and per address.
+  const ip = await clientIp();
+  if (!(await rateLimit(`login:ip:${ip}`, 30, 900)) || !(await rateLimit(`login:email:${email}`, 10, 900))) return { ok: false, message: TOO_MANY };
 
   const rows = await db.select().from(users).where(eq(users.email, email)).limit(1).catch(databaseDown);
   if (!rows) return DB_DOWN;
   const [user] = rows;
   // Same message whether the email or password is wrong.
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  const valid = await verifyPassword(password, user?.passwordHash ?? (await getDummyHash()));
+  if (!user || !valid) {
     return { ok: false, message: "That email and password don't match." };
   }
   await createSession(user.id);
+  await rememberFamilyOfUser(user.id);
   // Only allow same-site relative redirects.
-  redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  redirect(safePath(next));
 }
 
 export async function logout() {
