@@ -88,9 +88,10 @@ export async function login(_: ActionState, formData: FormData): Promise<ActionS
   redirect(safePath(next));
 }
 
+/** Sign out and go to the website's home page. */
 export async function logout() {
   await destroySession();
-  redirect("/login");
+  redirect("/");
 }
 
 // ─── Password reset & email verification ─────────────────────────────────────
