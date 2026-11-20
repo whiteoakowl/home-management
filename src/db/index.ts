@@ -2,7 +2,7 @@ import "server-only";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
-import { databaseUrl } from "./url";
+import { runtimeDatabaseUrl } from "./url";
 
 const globalForDb = globalThis as unknown as { pool?: Pool };
 
@@ -16,7 +16,7 @@ const serverless = !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAM
 const pool =
   globalForDb.pool ??
   new Pool({
-    connectionString: databaseUrl(),
+    connectionString: runtimeDatabaseUrl(),
     max: Number(process.env.PG_POOL_MAX) || (serverless ? 2 : 10),
     idleTimeoutMillis: serverless ? 5_000 : 30_000,
     connectionTimeoutMillis: 10_000,

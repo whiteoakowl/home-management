@@ -1,5 +1,5 @@
 import { pool } from "@/db";
-import { databaseUrl } from "@/db/url";
+import { databaseUrl, runtimeDatabaseUrl } from "@/db/url";
 import { explainDbError } from "@/lib/health";
 import { readSessionUser } from "@/lib/auth/session";
 import { isPlatformAdmin } from "@/lib/billing";
@@ -46,8 +46,9 @@ async function fullReport(): Promise<Response> {
   let kind = "not set";
   if (url) {
     try {
-      const u = new URL(url);
-      kind = u.hostname.endsWith("pooler.supabase.com") ? `Supabase pooler (${u.port === "6543" ? "transaction mode" : "session mode"})` : u.hostname.endsWith("supabase.co") ? "Supabase direct connection" : u.hostname.includes("neon") ? "Neon" : "PostgreSQL";
+      const u = new URL(runtimeDatabaseUrl(url) ?? url);
+      const switched = runtimeDatabaseUrl(url) !== url;
+      kind = u.hostname.endsWith("pooler.supabase.com") ? `Supabase pooler (${u.port === "6543" ? `transaction mode${switched ? ", switched automatically from session mode" : ""}` : "session mode"})` : u.hostname.endsWith("supabase.co") ? "Supabase direct connection" : u.hostname.includes("neon") ? "Neon" : "PostgreSQL";
     } catch {
       kind = "unreadable connection string";
     }
