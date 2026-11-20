@@ -46,13 +46,13 @@ export default async function TermsPage() {
 
       <h2>4. Cancelling</h2>
       <ul>
-        <li>The account holder can cancel anytime in <strong>Settings → Subscription &amp; billing</strong>, with no need to contact us.</li>
+        <li>The account holder can cancel anytime in <strong>Account settings → Subscription &amp; billing</strong>, with no need to contact us.</li>
         <li>After cancelling you keep access until the end of the period you&apos;ve paid for (or the end of the trial), and you won&apos;t be charged again. You can resume before then.</li>
         <li>Payments already made are not refunded, including for partly used periods, except where the law requires a refund.</li>
       </ul>
 
       <h2>5. Failed payments</h2>
-      <p>If a renewal payment fails, we&apos;ll let you know in the app and retry the card for a limited time. You can update your card or pay the open amount in Settings → Subscription &amp; billing. If payment isn&apos;t completed, access is paused until a payment succeeds; your family&apos;s information is kept.</p>
+      <p>If a renewal payment fails, we&apos;ll let you know in the app and retry the card for a limited time. You can update your card or pay the open amount in Account settings → Subscription &amp; billing. If payment isn&apos;t completed, access is paused until a payment succeeds; your family&apos;s information is kept.</p>
 
       <h2>6. Price changes</h2>
       <p>We may change our prices. Changes apply to new subscriptions; we&apos;ll tell existing subscribers in advance before any change affects their renewal, and you can cancel before it takes effect.</p>

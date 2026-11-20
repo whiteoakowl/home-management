@@ -1,0 +1,1 @@
+ALTER TABLE "families" ADD COLUMN "faith_paths" text[];

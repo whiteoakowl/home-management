@@ -11,7 +11,7 @@ export function FaithShowcase({ link = true }: { link?: boolean }) {
         <SectionTitle
           eyebrow="Faith & spiritual life"
           title="Your faith, your way"
-          intro="Every family member can choose their own religion, more than one, or none at all. Each gets its own tab with holidays, reading, devotions, a prayer list and a journal."
+          intro="Choose the religions your family uses, then give each family member the ones that are theirs (more than one, or none). Each religion gets its own tab with holidays, reading, devotions, a prayer list and a journal."
         />
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FAITH_OPTIONS.map((f) => (

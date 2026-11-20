@@ -93,10 +93,16 @@ export const FAITH_META: Record<Faith, FaithMeta> = {
 
 export const isFaith = (v: unknown): v is Faith => typeof v === "string" && (FAITHS as readonly string[]).includes(v);
 
-/** A member's paths: null (never chosen) = the Spiritual path, as before; [] = none. */
-export function faithPathsOf(member: { faithPaths: string[] | null }): Faith[] {
-  if (member.faithPaths === null) return ["spiritual"];
-  return FAITHS.filter((f) => member.faithPaths!.includes(f));
+/** Religions the family uses: null (never chosen) = the Spiritual path, as before. */
+export function familyFaiths(family: { faithPaths: string[] | null }): Faith[] {
+  if (family.faithPaths === null) return ["spiritual"];
+  return FAITHS.filter((f) => family.faithPaths!.includes(f));
+}
+
+/** Religions a member has access to: the family's, limited to the ones parents gave them. */
+export function faithPathsOf(member: { faithPaths: string[] | null }, family: { faithPaths: string[] | null }): Faith[] {
+  const fam = familyFaiths(family);
+  return member.faithPaths === null ? fam : fam.filter((f) => member.faithPaths!.includes(f));
 }
 
 export const faithHref = (f: Faith) => (f === "spiritual" ? "/spiritual" : `/spiritual/faith/${f}`);

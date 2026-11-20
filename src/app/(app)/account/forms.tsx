@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import { changeEmail, changePassword, resetMemberPassword, saveAppTheme, setMemberEmail } from "@/app/actions/account";
-import { saveFaithPaths } from "@/app/actions/faith";
 import { MEMBER_COLORS, MEMBER_COLOR_KEYS } from "@/lib/colors";
 import { CustomColorSwatch, ThemePreview } from "@/components/ui/custom-color";
 import { cn } from "@/lib/utils";
@@ -133,38 +132,3 @@ export function AppThemeForm({
   );
 }
 
-/** Which faith paths show as tabs in my Spiritual section. None = hidden from my menu. */
-export function FaithPathsForm({ current, options }: { current: string[]; options: { key: string; label: string; emoji: string; blurb: string }[] }) {
-  const [state, action] = useActionState(saveFaithPaths, undefined);
-  const [picked, setPicked] = useState<string[]>(current);
-  const toggle = (k: string) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
-  return (
-    <form action={action} className="flex flex-col gap-3">
-      <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
-      <div className="grid gap-2 sm:grid-cols-2">
-        {options.map((o) => (
-          <label key={o.key} className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3", picked.includes(o.key) ? "border-primary-300 bg-primary-50" : "border-line")}>
-            <input type="checkbox" name="paths" value={o.key} checked={picked.includes(o.key)} onChange={() => toggle(o.key)} className="mt-0.5 size-5 shrink-0 accent-primary-600" />
-            <span className="flex flex-col">
-              <span className="font-medium">
-                <span aria-hidden>{o.emoji}</span> {o.label}
-              </span>
-              <span className="text-sm text-muted">{o.blurb}</span>
-            </span>
-          </label>
-        ))}
-        <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3", picked.length === 0 ? "border-primary-300 bg-primary-50" : "border-line")}>
-          <input type="checkbox" checked={picked.length === 0} onChange={() => setPicked([])} className="mt-0.5 size-5 shrink-0 accent-primary-600" />
-          <span className="flex flex-col">
-            <span className="font-medium">None</span>
-            <span className="text-sm text-muted">Don&apos;t use the Spiritual section. It&apos;s hidden from my menu.</span>
-          </span>
-        </label>
-      </div>
-      <p className="text-sm text-muted">Pick as many as you like; each one gets its own tab. This only changes your account. Holidays for any religion can also be shown on the family calendar from the calendar&apos;s Show menu.</p>
-      <div className="flex justify-end">
-        <SubmitButton pendingLabel="Saving…">Save</SubmitButton>
-      </div>
-    </form>
-  );
-}

@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { Pencil } from "lucide-react";
 import { deleteCategory, saveAutomationSettings, saveCategory, saveKidNames, updateEnabledModules, updateFamily, uploadFamilyImage } from "@/app/actions/family";
+import { saveFamilyFaiths } from "@/app/actions/faith";
+import { Button } from "@/components/ui/button";
 import { ActionForm, FormModal } from "@/components/forms/action-form";
 import { ImageField, TextField } from "@/components/forms/fields";
 import { DeleteButton } from "@/components/forms/inline";
@@ -168,5 +170,82 @@ export function KidNamesForm({ parents }: { parents: { id: string; name: string;
         ))}
       </ul>
     </ActionForm>
+  );
+}
+
+type FaithOption = { key: string; label: string; emoji: string; blurb: string };
+type FaithMember = { id: string; name: string; color: string; role: string };
+
+/** Religions the family uses, and which members get each one (a checkbox per person). */
+export function FamilyFaithsForm({ options, enabled, members, access }: { options: FaithOption[]; enabled: string[]; members: FaithMember[]; access: Record<string, string[]> }) {
+  const [state, action, pending] = useActionState(saveFamilyFaiths, undefined);
+  const [, start] = useTransition();
+  const [on, setOn] = useState<string[]>(enabled);
+  // faith -> member ids
+  const [who, setWho] = useState<Record<string, string[]>>(() => Object.fromEntries(options.map((o) => [o.key, members.filter((m) => (access[m.id] ?? []).includes(o.key)).map((m) => m.id)])));
+  const toggleFaith = (k: string) => {
+    setOn((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
+    // Turning a religion on for the first time gives it to everyone; untick people who don't use it.
+    if (!on.includes(k) && !(who[k] ?? []).length) setWho((w) => ({ ...w, [k]: members.map((m) => m.id) }));
+  };
+  const toggleMember = (k: string, id: string) => setWho((w) => ({ ...w, [k]: (w[k] ?? []).includes(id) ? w[k]!.filter((x) => x !== id) : [...(w[k] ?? []), id] }));
+  return (
+    // Submitted by hand (not <form action>) so React doesn't reset the checkboxes after saving.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        start(() => action(fd));
+      }}
+      className="flex flex-col gap-3"
+    >
+      <FormMessage message={state?.message} tone={state?.ok ? "success" : "error"} />
+      <ul className="flex flex-col gap-3">
+        {options.map((o) => {
+          const active = on.includes(o.key);
+          return (
+            <li key={o.key} className={`rounded-2xl border p-4 ${active ? "border-primary-300 bg-primary-50/50" : "border-line"}`}>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input type="checkbox" name="faith" value={o.key} checked={active} onChange={() => toggleFaith(o.key)} className="mt-0.5 size-5 shrink-0 accent-primary-600" />
+                <span className="flex flex-col">
+                  <span className="font-semibold">
+                    <span aria-hidden>{o.emoji}</span> {o.label}
+                  </span>
+                  <span className="text-sm text-muted">{o.blurb}</span>
+                </span>
+              </label>
+              {active && (
+                <fieldset className="mt-3 border-t border-line pt-3 sm:pl-8">
+                  <legend className="sr-only">Who gets {o.label}</legend>
+                  <p className="mb-2 text-sm font-medium">
+                    Who gets this tab{" "}
+                    <button type="button" className="ml-1 text-primary-700 hover:underline" onClick={() => setWho((w) => ({ ...w, [o.key]: (w[o.key] ?? []).length === members.length ? [] : members.map((m) => m.id) }))}>
+                      {(who[o.key] ?? []).length === members.length ? "Clear" : "Everyone"}
+                    </button>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {members.map((m) => {
+                      const has = (who[o.key] ?? []).includes(m.id);
+                      return (
+                        <label key={m.id} className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm ${has ? "border-primary-400 bg-surface font-medium" : "border-line text-muted"}`}>
+                          <input type="checkbox" name={`access:${o.key}`} value={m.id} checked={has} onChange={() => toggleMember(o.key, m.id)} className="size-4 accent-primary-600" />
+                          <span className="size-2.5 rounded-full" style={{ backgroundColor: memberColor(m.color).solid }} aria-hidden />
+                          {m.name}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex justify-end">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Save religions"}
+        </Button>
+      </div>
+    </form>
   );
 }

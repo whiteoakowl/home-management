@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 /** One tab per religion/path the member chose (plus the one being viewed). */
 export async function FaithTabs({ active }: { active: Faith }) {
   const viewer = await getViewer();
-  const mine = faithPathsOf(viewer.member);
-  const tabs = FAITHS.filter((f) => mine.includes(f) || f === active);
+  const mine = faithPathsOf(viewer.member, viewer.family);
+  const tabs = FAITHS.filter((f) => mine.includes(f));
   return (
     <nav aria-label="Religions and paths" className="-mx-1 mb-5 flex items-center gap-2 overflow-x-auto px-1 pb-1">
       {tabs.map((f) => {
@@ -29,9 +29,11 @@ export async function FaithTabs({ active }: { active: Faith }) {
           </Link>
         );
       })}
-      <Link href="/account#faith" className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-medium text-muted hover:text-ink" title="Choose which religions and paths show here">
-        <Settings2 className="size-4" /> {tabs.length ? "Choose" : "Choose a path"}
-      </Link>
+      {viewer.isParent && (
+        <Link href="/settings#faith" className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-sm font-medium text-muted hover:text-ink" title="Choose the religions your family uses and who gets each one">
+          <Settings2 className="size-4" /> Religions
+        </Link>
+      )}
     </nav>
   );
 }

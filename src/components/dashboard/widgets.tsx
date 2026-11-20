@@ -254,7 +254,7 @@ export async function WeatherWidget({ scope }: { scope: Scope }) {
               ? "Set your home's coordinates in Settings to see local weather."
               : "We couldn't reach the weather service right now."
           }
-          action={f.latitude == null && scope.viewer.isParent ? <ButtonLink href="/settings" size="sm" variant="soft">Open settings</ButtonLink> : undefined}
+          action={f.latitude == null && scope.viewer.isParent ? <ButtonLink href="/settings" size="sm" variant="soft">Open account settings</ButtonLink> : undefined}
         />
       )}
     </Card>

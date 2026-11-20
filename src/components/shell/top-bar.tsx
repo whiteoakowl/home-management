@@ -79,7 +79,7 @@ export function TopBar({
           </div>
           <MenuItem href={`/family/${me.id}`} icon={<UserRound className="size-4" />}>My home</MenuItem>
           <MenuItem href="/account" icon={<KeyRound className="size-4" />}>My settings</MenuItem>
-          {isParent && <MenuItem href="/settings" icon={<Settings className="size-4" />}>Settings</MenuItem>}
+          {isParent && <MenuItem href="/settings" icon={<Settings className="size-4" />}>Account settings</MenuItem>}
           <MenuItem href="/feedback" icon={<MessageSquareHeart className="size-4" />}>Feedback & feature ideas</MenuItem>
           <MenuItem href="/terms" icon={<FileText className="size-4" />}>Terms & privacy</MenuItem>
           {platformAdmin && <MenuItem href="/admin" icon={<ShieldCheck className="size-4" />}>Admin</MenuItem>}

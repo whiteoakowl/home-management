@@ -13,9 +13,10 @@ import { fileUrl } from "@/lib/files";
 import { AppThemeForm } from "../account/forms";
 import { saveFamilyTheme } from "@/app/actions/account";
 import { DataControls } from "@/components/settings/data-controls";
-import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, KidNamesForm, ModulesForm } from "./forms";
+import { FAITHS, FAITH_META, familyFaiths, faithPathsOf } from "@/lib/faith-config";
+import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, FamilyFaithsForm, KidNamesForm, ModulesForm } from "./forms";
 
-export const metadata: Metadata = { title: "Settings" };
+export const metadata: Metadata = { title: "Account settings" };
 
 const DOMAINS: { key: string; label: string }[] = [
   { key: "calendar", label: "Calendar categories" },
@@ -32,13 +33,14 @@ const DOMAINS: { key: string; label: string }[] = [
 export default async function SettingsPage() {
   const viewer = await requireParent().catch(() => notFound());
   const f = viewer.family;
-  const parents = (await listFamilyMembers(f.id)).filter((m) => m.role === "parent");
+  const everyone = await listFamilyMembers(f.id);
+  const parents = everyone.filter((m) => m.role === "parent");
   const cats = await db.select().from(categories).where(and(eq(categories.familyId, f.id))).orderBy(asc(categories.sortOrder), asc(categories.name));
   const grouped = Map.groupBy(cats, (c) => c.domain);
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <PageHeader title="Settings" description={`Customize the ${f.name} Family.`} />
+      <PageHeader title="Account settings" description={`Customize the ${f.name} Family.`} />
       <div className="grid gap-6 md:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader title="Family details" />
@@ -90,6 +92,21 @@ export default async function SettingsPage() {
           parents={parents.map((p) => ({ id: p.id, name: p.displayName, kidName: p.kidName ?? "", color: p.color, editable: viewer.isOwner || p.id === viewer.member.id }))}
         />
       </Card>
+
+      {f.enabledModules.includes("witchcraft") && (
+        <Card id="faith" className="scroll-mt-24">
+          <CardHeader title="Religions & spiritual paths" />
+          <p className="mb-4 text-[15px] text-muted">
+            Check each religion your family uses. Each one becomes a tab in the Spiritual section, with its holidays, reading, devotions, prayer list and journal. Then choose which family members get each tab. Anyone with no religions doesn&apos;t see the Spiritual section.
+          </p>
+          <FamilyFaithsForm
+            options={FAITHS.map((k) => ({ key: k, label: FAITH_META[k].label, emoji: FAITH_META[k].emoji, blurb: FAITH_META[k].blurb }))}
+            enabled={familyFaiths(f)}
+            members={everyone.map((m) => ({ id: m.id, name: m.displayName, color: m.color, role: m.role }))}
+            access={Object.fromEntries(everyone.map((m) => [m.id, faithPathsOf(m, f)]))}
+          />
+        </Card>
+      )}
 
       <Card>
         <CardHeader title="Family colors" />

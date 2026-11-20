@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { faithEntries, faithHolidays, faithPracticeLogs, faithPractices, faithPrayers, faithReadingLogs, faithTexts, familyMembers } from "@/db/schema";
+import { faithEntries, faithHolidays, faithPracticeLogs, faithPractices, faithPrayers, faithReadingLogs, faithTexts, families, familyMembers } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, requireModule, requireParent, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { findText } from "@/lib/faith";
 import { FAITHS, isFaith, PRACTICE_UNITS, type Faith } from "@/lib/faith-config";
@@ -33,13 +33,23 @@ async function own<T extends { memberId: string }>(rows: Promise<T[]>): Promise<
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
-export async function saveFaithPaths(_: ActionState, fd: FormData): Promise<ActionState> {
+/**
+ * Account settings (parents): the religions the family uses, and which members
+ * get each one. Form fields: "faith" (checked religions) and "access:<faith>"
+ * (member ids with that religion).
+ */
+export async function saveFamilyFaiths(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
-    const paths = FAITHS.filter((x) => f.list(fd, "paths").includes(x));
-    await db.update(familyMembers).set({ faithPaths: paths }).where(eq(familyMembers.id, viewer.member.id));
+    const viewer = await requireParent();
+    const faiths = FAITHS.filter((x) => f.list(fd, "faith").includes(x));
+    const members = await db.select({ id: familyMembers.id }).from(familyMembers).where(and(eq(familyMembers.familyId, viewer.family.id), eq(familyMembers.isActive, true)));
+    await db.update(families).set({ faithPaths: faiths }).where(eq(families.id, viewer.family.id));
+    for (const m of members) {
+      const mine = faiths.filter((x) => f.list(fd, `access:${x}`).includes(m.id));
+      await db.update(familyMembers).set({ faithPaths: mine }).where(eq(familyMembers.id, m.id));
+    }
     revalidatePath("/", "layout");
-    return ok(paths.length ? "Your Spiritual tabs are updated." : "Spiritual is hidden from your menu. Choose a path here anytime to bring it back.");
+    return ok(faiths.length ? "Saved. Each person now sees the religions you gave them." : "No religions chosen: the Spiritual section is hidden for everyone.");
   });
 }
 

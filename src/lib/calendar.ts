@@ -55,6 +55,7 @@ import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 import { familyHolidays } from "./faith";
+import { familyFaiths } from "./faith-config";
 
 export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "christian", "catholic", "jewish", "hindu", "buddhist", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
@@ -432,7 +433,8 @@ export async function getCalendarItems(
   }
 
   // Religious holidays (built-in plus the family's own days and date changes), per religion the viewer turned on.
-  const faithLayers = (["christian", "catholic", "jewish", "hindu", "buddhist"] as const).filter((l) => want(l));
+  const famFaiths = familyFaiths(viewer.family);
+  const faithLayers = (["christian", "catholic", "jewish", "hindu", "buddhist"] as const).filter((l) => want(l) && famFaiths.includes(l));
   if (faithLayers.length && !subject) {
     const COLOR = { christian: "cornflower", catholic: "heather", jewish: "ocean", hindu: "tangerine", buddhist: "sunflower" } as const;
     const list = await familyHolidays(fid, [...faithLayers], from, to);

@@ -297,7 +297,7 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
       {
         name: "Spiritual & faith",
         icon: "Moon",
-        summary: "A tab for each person's religion or path: Spiritual, Christian, Catholic, Jewish, Hindu or Buddhist (pick several, or none).",
+        summary: "A tab for each religion your family uses: Christian, Catholic, Jewish, Hindu, Buddhist or Spiritual. Parents choose who gets each one.",
         tabs: [
           { name: "Today", does: "A daily verse or teaching, the church year, Hebrew date and Omer, Hindu tithi and Ekadashi, Uposatha days, and the saint and Rosary mysteries of the day." },
           { name: "Holidays", does: "Every holiday for the year with accurate dates; add your family's own days and show any religion's holidays on the family calendar." },
@@ -370,11 +370,12 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
     intro: "Make the app yours.",
     sections: [
       {
-        name: "Settings",
+        name: "Account settings",
         icon: "Settings",
         summary: "Run by the account holder.",
         tabs: [
           { name: "Sections", does: "Turn whole sections on or off (no pool? no farm? hide them)." },
+          { name: "Religions", does: "Check the religions your family uses and choose which members get each one." },
           { name: "Family name & colours", does: "Your family's name becomes the app's name on everyone's phone." },
           { name: "Subscription & billing", does: "Plan, card, receipts, switch monthly or yearly, or cancel, all in the app." },
         ],

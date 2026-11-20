@@ -160,7 +160,7 @@ export function buildNav(viewer: Viewer): NavSection[] {
   ];
   if (personal) personal.items.unshift(...mine);
   // Spiritual: one entry per path the member chose (none = hidden from their menu).
-  const paths = faithPathsOf(viewer.member);
+  const paths = faithPathsOf(viewer.member, viewer.family);
   for (const sec of sections) {
     const at = sec.items.findIndex((i) => i.href === "/spiritual");
     if (at < 0) continue;
@@ -175,7 +175,7 @@ export function buildNav(viewer: Viewer): NavSection[] {
   if (viewer.isParent)
     sections.push({
       group: "Admin",
-      items: [{ href: "/settings", label: "Settings", icon: "Settings" }],
+      items: [{ href: "/settings", label: "Account settings", icon: "Settings" }],
     });
   return sections.filter((s) => s.items.length > 0);
 }

@@ -22,7 +22,7 @@ export const FAITH_OPTIONS = [
 ] as const;
 
 export const FAITH_POINTS = [
-  "Each person picks their own religion, several, or none",
+  "Choose your family's religions and who gets each one",
   "Accurate holiday dates every year, on the family calendar",
   "Track your reading chapter by chapter",
   "A daily devotion checklist with streaks",
@@ -60,11 +60,11 @@ export const EXTRA_FEATURES = [
 ] as const;
 
 export const FAQ = [
-  { q: "How does the free trial work?", a: "Create your account and choose a monthly or yearly plan. Your card isn't charged until the trial ends, and you can cancel anytime before then from Settings → Subscription." },
+  { q: "How does the free trial work?", a: "Create your account and choose a monthly or yearly plan. Your card isn't charged until the trial ends, and you can cancel anytime before then from Account settings → Subscription." },
   { q: "Is the price per person?", a: "No. One subscription covers your whole family, with as many family members and logins as you need." },
   { q: "Can kids use it?", a: "Yes. Kids can have their own login (or none, for little ones). You choose exactly which sections each person can see and change." },
   { q: "Does it work on iPhone and Android?", a: "Yes. It works in any modern browser and can be installed on the home screen of phones and tablets, where it shows up with your family's name." },
-  { q: "Does it support our faith?", a: "Yes. The Spiritual section has a tab for Christian, Catholic, Jewish, Hindu, Buddhist and spiritual families, with holidays, reading, devotions, prayer lists and a journal. Each person chooses their own (or none), and any religion's holidays can be shown on the family calendar." },
-  { q: "Can I cancel anytime?", a: "Yes. Cancel from Settings → Subscription. You keep access until the end of the period you've paid for." },
+  { q: "Does it support our faith?", a: "Yes. The Spiritual section has a tab for Christian, Catholic, Jewish, Hindu, Buddhist and spiritual families, with holidays, reading, devotions, prayer lists and a journal. Parents choose the religions the family uses and which members get each one, and those holidays can be shown on the family calendar." },
+  { q: "Can I cancel anytime?", a: "Yes. Cancel from Account settings → Subscription. You keep access until the end of the period you've paid for." },
   { q: "What happens to our information?", a: "Your family's information belongs to you. It's only visible to the people in your family you share it with, and we never sell it." },
 ] as const;

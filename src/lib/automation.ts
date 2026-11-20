@@ -50,7 +50,7 @@ import { occurrencesBetween, type Rule } from "./recurrence";
 import { MODULE_META } from "./modules";
 import { rebalanceRotations } from "./rotation-db";
 
-/** Every automation can be switched off per family (Settings → Automations). */
+/** Every automation can be switched off per family (Account settings → Automations). */
 export const AUTOMATIONS = [
   { key: "recurringChores", label: "Generate recurring chores", description: "Create upcoming chore & cleaning occurrences from their schedules." },
   { key: "missedChores", label: "Mark missed chores", description: "Chores left undone for 7 days are marked missed (kept in history)." },

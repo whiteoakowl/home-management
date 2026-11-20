@@ -78,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             >
               {billing.status === "past_due"
                 ? "We couldn't charge your card. Update it to keep your family's app running →"
-                : `Free trial: ${trialLeft(billing.row!.trialEndsAt!)} left. Your plan starts automatically; manage it in Settings →`}
+                : `Free trial: ${trialLeft(billing.row!.trialEndsAt!)} left. Your plan starts automatically; manage it in Account settings →`}
             </Link>
           )}
           {unverifiedEmail && <VerifyEmailBanner email={unverifiedEmail} />}
