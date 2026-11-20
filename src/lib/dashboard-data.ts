@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameSql } from "./names";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or, sql, notInArray } from "drizzle-orm";
 import { itemVisible } from "./lists";
 import { db } from "@/db";
@@ -126,7 +127,7 @@ export async function getAnnouncements(s: Scope) {
       body: announcements.body,
       pinned: announcements.pinned,
       createdAt: announcements.createdAt,
-      authorName: familyMembers.displayName,
+      authorName: memberNameSql(s.viewer, familyMembers),
       authorColor: familyMembers.color,
     })
     .from(announcements)
@@ -323,7 +324,7 @@ export async function getActivity(s: Scope, limit = 8) {
       id: activityLog.id,
       summary: activityLog.summary,
       createdAt: activityLog.createdAt,
-      actorName: familyMembers.displayName,
+      actorName: memberNameSql(s.viewer, familyMembers),
       actorColor: familyMembers.color,
     })
     .from(activityLog)

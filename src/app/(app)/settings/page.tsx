@@ -8,12 +8,12 @@ import { categories } from "@/db/schema";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
 import { AUTOMATIONS } from "@/lib/automation";
-import { requireParent } from "@/lib/dal";
+import { listFamilyMembers, requireParent } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
 import { AppThemeForm } from "../account/forms";
 import { saveFamilyTheme } from "@/app/actions/account";
 import { DataControls } from "@/components/settings/data-controls";
-import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, ModulesForm } from "./forms";
+import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, KidNamesForm, ModulesForm } from "./forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -32,6 +32,7 @@ const DOMAINS: { key: string; label: string }[] = [
 export default async function SettingsPage() {
   const viewer = await requireParent().catch(() => notFound());
   const f = viewer.family;
+  const parents = (await listFamilyMembers(f.id)).filter((m) => m.role === "parent");
   const cats = await db.select().from(categories).where(and(eq(categories.familyId, f.id))).orderBy(asc(categories.sortOrder), asc(categories.name));
   const grouped = Map.groupBy(cats, (c) => c.domain);
 
@@ -80,6 +81,16 @@ export default async function SettingsPage() {
         </p>
         <ModulesForm enabled={f.enabledModules} readOnly={!viewer.isOwner} />
       </Card>
+      <Card>
+        <CardHeader title="What the kids call parents" />
+        <p className="mb-4 text-[15px] text-muted">
+          Kids (and other family members who aren&apos;t parents) see these names everywhere in the app: chores, calendar, chat and more. For example, Joe can show up as &ldquo;Dad&rdquo;. Parents still see real names. Leave a box empty to use the real name.
+        </p>
+        <KidNamesForm
+          parents={parents.map((p) => ({ id: p.id, name: p.displayName, kidName: p.kidName ?? "", color: p.color, editable: viewer.isOwner || p.id === viewer.member.id }))}
+        />
+      </Card>
+
       <Card>
         <CardHeader title="Family colors" />
         <AppThemeForm

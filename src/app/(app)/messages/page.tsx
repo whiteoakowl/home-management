@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, lte, ne } from "drizzle-orm";
@@ -8,7 +9,7 @@ import { calendarEvents, familyMessages, files, messageReactions, messageReads, 
 import { ChatComposer, ChatLive, MembersButton, MessageTools, NewMenu, PollCard, Reactions } from "@/components/hub/chat";
 import { Avatar, EmptyState } from "@/components/ui/display";
 import { memberColor } from "@/lib/colors";
-import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { getViewer } from "@/lib/dal";
 import { addDays, formatTime, todayIn } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { markRead } from "@/lib/hub";
@@ -53,7 +54,7 @@ export default async function MessagesPage({ searchParams }: PageProps<"/message
   );
   const [rows, members, others] = await Promise.all([
     db.select({ m: familyMessages, fileName: files.originalName, fileMime: files.mimeType }).from(familyMessages).leftJoin(files, eq(files.id, familyMessages.fileId)).where(where).orderBy(desc(familyMessages.createdAt)).limit(150),
-    listFamilyMembers(viewer.family.id),
+    familyMembersFor(viewer),
     // When did anyone else last open the chat? (for ✓✓ on my messages)
     db.select({ at: messageReads.lastReadAt }).from(messageReads).where(and(eq(messageReads.familyId, viewer.family.id), ne(messageReads.memberId, me))).orderBy(desc(messageReads.lastReadAt)).limit(1),
   ]);

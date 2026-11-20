@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameSql, seesKidNames } from "./names";
 import { and, eq, ilike, inArray, isNull, or, sql, notInArray } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { itemVisible } from "./lists";
@@ -66,9 +67,9 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
     "People",
     "Users",
     db
-      .select({ id: familyMembers.id, title: familyMembers.displayName, role: familyMembers.role })
+      .select({ id: familyMembers.id, title: memberNameSql(viewer, familyMembers), role: familyMembers.role })
       .from(familyMembers)
-      .where(and(eq(familyMembers.familyId, fid), eq(familyMembers.isActive, true), ilike(familyMembers.displayName, like)))
+      .where(and(eq(familyMembers.familyId, fid), eq(familyMembers.isActive, true), or(ilike(familyMembers.displayName, like), seesKidNames(viewer) ? and(eq(familyMembers.role, "parent"), ilike(familyMembers.kidName, like)) : undefined)))
       .limit(LIMIT)
       .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: x.role === "parent" ? "Parent" : "Family member", href: `/family/${x.id}` }))),
   );
@@ -309,7 +310,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       Promise.all(
         kinds.map(([, t, col, label, href]) =>
           db
-            .select({ id: t.id, title: col, member: familyMembers.displayName })
+            .select({ id: t.id, title: col, member: memberNameSql(viewer, familyMembers) })
             .from(t)
             .innerJoin(familyMembers, eq(familyMembers.id, t.memberId))
             .where(and(eq(t.familyId, fid), medicalVisible(viewer, t), ilike(col, like)))

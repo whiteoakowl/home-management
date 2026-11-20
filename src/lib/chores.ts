@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameRaw, memberNameSql } from "./names";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
@@ -124,13 +125,13 @@ export async function listOccurrences(viewer: Viewer, opts: OccurrenceQuery) {
       estimatedCostCents: chores.estimatedCostCents,
       points: chores.points,
       assigneeId: choreOccurrences.assigneeId,
-      assigneeName: assignee.displayName,
+      assigneeName: memberNameSql(viewer, assignee),
       assigneeColor: assignee.color,
       assigneeIds: choreOccurrences.assigneeIds,
       /** Everyone on the team, in the order they were picked. */
-      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', fm.display_name, 'color', fm.color) order by array_position(${choreOccurrences.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${choreOccurrences.assigneeIds})), '[]'::json)`,
+      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', ${memberNameRaw(viewer, "fm")}, 'color', fm.color) order by array_position(${choreOccurrences.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${choreOccurrences.assigneeIds})), '[]'::json)`,
       awardedMemberIds: choreOccurrences.awardedMemberIds,
-      completedByName: completer.displayName,
+      completedByName: memberNameSql(viewer, completer),
       pointsAwarded: choreOccurrences.pointsAwarded,
     })
     .from(choreOccurrences)
@@ -156,7 +157,7 @@ export async function listOccurrences(viewer: Viewer, opts: OccurrenceQuery) {
           text: choreOccurrenceItems.text,
           completedAt: choreOccurrenceItems.completedAt,
           assigneeId: choreOccurrenceItems.assigneeId,
-          assigneeName: itemAssignee.displayName,
+          assigneeName: memberNameSql(viewer, itemAssignee),
           assigneeColor: itemAssignee.color,
         })
         .from(choreOccurrenceItems)
@@ -182,9 +183,9 @@ export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], tod
       rule: recurrenceRules,
       roomName: rooms.name,
       categoryName: categories.name,
-      assigneeName: assignee.displayName,
+      assigneeName: memberNameSql(viewer, assignee),
       assigneeColor: assignee.color,
-      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', fm.display_name, 'color', fm.color) order by array_position(${chores.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${chores.assigneeIds})), '[]'::json)`,
+      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', ${memberNameRaw(viewer, "fm")}, 'color', fm.color) order by array_position(${chores.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${chores.assigneeIds})), '[]'::json)`,
       nextDue: sql<string | null>`(select min(o.due_date) from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'pending' and o.due_date >= ${today})`,
       lastDone: sql<string | null>`(select max(o.completed_at)::text from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'done')`,
       doneCount: sql<number>`(select count(*)::int from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'done')`,

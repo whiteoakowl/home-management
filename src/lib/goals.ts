@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameSql } from "./names";
 import { and, asc, desc, eq, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { familyMembers, goalContributions, goalMilestones, goals } from "@/db/schema";
@@ -35,7 +36,7 @@ export type GoalScope = "family" | "mine";
 
 export async function listGoals(viewer: Viewer, opts: { kind?: string; ownerId?: string; includeDone?: boolean; scope?: GoalScope } = {}) {
   return db
-    .select({ g: goals, owner: familyMembers.displayName, ownerColor: familyMembers.color })
+    .select({ g: goals, owner: memberNameSql(viewer, familyMembers), ownerColor: familyMembers.color })
     .from(goals)
     .leftJoin(familyMembers, eq(familyMembers.id, goals.ownerMemberId))
     .where(
@@ -59,7 +60,7 @@ export async function getGoal(viewer: Viewer, id: string) {
   const [milestones, contributions] = await Promise.all([
     db.select().from(goalMilestones).where(eq(goalMilestones.goalId, id)).orderBy(asc(goalMilestones.position), asc(goalMilestones.targetCents), asc(goalMilestones.targetValue)),
     db
-      .select({ c: goalContributions, who: familyMembers.displayName })
+      .select({ c: goalContributions, who: memberNameSql(viewer, familyMembers) })
       .from(goalContributions)
       .leftJoin(familyMembers, eq(familyMembers.id, goalContributions.memberId))
       .where(eq(goalContributions.goalId, id))

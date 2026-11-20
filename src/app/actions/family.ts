@@ -444,3 +444,26 @@ export async function uploadFamilyImage(_: ActionState, formData: FormData): Pro
     return { ok: true, message: "Family photo updated." };
   });
 }
+
+/**
+ * The names kids see for parents ("Dad", "Mom"). Each parent sets their own;
+ * the account holder can set any parent's. Empty = their real name.
+ */
+export async function saveKidNames(_: ActionState, formData: FormData): Promise<ActionState> {
+  const viewer = await requireParent();
+  const parents = await db
+    .select({ id: familyMembers.id })
+    .from(familyMembers)
+    .where(and(eq(familyMembers.familyId, viewer.family.id), eq(familyMembers.role, "parent"), eq(familyMembers.isActive, true)));
+  let saved = 0;
+  for (const p of parents) {
+    const key = `kidName:${p.id}`;
+    if (!formData.has(key)) continue;
+    if (p.id !== viewer.member.id && !viewer.isOwner) continue;
+    const value = String(formData.get(key) ?? "").trim().replace(/\s+/g, " ").slice(0, 30);
+    await db.update(familyMembers).set({ kidName: value || null }).where(eq(familyMembers.id, p.id));
+    saved++;
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: saved ? "Saved. Kids will see these names everywhere in the app." : "Nothing to save." };
+}

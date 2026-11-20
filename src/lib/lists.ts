@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameSql } from "./names";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, familyMembers, listItems, lists, recurrenceRules } from "@/db/schema";
@@ -74,7 +75,7 @@ export function canSeeItem(viewer: Viewer, item: { personalForMemberId: string |
 
 export async function loadListItems(listId: string, viewer: Viewer) {
   const rows = await db
-    .select({ item: listItems, rule: recurrenceRules, forName: familyMembers.displayName })
+    .select({ item: listItems, rule: recurrenceRules, forName: memberNameSql(viewer, familyMembers) })
     .from(listItems)
     .leftJoin(recurrenceRules, eq(recurrenceRules.id, listItems.recurrenceRuleId))
     .leftJoin(familyMembers, eq(familyMembers.id, listItems.personalForMemberId))
@@ -133,7 +134,7 @@ export async function listIndex(viewer: Viewer, kinds: Kind[], opts: { archived?
       categoryName: categories.name,
       categoryId: lists.categoryId,
       updatedAt: lists.updatedAt,
-      ownerName: familyMembers.displayName,
+      ownerName: memberNameSql(viewer, familyMembers),
       open: sql<number>`(select count(*)::int from ${listItems} i where i.list_id = ${lists.id} and not i.checked and ${itemVisibleRaw(viewer)})`,
       total: sql<number>`(select count(*)::int from ${listItems} i where i.list_id = ${lists.id} and ${itemVisibleRaw(viewer)})`,
       preview: sql<string[]>`coalesce((select array_agg(t.text) from (select i.text from ${listItems} i where i.list_id = ${lists.id} and not i.checked and ${itemVisibleRaw(viewer)} order by i.position limit 4) t), '{}')`,

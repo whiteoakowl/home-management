@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import Link from "next/link";
 import { ChevronRight, KeyRound, ShieldCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar, Badge, PageHeader } from "@/components/ui/display";
-import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { getViewer } from "@/lib/dal";
 import { memberColor } from "@/lib/colors";
 import { fileUrl } from "@/lib/files";
 import { AddMemberButton } from "./add-member-button";
@@ -12,7 +13,7 @@ export const metadata: Metadata = { title: "Family" };
 
 export default async function FamilyPage({ searchParams }: PageProps<"/family">) {
   const viewer = await getViewer();
-  const members = await listFamilyMembers(viewer.family.id);
+  const members = await familyMembersFor(viewer);
   const { new: openNew } = await searchParams;
 
   return (

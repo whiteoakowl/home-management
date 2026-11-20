@@ -149,6 +149,8 @@ export const familyMembers = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     displayName: text("display_name").notNull(),
+    /** For parents: the name kids (and other non-parent members) see, e.g. "Dad" or "Mom". */
+    kidName: text("kid_name"),
     role: memberRole("role").notNull().default("member"),
     color: text("color").notNull().default("plum"),
     avatarFileId: uuid("avatar_file_id"),

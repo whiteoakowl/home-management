@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameSql } from "./names";
 import { and, desc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { choreOccurrences, chores, familyMembers, pointAdjustments, rewardRedemptions, rewards } from "@/db/schema";
@@ -59,7 +60,7 @@ export async function rewardsFor(viewer: Viewer) {
 
 export async function redemptionsFor(viewer: Viewer) {
   return db
-    .select({ r: rewardRedemptions, name: familyMembers.displayName, color: familyMembers.color })
+    .select({ r: rewardRedemptions, name: memberNameSql(viewer, familyMembers), color: familyMembers.color })
     .from(rewardRedemptions)
     .innerJoin(familyMembers, eq(familyMembers.id, rewardRedemptions.memberId))
     .where(and(eq(rewardRedemptions.familyId, viewer.family.id), viewer.isParent ? undefined : eq(rewardRedemptions.memberId, viewer.member.id)))

@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameSql } from "./names";
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
@@ -199,7 +200,7 @@ export async function getCalendarItems(
 
   if (want("workouts") && viewer.can("fitness") && automationOn(viewer.family, "workoutCalendar")) {
     const rows = await db
-      .select({ w: workouts, rule: recurrenceRules, memberId: fitnessPlans.memberId, color: familyMembers.color, name: familyMembers.displayName })
+      .select({ w: workouts, rule: recurrenceRules, memberId: fitnessPlans.memberId, color: familyMembers.color, name: memberNameSql(viewer, familyMembers) })
       .from(workouts)
       .innerJoin(fitnessPlans, eq(fitnessPlans.id, workouts.planId))
       .innerJoin(recurrenceRules, eq(recurrenceRules.id, workouts.recurrenceRuleId))
@@ -310,7 +311,7 @@ export async function getCalendarItems(
     const seeWork = await visibleWorkers(viewer);
     const shifts = (await db.select().from(workShifts).where(and(eq(workShifts.familyId, fid), gte(workShifts.date, from), lte(workShifts.date, to), subject ? eq(workShifts.memberId, subject) : undefined))).filter((s) => seeWork.has(s.memberId));
     const colorOf = await memberColorMap(fid);
-    const names = new Map((await db.select({ id: familyMembers.id, name: familyMembers.displayName }).from(familyMembers).where(eq(familyMembers.familyId, fid))).map((m) => [m.id, m.name.split(" ")[0]!]));
+    const names = new Map((await db.select({ id: familyMembers.id, name: memberNameSql(viewer, familyMembers) }).from(familyMembers).where(eq(familyMembers.familyId, fid))).map((m) => [m.id, m.name.split(" ")[0]!]));
     for (const s of shifts) {
       const start = minutesOf(s.startTime)!;
       const end = minutesOf(s.endTime)!;

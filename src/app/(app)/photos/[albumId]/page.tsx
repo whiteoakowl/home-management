@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, desc, eq } from "drizzle-orm";
@@ -10,7 +11,7 @@ import { ActionButton, DeleteButton } from "@/components/forms/inline";
 import { AddPhotosModal, AlbumModal } from "@/components/hub/forms";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
-import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { getViewer } from "@/lib/dal";
 import { formatLongDate } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 
@@ -25,7 +26,7 @@ export default async function AlbumPage({ params }: PageProps<"/photos/[albumId]
   if (!album) notFound();
   const [photos, members] = await Promise.all([
     db.select().from(entityPhotos).where(and(eq(entityPhotos.entityType, "album"), eq(entityPhotos.entityId, album.id), eq(entityPhotos.familyId, viewer.family.id))).orderBy(desc(entityPhotos.createdAt)),
-    listFamilyMembers(viewer.family.id),
+    familyMembersFor(viewer),
   ]);
   const canUse = viewer.can("photos", "use");
   const canAll = viewer.can("photos", "edit");

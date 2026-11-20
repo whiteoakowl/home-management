@@ -1,4 +1,5 @@
 import "server-only";
+import { memberNameSql } from "./names";
 import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import { familyMembers, journalEntries, journalEntryFiles, journalEntryMembers } from "@/db/schema";
@@ -30,7 +31,7 @@ const visible = (viewer: Viewer) =>
 
 export async function listEntries(viewer: Viewer, opts: { from?: string; to?: string; q?: string; tag?: string; limit?: number } = {}) {
   const rows = await db
-    .select({ e: journalEntries, author: familyMembers.displayName, authorColor: familyMembers.color })
+    .select({ e: journalEntries, author: memberNameSql(viewer, familyMembers), authorColor: familyMembers.color })
     .from(journalEntries)
     .innerJoin(familyMembers, eq(familyMembers.id, journalEntries.authorMemberId))
     .where(
@@ -56,7 +57,7 @@ export async function listEntries(viewer: Viewer, opts: { from?: string; to?: st
 export async function getEntry(viewer: Viewer, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [row] = await db
-    .select({ e: journalEntries, author: familyMembers.displayName, authorColor: familyMembers.color })
+    .select({ e: journalEntries, author: memberNameSql(viewer, familyMembers), authorColor: familyMembers.color })
     .from(journalEntries)
     .innerJoin(familyMembers, eq(familyMembers.id, journalEntries.authorMemberId))
     .where(and(eq(journalEntries.id, id), eq(journalEntries.familyId, viewer.family.id), visible(viewer)));
@@ -64,7 +65,7 @@ export async function getEntry(viewer: Viewer, id: string) {
   const [photos, people] = await Promise.all([
     db.select().from(journalEntryFiles).where(eq(journalEntryFiles.entryId, id)).orderBy(asc(journalEntryFiles.position)),
     db
-      .select({ id: familyMembers.id, displayName: familyMembers.displayName, color: familyMembers.color })
+      .select({ id: familyMembers.id, displayName: memberNameSql(viewer, familyMembers), color: familyMembers.color })
       .from(journalEntryMembers)
       .innerJoin(familyMembers, eq(familyMembers.id, journalEntryMembers.memberId))
       .where(eq(journalEntryMembers.entryId, id)),

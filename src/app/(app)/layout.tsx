@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { notifications, MODULES, users } from "@/db/schema";
@@ -6,7 +7,7 @@ import { MobileNav } from "@/components/shell/mobile-nav";
 import { buildNav } from "@/components/shell/nav";
 import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
-import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { getViewer } from "@/lib/dal";
 import { familyAccess, isPlatformAdmin } from "@/lib/billing";
 import { redirect } from "next/navigation";
 import { unreadMessages } from "@/lib/hub";
@@ -37,7 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Recurring chores, reminders, low-stock → shopping… (once per family per day).
   await runDailyAutomation(viewer.family);
   const [members, [unread]] = await Promise.all([
-    listFamilyMembers(viewer.family.id),
+    familyMembersFor(viewer),
     db
       .select({ n: count() })
       .from(notifications)

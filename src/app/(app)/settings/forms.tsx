@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Pencil } from "lucide-react";
-import { deleteCategory, saveAutomationSettings, saveCategory, updateEnabledModules, updateFamily, uploadFamilyImage } from "@/app/actions/family";
+import { deleteCategory, saveAutomationSettings, saveCategory, saveKidNames, updateEnabledModules, updateFamily, uploadFamilyImage } from "@/app/actions/family";
 import { ActionForm, FormModal } from "@/components/forms/action-form";
 import { ImageField, TextField } from "@/components/forms/fields";
 import { DeleteButton } from "@/components/forms/inline";
@@ -141,5 +141,32 @@ export function CategoryManager({ domain, label, items }: { domain: string; labe
         </ul>
       )}
     </div>
+  );
+}
+
+/** What the kids call each parent ("Dad", "Mom"); shown to kids everywhere instead of the real name. */
+export function KidNamesForm({ parents }: { parents: { id: string; name: string; kidName: string; color: string; editable: boolean }[] }) {
+  return (
+    <ActionForm action={saveKidNames} submitLabel="Save names" showSuccess resetOnSuccess={false}>
+      <ul className="flex flex-col gap-3">
+        {parents.map((p) => (
+          <li key={p.id} className="grid items-center gap-2 sm:grid-cols-[10rem_1fr]">
+            <span className="flex items-center gap-2 font-medium">
+              <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: memberColor(p.color).solid }} aria-hidden />
+              {p.name}
+            </span>
+            <TextField
+              name={`kidName:${p.id}`}
+              label={`Kids see ${p.name.split(" ")[0]} as`}
+              defaultValue={p.kidName}
+              placeholder={p.name.split(" ")[0]}
+              maxLength={30}
+              disabled={!p.editable}
+              hint={p.editable ? undefined : "Only they (or the account holder) can change this."}
+            />
+          </li>
+        ))}
+      </ul>
+    </ActionForm>
   );
 }

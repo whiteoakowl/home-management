@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
 import { Check, ExternalLink, Gift, PackageCheck, ShoppingBag, Undo2 } from "lucide-react";
@@ -12,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { SegmentLinks } from "@/components/ui/tabs";
 import { fileUrl } from "@/lib/files";
-import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { getViewer } from "@/lib/dal";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Wishlists" };
@@ -32,7 +33,7 @@ export default async function WishlistsPage({ searchParams }: PageProps<"/lists/
   if (!viewer.can("lists")) notFound();
   const sp = await searchParams;
   const [members, items] = await Promise.all([
-    listFamilyMembers(viewer.family.id),
+    familyMembersFor(viewer),
     db.select().from(wishlistItems).where(and(eq(wishlistItems.familyId, viewer.family.id))).orderBy(asc(wishlistItems.priority), asc(wishlistItems.createdAt)),
   ]);
   const opts = members.map((m) => ({ id: m.id, displayName: m.displayName, color: m.color }));

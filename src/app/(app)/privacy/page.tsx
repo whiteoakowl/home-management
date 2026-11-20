@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import Link from "next/link";
 import { Eye, Lock, ShieldAlert } from "lucide-react";
 import { PRIVACY_CATEGORIES } from "@/db/schema";
 import { PrivacyForm } from "@/components/privacy/privacy-form";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
-import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { getViewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { allPrivacy, isMinor, PRIVACY_META } from "@/lib/privacy";
 
@@ -18,7 +19,7 @@ const OPTION_LABELS: Partial<Record<(typeof PRIVACY_CATEGORIES)[number], Record<
 /** Each person controls who can see their personal areas. */
 export default async function PrivacyCenterPage() {
   const viewer = await getViewer();
-  const [settings, members] = await Promise.all([allPrivacy(viewer.member.id), listFamilyMembers(viewer.family.id)]);
+  const [settings, members] = await Promise.all([allPrivacy(viewer.member.id), familyMembersFor(viewer)]);
   const others = members.filter((m) => m.id !== viewer.member.id).map((m) => ({ id: m.id, displayName: m.displayName, color: m.color }));
   const oversight = isMinor(viewer.member, todayIn(viewer.family.timezone)) ? viewer.member.parentAccess : [];
   const areas = PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry && !viewer.member.hiddenAreas.includes(c));

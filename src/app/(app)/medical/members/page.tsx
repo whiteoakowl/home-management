@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import Link from "next/link";
 import { Avatar, PageHeader } from "@/components/ui/display";
-import { listFamilyMembers } from "@/lib/dal";
+
 import { fileUrl } from "@/lib/files";
 import { listMedical } from "@/lib/medical";
 import { medicalViewer } from "../kind-page";
@@ -12,7 +13,7 @@ export const metadata: Metadata = { title: "Family members · Medical" };
 export default async function MedicalMembersPage() {
   const viewer = await medicalViewer();
   const [fam, profiles, alls, conds, meds] = await Promise.all([
-    listFamilyMembers(viewer.family.id),
+    familyMembersFor(viewer),
     listMedical(viewer, "profile"),
     listMedical(viewer, "allergy"),
     listMedical(viewer, "condition"),
