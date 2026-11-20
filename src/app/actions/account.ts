@@ -10,6 +10,7 @@ import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { hashPassword, revokeSessions, verifyPassword } from "@/lib/auth/session";
 import { getFamilyMember, getViewer, requireParent } from "@/lib/dal";
 import { logActivity } from "@/lib/family";
+import { sendVerification } from "@/lib/auth/verify-email";
 import { rateLimit, TOO_MANY } from "@/lib/rate-limit";
 
 const NewPassword = z.string().min(8, "Use at least 8 characters.").max(200, "That's too long.");
@@ -43,7 +44,8 @@ export async function changeEmail(_: ActionState, fd: FormData): Promise<ActionS
   if (!u || !(await verifyPassword(parsed.data.current, u.passwordHash))) return { ok: false, errors: { current: ["That isn't your current password."] } };
   const [taken] = await db.select({ id: users.id }).from(users).where(and(eq(users.email, parsed.data.email), ne(users.id, u.id)));
   if (taken) return { ok: false, errors: { email: ["That email is already used by another account."] } };
-  await db.update(users).set({ email: parsed.data.email }).where(eq(users.id, u.id));
+  await db.update(users).set({ email: parsed.data.email, emailVerifiedAt: null }).where(eq(users.id, u.id));
+  await sendVerification({ id: u.id, email: parsed.data.email, name: u.name }).catch((e) => console.error("Verification email failed:", e));
   revalidatePath("/account");
   return { ok: true, message: `Email changed. Sign in with ${parsed.data.email} from now on.` };
 }

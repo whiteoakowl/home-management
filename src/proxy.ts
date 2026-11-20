@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Optimistic check only: the real authorization happens in src/lib/dal.ts.
-const PUBLIC_PATHS = ["/login", "/signup", "/welcome", "/features", "/pricing", "/reviews", "/contact", "/privacy-policy", "/terms"];
+const PUBLIC_PATHS = ["/login", "/signup", "/welcome", "/features", "/pricing", "/reviews", "/contact", "/privacy-policy", "/terms", "/forgot-password", "/reset-password", "/verify-email"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

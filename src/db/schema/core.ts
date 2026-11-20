@@ -57,8 +57,33 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
+  /** When the person proved they own this email (verification or reset link). */
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   ...timestamps,
 });
+
+/**
+ * One-time links sent by email: password reset (1 hour) and email
+ * verification (3 days). Only a SHA-256 hash of the token is stored.
+ */
+export const authTokens = pgTable(
+  "auth_tokens",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** reset | verify */
+    kind: text("kind").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** For verify links: the address being confirmed. */
+    email: text("email"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("auth_tokens_user_idx").on(t.userId, t.kind)],
+);
 
 export const sessions = pgTable(
   "sessions",

@@ -6,7 +6,12 @@ import * as z from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { rememberFamilyOfUser } from "@/lib/auth/device-family";
-import { createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth/session";
+import { createSession, destroySession, hashPassword, readSessionUser, revokeSessions, verifyPassword } from "@/lib/auth/session";
+import { consumeToken, issueToken } from "@/lib/auth/tokens";
+import { sendVerification } from "@/lib/auth/verify-email";
+import { getBrand } from "@/lib/billing";
+import { buttonEmail, emailConfigured, sendEmail } from "@/lib/email";
+import { siteUrl } from "@/lib/site-url";
 import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { clientIp, rateLimit, TOO_MANY } from "@/lib/rate-limit";
 import { safePath } from "@/lib/safe-redirect";
@@ -51,6 +56,7 @@ export async function signup(_: ActionState, formData: FormData): Promise<Action
     .values({ name, email, passwordHash: await hashPassword(password) })
     .returning({ id: users.id });
   await createSession(user!.id);
+  await sendVerification({ id: user!.id, email, name }).catch((e) => console.error("Verification email failed:", e));
   redirect("/onboarding");
 }
 
@@ -85,4 +91,58 @@ export async function login(_: ActionState, formData: FormData): Promise<ActionS
 export async function logout() {
   await destroySession();
   redirect("/login");
+}
+
+// ─── Password reset & email verification ─────────────────────────────────────
+
+const SENT = "If an account uses that email, we've sent a link to reset the password. It works for 1 hour. (Check your spam folder too.)";
+
+/** "Forgot password?": always answers the same, so it never reveals which emails have accounts. */
+export async function requestPasswordReset(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = z.object({ email: z.email("Please enter a valid email.").trim().toLowerCase() }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return fieldErrors(parsed.error);
+  const { email } = parsed.data;
+  if (!(await rateLimit(`reset-ip:${await clientIp()}`, 10, 3600)) || !(await rateLimit(`reset:${email}`, 3, 3600))) return { ok: true, message: SENT };
+  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (user) {
+    const token = await issueToken(user.id, "reset");
+    const brand = await getBrand();
+    const url = `${await siteUrl()}/reset-password?token=${token}`;
+    await sendEmail({
+      to: user.email,
+      subject: `Reset your ${brand} password`,
+      ...buttonEmail({ brand, heading: "Reset your password", body: `We got a request to reset the password for ${user.email}. Choose a new one with the button below.`, button: "Choose a new password", url, footer: "This link works for 1 hour and only once. If you didn't ask for this, you can ignore this email; your password stays the same." }),
+    });
+  }
+  return { ok: true, message: emailConfigured() ? SENT : `${SENT} If no email arrives, a parent in your family can set a new password for you from Family → your name → Manage.` };
+}
+
+const NewPassword = z
+  .object({
+    token: z.string().min(10),
+    password: z.string().min(8, "Use at least 8 characters.").max(200).regex(/[a-zA-Z]/, "Include at least one letter.").regex(/[0-9]/, "Include at least one number."),
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, { path: ["confirm"], message: "The passwords don't match." });
+
+/** Set a new password from an emailed link; signs out every device. */
+export async function resetPassword(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = NewPassword.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return fieldErrors(parsed.error);
+  if (!(await rateLimit(`reset-use:${await clientIp()}`, 20, 3600))) return { ok: false, message: TOO_MANY };
+  const row = await consumeToken(parsed.data.token, "reset");
+  if (!row) return { ok: false, message: "This link has expired or was already used. Ask for a new one." };
+  // Using the link proves the person owns the email.
+  await db.update(users).set({ passwordHash: await hashPassword(parsed.data.password), emailVerifiedAt: new Date() }).where(eq(users.id, row.userId));
+  await revokeSessions(row.userId);
+  redirect("/login?reset=1");
+}
+
+/** Send the verification email again (signed-in account holder). */
+export async function resendVerification(): Promise<ActionState> {
+  const user = await readSessionUser();
+  if (!user) return { ok: false, message: "Please sign in again." };
+  if (!(await rateLimit(`verify-send:${user.id}`, 4, 3600))) return { ok: false, message: TOO_MANY };
+  await sendVerification(user);
+  return { ok: true, message: `We've sent a new link to ${user.email}.` };
 }

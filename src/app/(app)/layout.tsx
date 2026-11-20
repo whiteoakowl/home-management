@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { notifications, MODULES } from "@/db/schema";
+import { notifications, MODULES, users } from "@/db/schema";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { buildNav } from "@/components/shell/nav";
 import { Sidebar } from "@/components/shell/sidebar";
@@ -11,6 +11,8 @@ import { familyAccess, isPlatformAdmin } from "@/lib/billing";
 import { redirect } from "next/navigation";
 import { unreadMessages } from "@/lib/hub";
 import { LegalFooter } from "@/components/legal-footer";
+import { VerifyEmailBanner } from "@/components/verify-email-banner";
+import { emailConfigured } from "@/lib/email";
 import { getBrand } from "@/lib/billing";
 import Link from "next/link";
 import { runDailyAutomation } from "@/lib/automation";
@@ -42,6 +44,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .where(and(eq(notifications.memberId, viewer.member.id), isNull(notifications.readAt))),
   ]);
   const sections = buildNav(viewer);
+  // The account holder confirms their email once email sending is set up.
+  const unverifiedEmail =
+    viewer.isOwner && emailConfigured() ? ((await db.select({ v: users.emailVerifiedAt }).from(users).where(eq(users.id, viewer.user.id)))[0]?.v ? null : viewer.user.email) : null;
   const unreadChat = viewer.can("messages") ? await unreadMessages(viewer.family.id, viewer.member.id) : 0;
   // Quick Add: modules the member can add to (Family Pantry areas accept the "Add" level).
   // Areas where "Use" can already add their own things; the rest still need Add & edit.
@@ -75,6 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 : `Free trial: ${trialLeft(billing.row!.trialEndsAt!)} left. Your plan starts automatically; manage it in Settings →`}
             </Link>
           )}
+          {unverifiedEmail && <VerifyEmailBanner email={unverifiedEmail} />}
           {children}
           <LegalFooter brand={await getBrand()} className="mt-12 print:hidden" />
         </main>

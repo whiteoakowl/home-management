@@ -20,11 +20,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { next } = await searchParams;
+  const { next, reset } = await searchParams;
   const [brand, fam] = await Promise.all([getBrand(), deviceFamily()]);
   return (
     <>
-      <LoginForm next={typeof next === "string" ? next : undefined} />
+      <LoginForm next={typeof next === "string" ? next : undefined} notice={reset === "1" ? "Your password was changed. Sign in with your new password." : undefined} />
       <LoginInstallPopup appName={brand} knowsFamily={!!fam} />
     </>
   );

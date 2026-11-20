@@ -351,6 +351,13 @@
       "when": 1795134712656,
       "tag": "0049_stripe_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795136238697,
+      "tag": "0050_auth_tokens",
+      "breakpoints": true
     }
   ]
 }
