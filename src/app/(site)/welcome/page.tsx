@@ -5,6 +5,7 @@ import { Check, ChevronRight } from "lucide-react";
 import { db } from "@/db";
 import { reviews } from "@/db/schema";
 import { Icon } from "@/components/icons";
+import { FaithShowcase } from "@/components/site/faith";
 import { CallToAction, ReviewCard, Section, SectionTitle } from "@/components/site/parts";
 import { ButtonLink } from "@/components/ui/button";
 import { readSessionUser } from "@/lib/auth/session";
@@ -15,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { brandName } = await getPlatformSettings();
   return {
     title: { absolute: `${brandName}: your family's home base` },
-    description: "One app for your family's calendar, chores, meals, sports, chat, wishlists, budget and more. Everyone gets their own login.",
+    description: "One app for your family's calendar, chores, meals, sports, chat, wishlists, budget, faith and more. Everyone gets their own login.",
   };
 }
 
@@ -133,7 +134,9 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
         </p>
       </Section>
 
-      <div className="border-y border-line bg-surface/60">
+      <FaithShowcase />
+
+      <div className="border-b border-line bg-surface/60">
         <Section>
           <SectionTitle eyebrow="Made for real families" title="Built around the people in your house" />
           <ul className="grid gap-6 sm:grid-cols-2">

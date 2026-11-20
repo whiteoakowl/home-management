@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Pricing", description: "One simple price for your whole family, monthly or yearly, with a free trial." };
 
-const INCLUDED = ["Every feature and section", "Unlimited family members and logins", "Your family's name and colors on the app", "Phones, tablets and computers", "Free updates and new features", "Cancel anytime"];
+const INCLUDED = ["Every feature and section", "Unlimited family members and logins",
+  "Faith tabs: Christian, Catholic, Jewish, Hindu, Buddhist & spiritual", "Your family's name and colors on the app", "Phones, tablets and computers", "Free updates and new features", "Cancel anytime"];
 
 export default async function PricingPage() {
   const [s, user] = await Promise.all([getPlatformSettings(), readSessionUser()]);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, ChevronRight, Sparkles } from "lucide-react";
 import { Icon } from "@/components/icons";
+import { FaithShowcase } from "@/components/site/faith";
 import { CallToAction, Section, SectionTitle } from "@/components/site/parts";
 import { readSessionUser } from "@/lib/auth/session";
 import { getPlatformSettings } from "@/lib/billing";
@@ -10,7 +11,7 @@ import { EXTRA_FEATURES } from "@/lib/site-content";
 
 export const metadata: Metadata = {
   title: "Features",
-  description: "Every section and tab in the app: calendar, chores, meals, sports and dance, family chat, photo albums, wishlists, budget, home, health and more.",
+  description: "Every section and tab in the app: calendar, chores, meals, sports and dance, family chat, photo albums, wishlists, budget, faith (Christian, Catholic, Jewish, Hindu, Buddhist), home, health and more.",
 };
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -33,6 +34,11 @@ export default async function FeaturesPage() {
               </a>
             ))}
           </nav>
+          <p className="mt-6 text-center text-[15px]">
+            <a href="#faith" className="font-medium text-primary-700 hover:underline">
+              ✝️ ⛪ ✡️ 🕉️ ☸️ 🌙 Faith tabs for Christian, Catholic, Jewish, Hindu, Buddhist and spiritual families →
+            </a>
+          </p>
         </Section>
       </div>
 
@@ -44,7 +50,7 @@ export default async function FeaturesPage() {
           </div>
           <ul className="grid gap-4 md:grid-cols-2">
             {g.sections.map((s) => (
-              <li key={s.name} className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
+              <li key={s.name} id={slug(s.name)} className="flex scroll-mt-20 flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-5 shadow-[var(--shadow-card)]">
                 <div className="flex items-center gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
                     <Icon name={s.icon} className="size-5" />
@@ -71,7 +77,9 @@ export default async function FeaturesPage() {
         </Section>
       ))}
 
-      <div className="mt-6 border-y border-line bg-surface/60">
+      <FaithShowcase />
+
+      <div className="border-b border-line bg-surface/60">
         <Section>
           <SectionTitle eyebrow="And all of this" title="Built in, everywhere" />
           <ul className="mx-auto grid max-w-4xl gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
