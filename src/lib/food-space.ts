@@ -26,7 +26,7 @@ export const FOOD_LABELS: Record<"kitchen" | "recipes" | "meals" | "shopping", {
   kitchen: { family: "Family Pantry", mine: "My Pantry", href: "/kitchen" },
   recipes: { family: "Family Recipes", mine: "My Recipes", href: "/recipes" },
   meals: { family: "Family Meal Plans", mine: "My Meal Plans", href: "/meals" },
-  shopping: { family: "Family Shopping", mine: "My Shopping List", href: "/shopping" },
+  shopping: { family: "Grocery Shopping", mine: "My Shopping List", href: "/shopping" },
 };
 
 export const hasPrivateFood = (viewer: Viewer) => viewer.member.privateFood;

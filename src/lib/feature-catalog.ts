@@ -222,7 +222,7 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         ],
       },
       {
-        name: "Family Shopping",
+        name: "Grocery Shopping",
         icon: "ShoppingBasket",
         summary: "Smart shopping lists.",
         tabs: [{ name: "Lists", does: "Grouped by aisle, with prices, totals and quick 'buy again'." }],

@@ -91,6 +91,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         isParent={viewer.isParent}
         canCalendar={viewer.can("calendar")}
         canLists={viewer.can("lists")}
+        shoppingHref={viewer.can("shopping") ? "/shopping" : viewer.member.privateFood ? "/shopping?space=mine" : null}
       />
     </div>
   );

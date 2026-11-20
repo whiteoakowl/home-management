@@ -54,7 +54,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       { module: "kitchen", label: "Family Pantry", description: "Pantry, fridge, freezer and supplies" },
       { module: "recipes", label: "Family Recipes", description: "Your family recipe book" },
       { module: "meals", label: "Family Meal Plans", description: "Weekly meal planner" },
-      { module: "shopping", label: "Family Shopping", description: "Grouped by aisle, built from your plans" },
+      { module: "shopping", label: "Grocery Shopping", description: "Grouped by aisle, built from your plans" },
     ],
     picks: { target: "inventory", label: "Inventory categories", options: ["Baking", "Canned goods", "Grains & pasta", "Snacks", "Spices", "Beverages", "Condiments", "Cleaning supplies", "Paper goods"] },
   },

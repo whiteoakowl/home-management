@@ -125,6 +125,14 @@ export function buildNav(viewer: Viewer): NavSection[] {
     label: "Home",
     icon: "LayoutDashboard",
   });
+  // Grocery Shopping sits right under Calendar.
+  const today = sections[0]!.items;
+  const shopAt = today.findIndex((i) => i.href.startsWith("/shopping"));
+  const calAt = today.findIndex((i) => i.href === "/calendar");
+  if (shopAt > -1) {
+    const [shop] = today.splice(shopAt, 1);
+    today.splice(calAt > -1 ? calAt + 1 : 1, 0, shop!);
+  }
   // Cleaning & Chores: the chore board's Tasks and Rewards get their own menu entries.
   const chores = sections.find((s) => s.group === "Cleaning & Chores");
   if (chores && viewer.can("chores"))

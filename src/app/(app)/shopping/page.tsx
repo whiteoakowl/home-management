@@ -14,7 +14,7 @@ import { canAddIn, canOpenFood, privateSpaceMembers, resolveSpace } from "@/lib/
 import { listIndex } from "@/lib/lists";
 import { memberOptions } from "@/lib/queries";
 
-export const metadata: Metadata = { title: "Family Shopping" };
+export const metadata: Metadata = { title: "Grocery Shopping" };
 
 export default async function ShoppingPage({ searchParams }: PageProps<"/shopping">) {
   const viewer = await getViewer();
@@ -36,7 +36,7 @@ export default async function ShoppingPage({ searchParams }: PageProps<"/shoppin
     <>
       <PageHeader
         eyebrow={owner ? "My private food" : "Family Pantry"}
-        title={owner ? (own ? "My Shopping List" : `${space.kind === "private" ? space.memberName : ""}'s Shopping List`) : "Family Shopping"}
+        title={owner ? (own ? "My Shopping List" : `${space.kind === "private" ? space.memberName : ""}'s Shopping List`) : "Grocery Shopping"}
         description={owner ? "Shopping lists only you can see." : "Grouped by aisle, built from recipes, meal plans and low stock."}
         actions={canEdit ? add : undefined}
       />

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CalendarDays, ClipboardList, LayoutDashboard, Menu } from "lucide-react";
+import { CalendarDays, ClipboardList, LayoutDashboard, Menu, ShoppingBasket } from "lucide-react";
 import type { Module } from "@/db/schema/_shared";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/ui/modal";
@@ -20,12 +20,15 @@ export function MobileNav({
   isParent,
   canCalendar,
   canLists,
+  shoppingHref,
 }: {
   sections: NavSection[];
   editable: Module[];
   isParent: boolean;
   canCalendar: boolean;
   canLists: boolean;
+  /** Where Shopping goes (the family list, or "My Shopping List"); null hides the tab. */
+  shoppingHref: string | null;
 }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
@@ -58,6 +61,7 @@ export function MobileNav({
         <div className="flex flex-1 justify-center">
           <QuickAdd editable={editable} isParent={isParent} variant="fab" />
         </div>
+        {tab(shoppingHref ?? "/shopping", "Shopping", <ShoppingBasket className="size-6" />, !!shoppingHref)}
         {tab("/lists", "Lists", <ClipboardList className="size-6" />, canLists)}
         <button type="button" onClick={() => setMore(true)} className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium text-muted">
           <Menu className="size-6" />

@@ -85,7 +85,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
   return (
     <>
       {deleted && <p role="status" className="bg-olive-50 px-4 py-3 text-center text-sm text-olive-800">Your family&apos;s account and information were deleted, and your subscription was cancelled. Thank you for using {settings.brandName}.</p>}
-      <div className="bg-hearth">
+      <div className="bg-hearth overflow-x-clip">
         <Section className="grid items-center gap-12 pt-12 sm:pt-16 lg:grid-cols-[1.1fr_1fr]">
           <div className="flex flex-col gap-6">
             <p className="w-fit rounded-full border border-primary-200 bg-surface/70 px-3 py-1 text-sm font-medium text-primary-700">The family organizer that grows with you</p>

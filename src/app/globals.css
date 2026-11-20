@@ -62,9 +62,32 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    /* Don't let phones enlarge text on their own (keeps every page at its designed size). */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     @apply bg-canvas text-ink font-sans antialiased;
+    /* Pages never scroll sideways on phones. */
+    overflow-x: clip;
+  }
+  /* Grid columns shrink to the screen instead of growing to their widest content
+     (the usual cause of pages wider than a phone). */
+  .grid > * {
+    min-width: 0;
+  }
+  /* Long words, links and emails wrap instead of pushing the page wider. */
+  main {
+    overflow-wrap: break-word;
+  }
+  /* iPhones zoom in when you tap a box whose text is under 16px, and stay zoomed.
+     16px on phones prevents that; larger screens keep the design's size. */
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
   h1,
   h2,
