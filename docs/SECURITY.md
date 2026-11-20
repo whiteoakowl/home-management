@@ -41,25 +41,34 @@ gaps (mainly email-based password reset) to plan for.
 | 6 | Signing in with an unknown email answered faster than with a wrong password, revealing which emails have accounts. | Low | Unknown emails now take the same time. |
 | 7 | Payment was only enforced by redirecting pages; a family without a plan could still call actions directly. | Low | Enforced on the server for every page and action, except onboarding and the subscription pages. |
 
+## Added after the review
+
+- **Forgot password** by email: one-time links (1 hour, stored hashed, single use, rate limited); the
+  answer never reveals whether an email has an account; resetting signs out every device.
+- **Email confirmation** for account holders (3-day links; changing email requires confirming again).
+- **In-app payments** with Stripe's Payment Element (PCI SAQ A: card fields are Stripe's own frames; no card
+  data reaches the server). Card setup and "pay now" are rate limited against card-testing abuse; only the
+  account holder can change billing; SetupIntents are checked against the family's own Stripe customer.
+- **Supabase lockdown:** row level security on every table and no privileges for the `anon` /
+  `authenticated` roles, re-applied after every deploy (`scripts/secure-tables.mjs`), so Supabase's public
+  API keys can't read app data.
+- **Download our data / Delete our family account** for the account holder (password + family name to
+  delete; the subscription is cancelled first).
+
 ## Before launch (recommended)
 
-1. **Password reset by email.** Today a forgotten password can only be reset by a parent in the
-   family, which leaves the account owner stuck. Add a "Forgot password?" email link (needs an email
-   service such as Postmark, Resend or SendGrid). This is the most important gap for a paid product.
-2. **Email verification at sign-up.** Without it, someone could sign up with an email they don't own.
-   Add it together with password reset (same email service).
-3. **Admin accounts:** only add an email to `PLATFORM_ADMIN_EMAILS` once that account already exists
+1. **Turn on email** (Resend) so password resets and confirmations are delivered: see docs/LAUNCH.md.
+2. **Admin accounts:** only add an email to `PLATFORM_ADMIN_EMAILS` once that account already exists
    (it does for your own), so nobody else can register it first.
-4. **Backups:** turn on daily backups / point-in-time recovery in Supabase.
-5. **Privacy Policy and Terms:** have the website versions reviewed. Because children can have
+3. **Backups:** turn on daily backups / point-in-time recovery in Supabase.
+4. **Privacy Policy and Terms:** have the website versions reviewed. Because children can have
    accounts, ask about COPPA (US) and, if you sell in Europe, GDPR (data export and deletion requests).
    Don't describe the Medical section as HIPAA-compliant; consumer apps usually aren't covered, but
    the wording matters.
-6. **Stripe:** in live mode, turn on Radar (fraud screening) and use a restricted key if you can.
+5. **Stripe:** in live mode, turn on Radar (fraud screening) and use a restricted key if you can.
 
 ## Later (nice to have)
 
 - Two-factor sign-in (authenticator app) for account owners.
 - A Content-Security-Policy that also restricts scripts (needs per-request nonces in Next.js).
-- "Download my family's data" and "Delete our account" buttons in Settings (today handled by request).
 - Error monitoring with alerts (for example Sentry) using the reference codes shown to people.

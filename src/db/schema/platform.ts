@@ -104,7 +104,7 @@ export const reviews = pgTable(
     rating: integer("rating").notNull(),
     title: text("title"),
     body: text("body").notNull(),
-    /** How the reviewer is shown publicly, e.g. "Sarah, mom of three". */
+    /** How the reviewer is shown publicly, e.g. "Sara, mom of three". */
     displayName: text("display_name").notNull(),
     /** pending | approved | hidden */
     status: text("status").notNull().default("pending"),

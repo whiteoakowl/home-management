@@ -23,7 +23,7 @@ npm run db:seed                 # optional: sample family for local development
 npm run dev                     # http://localhost:3000
 ```
 
-Sample logins after `db:seed` (password `vanderbilt123`): `sarah@vanderbilt.family` (parent, owner),
+Sample logins after `db:seed` (password `vanderbilt123`): `sara@vanderbilt.family` (parent, owner),
 `michael@vanderbilt.family` (parent), `serenity@vanderbilt.family` (family member with limited access).
 Or create your own account at `/signup`; the setup wizard walks you through the rest.
 
@@ -144,26 +144,33 @@ The Privacy and Terms pages are plain-language starting points: have them review
 family's name is the app's title on their phones (per-family manifest + Apple web-app title). The person
 who created the account (the owner) chooses which sections the family uses in Settings → Sections.
 
-**Payments (Stripe).** Add in Netlify:
+**Payments (Stripe, inside the app).** Families pay on a branded page in the app with Stripe's Payment
+Element (card numbers go straight to Stripe; nothing card-related is stored except brand, last 4 and
+expiry). They manage everything in **Settings → Subscription & billing**: plan, price, status, renewal date,
+card, receipts; switch monthly ↔ yearly (yearly now with credit, monthly at the end of the paid year),
+update the card, pay a failed renewal, cancel or resume. Only the account holder can change billing.
 
-| Variable | Value |
-|---|---|
-| `STRIPE_SECRET_KEY` | Stripe secret key (`sk_live_…`, or `sk_test_…` while testing) |
-| `STRIPE_WEBHOOK_SECRET` | Signing secret of the webhook below (`whsec_…`) |
-| `PLATFORM_ADMIN_EMAILS` | Comma-separated sign-in emails of the people who run the service |
+How it fits together:
+- `supabase/functions/_shared/billing-core.ts`: the billing engine (Stripe REST + SQL), shared by the app and
+  the webhook.
+- `supabase/functions/stripe-webhook`: Supabase Edge Function that Stripe calls; keeps `family_billing`,
+  `billing_invoices` and `stripe_events` in step with Stripe. `src/app/api/stripe/webhook` is a backup
+  endpoint with the same code.
+- Access: trialing (with a card), active and past_due (while Stripe retries) can use the app; anything else
+  goes to `/billing`. Enforced on the server for every page and action.
 
-In the Stripe dashboard → Developers → Webhooks, add an endpoint `https://YOUR-SITE/api/stripe/webhook`
-for the events `checkout.session.completed`, `customer.subscription.created`,
-`customer.subscription.updated` and `customer.subscription.deleted`. Turn on the **customer portal**
-(Settings → Billing → Customer portal) so families can change card, switch plan or cancel.
+Setup, step by step: **[docs/LAUNCH.md](docs/LAUNCH.md)** (Stripe keys and settings, deploying the Edge
+Function, webhook events, email, domain, going live).
 
-How it works: after onboarding, a parent chooses monthly or yearly and enters a card on Stripe Checkout.
-Trials are free for the admin-set number of days (7 by default); the card is charged when the trial ends.
-Families without an active plan or trial are sent to `/billing`. Until `STRIPE_SECRET_KEY` is set, or while
-"Charge for the app" is off in Admin, everyone uses the app free.
+Tests: `npm test`; with a migrated database also `TEST_DATABASE_URL=postgres://… npm test` (full subscription
+lifecycle against a fake Stripe) and `TEST_DATABASE_URL=postgres://… npx tsx tests/edge-webhook.e2e.mts`
+(the Edge Function in Deno).
+
+**Email.** Password resets and email confirmation use Resend (`RESEND_API_KEY`, `EMAIL_FROM`, optional
+`EMAIL_REPLY_TO`); set `SITE_URL` for links. Without email, people are told a parent can reset passwords.
 
 **Admin** (avatar menu → Admin, only for `PLATFORM_ADMIN_EMAILS`): product name, monthly and yearly
-prices, trial length, the billing switch, every family's status, **Make free** for complimentary
+prices (new Stripe Prices are created automatically), trial length, the billing switch, every family's status, **Make free** for complimentary
 families (families with an admin in them are always free), the feedback/contact inbox, and **Reviews**,
 where you approve customer reviews (and feature the best on the home page) before they appear publicly.
 
