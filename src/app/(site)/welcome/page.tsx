@@ -73,7 +73,8 @@ function AppPreview() {
   );
 }
 
-export default async function WelcomePage() {
+export default async function WelcomePage({ searchParams }: PageProps<"/welcome">) {
+  const deleted = (await searchParams).deleted === "1";
   const [settings, user, featured] = await Promise.all([
     getPlatformSettings(),
     readSessionUser(),
@@ -83,6 +84,7 @@ export default async function WelcomePage() {
 
   return (
     <>
+      {deleted && <p role="status" className="bg-olive-50 px-4 py-3 text-center text-sm text-olive-800">Your family&apos;s account and information were deleted, and your subscription was cancelled. Thank you for using {settings.brandName}.</p>}
       <div className="bg-hearth">
         <Section className="grid items-center gap-12 pt-12 sm:pt-16 lg:grid-cols-[1.1fr_1fr]">
           <div className="flex flex-col gap-6">

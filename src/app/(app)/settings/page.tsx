@@ -12,6 +12,7 @@ import { requireParent } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
 import { AppThemeForm } from "../account/forms";
 import { saveFamilyTheme } from "@/app/actions/account";
+import { DataControls } from "@/components/settings/data-controls";
 import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, ModulesForm } from "./forms";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -93,6 +94,14 @@ export default async function SettingsPage() {
         <p className="mb-3 text-[15px] text-muted">Repetitive work happens automatically once a day. Switch off anything you&apos;d rather do by hand.</p>
         <AutomationsForm automations={AUTOMATIONS.map((a) => ({ ...a }))} settings={f.settings ?? {}} />
       </Card>
+      {viewer.isOwner && (
+        <Card>
+          <CardHeader title="Your family's data" />
+          <p className="mb-4 text-[15px] text-muted">Download a copy of everything your family has added (other people&apos;s private journals and health records aren&apos;t included), or delete the family account and all its information for good.</p>
+          <DataControls familyName={f.name} />
+        </Card>
+      )}
+
       <Card>
         <CardHeader title="Categories" />
         <p className="mb-4 text-[15px] text-muted">Customize the categories each area uses. Rooms are managed on the House page.</p>
