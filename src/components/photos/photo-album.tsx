@@ -16,7 +16,7 @@ export function PhotoAlbum({ kind, entityId, photos, canAdd, canRemoveAll, title
         icon={<Images className="size-4" />}
         action={
           canAdd ? (
-            <FormModal title="Add photos" action={addAlbumPhotos} triggerLabel="Add photos" triggerIcon={<Camera className="size-4" />} triggerVariant="secondary" size="sm" submitLabel="Upload">
+            <FormModal title="Add photos" action={addAlbumPhotos} refreshOnSuccess triggerLabel="Add photos" triggerIcon={<Camera className="size-4" />} triggerVariant="secondary" size="sm" submitLabel="Upload">
               <input type="hidden" name="kind" value={kind} />
               <input type="hidden" name="entityId" value={entityId} />
               <PhotosField name="photos" label="Photos" required />
