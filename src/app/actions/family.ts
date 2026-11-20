@@ -1,5 +1,6 @@
 "use server";
 
+import { rememberDeviceFamily } from "@/lib/auth/device-family";
 import { USE_ONLY_MODULES } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -50,13 +51,14 @@ export async function createFamily(_: ActionState, formData: FormData): Promise<
   if (member) redirect("/onboarding?step=2");
   const parsed = FamilySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fieldErrors(parsed.error);
-  await createFamilyForUser({
+  const { family } = await createFamilyForUser({
     userId: user.id,
     userName: user.name,
     familyName: parsed.data.familyName,
     timezone: parsed.data.timezone,
     locationName: parsed.data.locationName,
   });
+  await rememberDeviceFamily(family.id);
   redirect("/onboarding?step=2");
 }
 
