@@ -29,6 +29,21 @@ A real address (like `app.familybubble.com`) looks trustworthy, and it's needed 
   - **`EMAIL_FROM`** = `Family Bubble <hello@your-address.com>` (use your verified domain)
   - **`EMAIL_REPLY_TO`** (optional) = your support email
 
+## Step 2b: Push notifications (10 min)
+
+Phones and computers get reminders and Family Chat messages as push notifications.
+
+- [ ] Make a key pair once. Either use the pair Claude generated for you, or run
+      `npx web-push generate-vapid-keys` on any computer with Node installed.
+- [ ] In Netlify add:
+  - **`VAPID_PUBLIC_KEY`** = the public key
+  - **`VAPID_PRIVATE_KEY`** = the private key (keep it secret)
+  - **`VAPID_SUBJECT`** = `mailto:` + your support email, e.g. `mailto:hello@your-address.com`
+  - **`CRON_SECRET`** = any long random text (lets the hourly reminder job run)
+- [ ] Redeploy. Then in the app: **Notifications → Push notifications → Turn on for this device → Send a test**.
+- iPhone/iPad: push works from the app on the Home Screen (Safari → Share → Add to Home Screen), iOS 16.4 or newer.
+- Don't change the keys later: every device would have to turn push on again.
+
 ## Step 3: Stripe, test mode first (30 min)
 
 Create your account at **stripe.com** if you haven't. Keep the **Test mode** switch (top right) **ON** for this step.
@@ -137,6 +152,9 @@ npx supabase secrets set --project-ref YOUR_PROJECT_REF STRIPE_SECRET_KEY=sk_tes
 | `RESEND_API_KEY` | `re_…` | yes |
 | `EMAIL_FROM` | `Family Bubble <hello@your-address.com>` | yes |
 | `EMAIL_REPLY_TO` | your support email | optional |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Push keys (Step 2b) | for push |
+| `VAPID_SUBJECT` | `mailto:hello@your-address.com` | for push |
+| `CRON_SECRET` | any long random text (hourly reminders) | for push |
 | `HEALTH_CHECK_KEY` | any long random text, to open `/api/health?key=…` | optional |
 
 **Supabase Edge Function secrets** (set with `npx supabase secrets set`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.

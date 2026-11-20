@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { desc, eq } from "drizzle-orm";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Smartphone } from "lucide-react";
 import { db } from "@/db";
-import { notificationPreferences, notifications } from "@/db/schema";
+import { notificationPreferences, notifications, pushSubscriptions } from "@/db/schema";
+import { PushSetup } from "@/components/notifications/push-setup";
+import { vapidPublicKey } from "@/lib/push";
 import { clearRead, markAllRead, openNotification } from "@/app/actions/notifications";
 import { ActionForm } from "@/components/forms/action-form";
 import { ActionButton } from "@/components/forms/inline";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
-import { Toggle } from "@/components/ui/form";
 import { savePreferences } from "@/app/actions/notifications";
 import { getViewer } from "@/lib/dal";
 import { relativeTime } from "@/lib/dates";
@@ -19,9 +20,10 @@ export const metadata: Metadata = { title: "Notifications" };
 
 export default async function NotificationsPage() {
   const viewer = await getViewer();
-  const [rows, prefs] = await Promise.all([
+  const [rows, prefs, devices] = await Promise.all([
     db.select().from(notifications).where(eq(notifications.memberId, viewer.member.id)).orderBy(desc(notifications.createdAt)).limit(100),
     db.select().from(notificationPreferences).where(eq(notificationPreferences.memberId, viewer.member.id)),
+    db.select({ device: pushSubscriptions.device }).from(pushSubscriptions).where(eq(pushSubscriptions.memberId, viewer.member.id)),
   ]);
   const unread = rows.filter((r) => !r.readAt).length;
   const muted = new Set(prefs.filter((p) => !p.inApp).map((p) => p.kind));
@@ -72,16 +74,44 @@ export default async function NotificationsPage() {
           )}
         </Card>
       </div>
-      <Card className="h-fit lg:mt-[92px]">
-        <CardHeader title="What to notify me about" />
-        <ActionForm action={savePreferences} submitLabel="Save preferences" resetOnSuccess={false} showSuccess>
-          <div className="flex flex-col divide-y divide-line">
-            {kinds.map((k) => (
-              <Toggle key={k.key} name={`pref:${k.key}`} label={k.label} description={k.description} defaultChecked={!muted.has(k.key)} />
-            ))}
-          </div>
-        </ActionForm>
-      </Card>
+      <div className="flex h-fit flex-col gap-6 lg:mt-[92px]">
+        <Card id="push" className="scroll-mt-24">
+          <CardHeader title="Push notifications" icon={<Smartphone className="size-4" />} />
+          <PushSetup publicKey={vapidPublicKey()} />
+          {devices.length > 0 && (
+            <p className="mt-3 border-t border-line pt-3 text-xs text-muted">
+              On for: {devices.map((d) => d.device ?? "a device").join(", ")}
+            </p>
+          )}
+        </Card>
+        <Card>
+          <CardHeader title="What to notify me about" />
+          <ActionForm action={savePreferences} submitLabel="Save preferences" resetOnSuccess={false} showSuccess>
+            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 text-sm">
+              <span />
+              <span className="pb-1 text-center text-xs font-medium text-muted">In app</span>
+              <span className="pb-1 text-center text-xs font-medium text-muted">Push</span>
+              {kinds.map((k) => {
+                const p = prefs.find((x) => x.kind === k.key);
+                return (
+                  <label key={k.key} className="contents">
+                    <span className="border-t border-line py-2.5">
+                      <span className="block text-[15px] font-medium">{k.label}</span>
+                      <span className="block text-xs text-muted">{k.description}</span>
+                    </span>
+                    <span className="flex justify-center border-t border-line py-2.5">
+                      {"pushOnly" in k && k.pushOnly ? <span className="text-muted">–</span> : <input type="checkbox" name={`app:${k.key}`} defaultChecked={!muted.has(k.key)} aria-label={`${k.label} in the app`} className="size-5 accent-primary-600" />}
+                    </span>
+                    <span className="flex justify-center border-t border-line py-2.5">
+                      <input type="checkbox" name={`push:${k.key}`} defaultChecked={p ? p.push : true} aria-label={`${k.label} as push`} className="size-5 accent-primary-600" />
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </ActionForm>
+        </Card>
+      </div>
     </div>
   );
 }

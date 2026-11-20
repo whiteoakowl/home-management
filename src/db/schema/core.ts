@@ -368,7 +368,8 @@ export const notificationPreferences = pgTable(
     kind: text("kind").notNull(),
     inApp: boolean("in_app").notNull().default(true),
     email: boolean("email").notNull().default(false),
-    push: boolean("push").notNull().default(false),
+    /** Phone/computer push for this kind (needs push turned on for a device). */
+    push: boolean("push").notNull().default(true),
   },
   (t) => [primaryKey({ columns: [t.memberId, t.kind] })],
 );
@@ -395,4 +396,24 @@ export const entityPhotos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("entity_photos_entity_idx").on(t.entityType, t.entityId)],
+);
+
+/** Push notification subscriptions: one per device/browser a member turned push on for. */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    device: text("device"),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint_uq").on(t.endpoint), index("push_subscriptions_member_idx").on(t.memberId)],
 );

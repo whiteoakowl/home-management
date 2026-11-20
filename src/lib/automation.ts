@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { sendPush } from "./push";
 import "server-only";
 import { and, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -156,11 +158,24 @@ export async function notify(
     );
   const done = new Set(existing.map((e) => e.memberId));
   const rows = memberIds.filter((m) => !mutedSet.has(m) && !done.has(m)).map((memberId) => ({ familyId, memberId, ...n }));
-  if (rows.length) await db.insert(notifications).values(rows);
+  if (rows.length) {
+    await db.insert(notifications).values(rows);
+    // Also to their phones (skips anyone who switched push off for this kind, and quiet hours).
+    later(() => sendPush(rows.map((r) => r.memberId), n.kind, { title: n.title, body: n.body, href: n.href ?? "/notifications", tag: `${n.kind}:${n.title}`.slice(0, 80) }));
+  }
+}
+
+/** Run after the response when inside a request (so pages never wait on phones); otherwise right away. */
+function later(fn: () => Promise<unknown>) {
+  try {
+    after(fn);
+  } catch {
+    void fn();
+  }
 }
 
 /** Members who can view a module (parents + members granted view/edit). */
-async function viewersOf(familyId: string, module: keyof typeof MODULE_META) {
+export async function viewersOf(familyId: string, module: keyof typeof MODULE_META) {
   const members = await db
     .select({ id: familyMembers.id, role: familyMembers.role, level: memberPermissions.level })
     .from(familyMembers)

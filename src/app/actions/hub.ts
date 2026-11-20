@@ -10,6 +10,7 @@ import { AuthorizationError, getViewer, requireModule } from "@/lib/dal";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { f } from "@/lib/records";
 import { CONTACT_CATEGORIES, markRead } from "@/lib/hub";
+import { pushChat } from "@/lib/push-chat";
 import { canPostChannel, canSeeChannel, EMOJI, REACTIONS, type Channel } from "@/lib/hub-shared";
 
 const uuidOk = (v: string | null | undefined): v is string => !!v && /^[0-9a-f-]{36}$/i.test(v);
@@ -43,6 +44,7 @@ export async function sendMessage(_: ActionState, fd: FormData): Promise<ActionS
     const file = photo ? null : await saveUpload(viewer, fd.get("file"), { allowDocs: true });
     if (!body && !photo && !file) return fail("Type a message, or add a photo or file.", "body");
     await db.insert(familyMessages).values({ familyId: viewer.family.id, memberId: viewer.member.id, body, fileId: photo ?? file, channel, kind: photo ? "photo" : file ? "file" : "text" });
+    pushChat(viewer.family.id, viewer.member, channel, body || (photo ? "📷 Photo" : "📎 File"));
     await chatChanged(viewer);
     return { ok: true };
   });
@@ -70,6 +72,7 @@ export async function sendPoll(_: ActionState, fd: FormData): Promise<ActionStat
       body: question,
       poll: { question, options: options.map((text, i) => ({ id: String(i + 1), text })) },
     });
+    pushChat(viewer.family.id, viewer.member, channel, `📊 Poll: ${question}`);
     await chatChanged(viewer);
     return ok("Poll posted.");
   });
@@ -99,11 +102,12 @@ export async function shareEvent(_: ActionState, fd: FormData): Promise<ActionSt
     const eventId = String(fd.get("eventId") ?? "");
     if (!uuidOk(eventId)) return fail("Choose an event.", "eventId");
     const [ev] = await db
-      .select({ id: calendarEvents.id })
+      .select({ id: calendarEvents.id, title: calendarEvents.title })
       .from(calendarEvents)
       .where(and(eq(calendarEvents.id, eventId), eq(calendarEvents.familyId, viewer.family.id), eq(calendarEvents.visibility, "family")));
     if (!ev) return fail("Choose an event the whole family can see.", "eventId");
     await db.insert(familyMessages).values({ familyId: viewer.family.id, memberId: viewer.member.id, channel, kind: "event", eventId: ev.id, body: f.str(fd, "note")?.slice(0, 500) ?? null });
+    pushChat(viewer.family.id, viewer.member, channel, `📅 ${ev.title}`);
     await chatChanged(viewer);
     return ok("Event shared.");
   });

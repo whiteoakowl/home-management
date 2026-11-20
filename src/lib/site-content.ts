@@ -51,7 +51,7 @@ export const EXTRA_FEATURES = [
   "Turn whole sections on or off",
   "Search everything",
   "Quick add from anywhere",
-  "Reminders and notifications",
+  "Push notifications for reminders and chat",
   "Works on phones, tablets and computers",
   "Installs on the home screen like an app",
   "Private spaces for each person",
