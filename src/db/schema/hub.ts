@@ -1,4 +1,4 @@
-import { boolean, date, index, integer, pgTable, primaryKey, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, pgTable, primaryKey, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { families, familyMembers, files } from "./core";
 
@@ -16,9 +16,57 @@ export const familyMessages = pgTable(
     memberId: uuid("member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     body: text("body"),
     fileId: uuid("file_id").references(() => files.id, { onDelete: "set null" }),
+    /** all (everyone) | parents | kids | announcements */
+    channel: text("channel").notNull().default("all"),
+    /** text | photo | file | poll | event */
+    kind: text("kind").notNull().default("text"),
+    /** A calendar event shared in the chat (event cards). */
+    eventId: uuid("event_id"),
+    /** Poll question and options. */
+    poll: jsonb("poll").$type<{ question: string; options: { id: string; text: string }[]; multiple?: boolean }>(),
+    pinnedAt: timestamp("pinned_at", { withTimezone: true }),
+    pinnedByMemberId: uuid("pinned_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("family_messages_family_idx").on(t.familyId, t.createdAt)],
+  (t) => [index("family_messages_family_idx").on(t.familyId, t.createdAt), index("family_messages_channel_idx").on(t.familyId, t.channel, t.createdAt)],
+);
+
+/** Emoji reactions on chat messages (one row per person per emoji). */
+export const messageReactions = pgTable(
+  "message_reactions",
+  {
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => familyMessages.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.memberId, t.emoji] })],
+);
+
+/** Votes on chat polls (one per person per poll). */
+export const pollVotes = pgTable(
+  "poll_votes",
+  {
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => familyMessages.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    optionId: text("option_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.memberId] })],
 );
 
 /** When each person last opened the chat (for the unread count). */

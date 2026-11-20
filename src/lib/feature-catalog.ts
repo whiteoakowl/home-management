@@ -36,7 +36,10 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         icon: "MessagesSquare",
         summary: "One group conversation for the whole family.",
         tabs: [
-          { name: "Messages", does: "Send messages and photos; an unread count shows in the menu." },
+          { name: "All, Parents, Kids", does: "The whole family's chat, a private parents' chat, and a chat for the kids." },
+          { name: "Announcements & Pinned", does: "Parents post announcements everyone sees; pin important messages to find them fast." },
+          { name: "Photos, files, polls & events", does: "Share pictures and documents, run quick polls, and post calendar events as reminders." },
+          { name: "Reactions & read receipts", does: "React with emoji, and see when your message has been read." },
         ],
       },
       {

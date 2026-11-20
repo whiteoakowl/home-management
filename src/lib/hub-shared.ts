@@ -23,3 +23,23 @@ export function nextBirthday(birthday: string, today: string) {
 
 /** Wishlist priorities. */
 export const PRIORITY: Record<number, string> = { 1: "Really want", 2: "Would love", 3: "Nice to have" };
+
+// ─── Family Chat ─────────────────────────────────────────────────────────────
+
+export type Channel = "all" | "parents" | "kids" | "announcements";
+export const CHANNELS: { key: Channel; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "parents", label: "Parents" },
+  { key: "kids", label: "Kids" },
+  { key: "announcements", label: "Announcements" },
+];
+/** Who can read a chat: Parents is parents only; everything else is the whole family (parents can read Kids). */
+export const canSeeChannel = (isParent: boolean, c: string) => c === "all" || c === "kids" || c === "announcements" || (c === "parents" && isParent);
+/** Who can write: Announcements and Parents are for parents. */
+export const canPostChannel = (isParent: boolean, c: string) => c === "all" || c === "kids" || isParent;
+export const visibleChannels = (isParent: boolean) => CHANNELS.filter((c) => canSeeChannel(isParent, c.key)).map((c) => c.key);
+
+/** Quick reactions offered on every message. */
+export const REACTIONS = ["❤️", "👍", "😂", "😮", "🎉", "🙏"];
+/** The emoji picker in the message box. */
+export const EMOJI = ["😀", "😂", "😊", "😍", "🥰", "😎", "🤔", "😴", "😢", "😡", "👍", "👏", "🙏", "💪", "❤️", "🎉", "✅", "⭐", "🔥", "🌮", "🍕", "🍓", "🌶️", "☕", "🏀", "⚽", "🩰", "🚗", "🏠", "🐶", "🎂", "🎁"];

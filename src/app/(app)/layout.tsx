@@ -47,7 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // The account holder confirms their email once email sending is set up.
   const unverifiedEmail =
     viewer.isOwner && emailConfigured() ? ((await db.select({ v: users.emailVerifiedAt }).from(users).where(eq(users.id, viewer.user.id)))[0]?.v ? null : viewer.user.email) : null;
-  const unreadChat = viewer.can("messages") ? await unreadMessages(viewer.family.id, viewer.member.id) : 0;
+  const unreadChat = viewer.can("messages") ? await unreadMessages(viewer.family.id, viewer.member.id, viewer.isParent) : 0;
   // Quick Add: modules the member can add to (Family Pantry areas accept the "Add" level).
   // Areas where "Use" can already add their own things; the rest still need Add & edit.
   const USE_ADDS: readonly string[] = ["kitchen", "recipes", "meals", "shopping", "calendar", "chores", "cleaning", "plans", "work", "dance", "sports"];

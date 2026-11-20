@@ -1,94 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ImagePlus, ImageUp, Pencil, SendHorizontal, UserPlus } from "lucide-react";
-import { addPhotosToAlbum, saveAlbum, saveContact, sendMessage } from "@/app/actions/hub";
-import { ActionForm, FormModal } from "@/components/forms/action-form";
+import { ImagePlus, ImageUp, Pencil, UserPlus } from "lucide-react";
+import { addPhotosToAlbum, saveAlbum, saveContact } from "@/app/actions/hub";
+import { FormModal } from "@/components/forms/action-form";
 import { CheckboxField, DateField, FormRow, PhotosField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
-import { SubmitButton } from "@/components/ui/form";
 import { CONTACT_CATEGORIES, CONTACT_LABEL } from "@/lib/hub-shared";
 
 const editIcon = <Pencil className="mx-auto size-4" />;
 const iconBtn = "size-9 rounded-full text-muted hover:bg-sunken";
-
-// ─── Chat ────────────────────────────────────────────────────────────────────
-
-/** Keeps the chat fresh (every few seconds while the tab is visible) and scrolled to the newest message. */
-export function ChatLive({ latest }: { latest: string }) {
-  const router = useRouter();
-  useEffect(() => {
-    const h = window.setInterval(() => {
-      if (document.visibilityState === "visible") router.refresh();
-    }, 8000);
-    return () => window.clearInterval(h);
-  }, [router]);
-  useEffect(() => {
-    document.getElementById("chat-end")?.scrollIntoView({ block: "end" });
-  }, [latest]);
-  return null;
-}
-
-export function ChatComposer() {
-  const [key, setKey] = useState(0);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const textRef = useRef<HTMLTextAreaElement>(null);
-  return (
-    <ActionForm
-      key={key}
-      action={sendMessage}
-      onSuccess={() => {
-        setPhoto(null);
-        setKey((k) => k + 1);
-      }}
-      className="gap-2"
-    >
-      {photo && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={photo} alt="Photo to send" className="h-24 w-fit rounded-xl object-cover" />
-      )}
-      <div className="flex items-end gap-2">
-        <label className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line text-muted hover:bg-sunken" aria-label="Add a photo" title="Add a photo">
-          <ImagePlus className="size-5" />
-          <input
-            type="file"
-            name="photo"
-            accept="image/*"
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.currentTarget.files?.[0];
-              setPhoto(file ? URL.createObjectURL(file) : null);
-            }}
-          />
-        </label>
-        <textarea
-          ref={textRef}
-          name="body"
-          rows={1}
-          autoFocus
-          placeholder="Message the family…"
-          aria-label="Message"
-          maxLength={4000}
-          className="max-h-40 min-h-11 flex-1 resize-none rounded-2xl border border-line bg-surface px-4 py-2.5 text-[15px] outline-none focus:border-primary-400"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              e.currentTarget.form?.requestSubmit();
-            }
-          }}
-          onInput={(e) => {
-            const t = e.currentTarget;
-            t.style.height = "auto";
-            t.style.height = `${t.scrollHeight}px`;
-          }}
-        />
-        <SubmitButton pendingLabel=" " aria-label="Send" className="size-11 shrink-0 rounded-full p-0">
-          <SendHorizontal className="size-5" />
-        </SubmitButton>
-      </div>
-    </ActionForm>
-  );
-}
 
 // ─── Contacts ────────────────────────────────────────────────────────────────
 

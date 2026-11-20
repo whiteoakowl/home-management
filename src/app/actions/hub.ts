@@ -4,37 +4,140 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { contacts, entityPhotos, familyMessages, photoAlbums } from "@/db/schema";
+import { calendarEvents, contacts, entityPhotos, familyMessages, messageReactions, photoAlbums, pollVotes } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getViewer, requireModule } from "@/lib/dal";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { f } from "@/lib/records";
 import { CONTACT_CATEGORIES, markRead } from "@/lib/hub";
+import { canPostChannel, canSeeChannel, EMOJI, REACTIONS, type Channel } from "@/lib/hub-shared";
 
 const uuidOk = (v: string | null | undefined): v is string => !!v && /^[0-9a-f-]{36}$/i.test(v);
 
 // ─── Family Chat ─────────────────────────────────────────────────────────────
 
+const chatChannel = (v: unknown) => (["all", "parents", "kids", "announcements"].includes(String(v)) ? (String(v) as Channel) : "all");
+
+/** A message in this family that the viewer may see. */
+async function visibleMessage(viewer: Awaited<ReturnType<typeof requireModule>>, id: string) {
+  if (!uuidOk(id)) throw new AuthorizationError("Message not found.");
+  const [m] = await db.select().from(familyMessages).where(and(eq(familyMessages.id, id), eq(familyMessages.familyId, viewer.family.id)));
+  if (!m || !canSeeChannel(viewer.isParent, m.channel)) throw new AuthorizationError("Message not found.");
+  return m;
+}
+
+const chatChanged = async (viewer: { family: { id: string }; member: { id: string } }) => {
+  await markRead(viewer.family.id, viewer.member.id);
+  revalidatePath("/messages");
+  revalidatePath("/", "layout");
+};
+
+/** Send a message, photo or file to one of the family's chats. */
 export async function sendMessage(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireModule("messages", "use");
+    const channel = chatChannel(fd.get("channel"));
+    if (!canPostChannel(viewer.isParent, channel)) return fail(channel === "announcements" ? "Only parents can post announcements." : "You can't post in this chat.");
     const body = f.str(fd, "body")?.slice(0, 4000) ?? null;
-    const fileId = await saveUpload(viewer, fd.get("photo"));
-    if (!body && !fileId) return fail("Type a message or add a photo.", "body");
-    await db.insert(familyMessages).values({ familyId: viewer.family.id, memberId: viewer.member.id, body, fileId });
-    await markRead(viewer.family.id, viewer.member.id);
-    revalidatePath("/messages");
-    revalidatePath("/", "layout");
+    const photo = await saveUpload(viewer, fd.get("photo"));
+    const file = photo ? null : await saveUpload(viewer, fd.get("file"), { allowDocs: true });
+    if (!body && !photo && !file) return fail("Type a message, or add a photo or file.", "body");
+    await db.insert(familyMessages).values({ familyId: viewer.family.id, memberId: viewer.member.id, body, fileId: photo ?? file, channel, kind: photo ? "photo" : file ? "file" : "text" });
+    await chatChanged(viewer);
     return { ok: true };
   });
 }
 
+/** A poll: a question with 2–6 choices; everyone votes once (and can change it). */
+export async function sendPoll(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("messages", "use");
+    const channel = chatChannel(fd.get("channel"));
+    if (!canPostChannel(viewer.isParent, channel)) return fail("You can't post in this chat.");
+    const question = f.str(fd, "question")?.slice(0, 200);
+    if (!question) return fail("What's the question?", "question");
+    const options = fd
+      .getAll("option")
+      .map((o) => String(o).trim().slice(0, 80))
+      .filter(Boolean)
+      .slice(0, 6);
+    if (new Set(options.map((o) => o.toLowerCase())).size < 2) return fail("Add at least two different choices.", "option");
+    await db.insert(familyMessages).values({
+      familyId: viewer.family.id,
+      memberId: viewer.member.id,
+      channel,
+      kind: "poll",
+      body: question,
+      poll: { question, options: options.map((text, i) => ({ id: String(i + 1), text })) },
+    });
+    await chatChanged(viewer);
+    return ok("Poll posted.");
+  });
+}
+
+export async function votePoll(fd: FormData) {
+  const viewer = await requireModule("messages", "use");
+  const m = await visibleMessage(viewer, String(fd.get("id") ?? ""));
+  const option = String(fd.get("option") ?? "");
+  if (m.kind !== "poll" || !m.poll?.options.some((o) => o.id === option)) return;
+  const [mine] = await db.select().from(pollVotes).where(and(eq(pollVotes.messageId, m.id), eq(pollVotes.memberId, viewer.member.id)));
+  if (mine?.optionId === option) await db.delete(pollVotes).where(and(eq(pollVotes.messageId, m.id), eq(pollVotes.memberId, viewer.member.id)));
+  else
+    await db
+      .insert(pollVotes)
+      .values({ messageId: m.id, memberId: viewer.member.id, familyId: viewer.family.id, optionId: option })
+      .onConflictDoUpdate({ target: [pollVotes.messageId, pollVotes.memberId], set: { optionId: option, createdAt: new Date() } });
+  revalidatePath("/messages");
+}
+
+/** Share a calendar event in the chat (shows as an event card). Only events the whole family can see. */
+export async function shareEvent(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("messages", "use");
+    const channel = chatChannel(fd.get("channel"));
+    if (!canPostChannel(viewer.isParent, channel)) return fail("You can't post in this chat.");
+    const eventId = String(fd.get("eventId") ?? "");
+    if (!uuidOk(eventId)) return fail("Choose an event.", "eventId");
+    const [ev] = await db
+      .select({ id: calendarEvents.id })
+      .from(calendarEvents)
+      .where(and(eq(calendarEvents.id, eventId), eq(calendarEvents.familyId, viewer.family.id), eq(calendarEvents.visibility, "family")));
+    if (!ev) return fail("Choose an event the whole family can see.", "eventId");
+    await db.insert(familyMessages).values({ familyId: viewer.family.id, memberId: viewer.member.id, channel, kind: "event", eventId: ev.id, body: f.str(fd, "note")?.slice(0, 500) ?? null });
+    await chatChanged(viewer);
+    return ok("Event shared.");
+  });
+}
+
+/** Add or remove your emoji reaction. */
+export async function toggleReaction(fd: FormData) {
+  const viewer = await requireModule("messages", "use");
+  const m = await visibleMessage(viewer, String(fd.get("id") ?? ""));
+  const emoji = String(fd.get("emoji") ?? "");
+  if (![...REACTIONS, ...EMOJI].includes(emoji)) return;
+  const removed = await db
+    .delete(messageReactions)
+    .where(and(eq(messageReactions.messageId, m.id), eq(messageReactions.memberId, viewer.member.id), eq(messageReactions.emoji, emoji)))
+    .returning();
+  if (!removed.length) await db.insert(messageReactions).values({ messageId: m.id, memberId: viewer.member.id, familyId: viewer.family.id, emoji }).onConflictDoNothing();
+  revalidatePath("/messages");
+}
+
+/** Pin or unpin (parents, or whoever wrote it). */
+export async function togglePin(fd: FormData) {
+  const viewer = await requireModule("messages", "use");
+  const m = await visibleMessage(viewer, String(fd.get("id") ?? ""));
+  if (!viewer.isParent && m.memberId !== viewer.member.id) throw new AuthorizationError("Only parents can pin other people's messages.");
+  await db
+    .update(familyMessages)
+    .set(m.pinnedAt ? { pinnedAt: null, pinnedByMemberId: null } : { pinnedAt: new Date(), pinnedByMemberId: viewer.member.id })
+    .where(eq(familyMessages.id, m.id));
+  revalidatePath("/messages");
+}
+
 export async function deleteMessage(fd: FormData) {
   const viewer = await requireModule("messages", "use");
-  const id = String(fd.get("id") ?? "");
-  if (!uuidOk(id)) return;
-  const [m] = await db.select().from(familyMessages).where(and(eq(familyMessages.id, id), eq(familyMessages.familyId, viewer.family.id)));
-  if (!m) return;
+  const m = await visibleMessage(viewer, String(fd.get("id") ?? ""));
   if (m.memberId !== viewer.member.id && !viewer.isParent) throw new AuthorizationError("You can only delete your own messages.");
   await db.delete(familyMessages).where(eq(familyMessages.id, m.id));
   await deleteFamilyFile(viewer.family.id, m.fileId);

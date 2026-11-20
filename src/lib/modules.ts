@@ -41,8 +41,8 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     phase: 2,
     inNav: true,
     defaultMemberAccess: "use",
-    tagline: "One group chat for the whole family, with photos.",
-    highlights: ["Everyone in one thread", "Share photos", "Unread count on the menu"],
+    tagline: "The family's group chats: everyone, parents, kids and announcements.",
+    highlights: ["Reactions, polls and event reminders", "Photos and files", "Pinned messages and read receipts"],
   },
   contacts: {
     id: "contacts",
