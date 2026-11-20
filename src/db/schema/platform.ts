@@ -17,22 +17,53 @@ export const platformSettings = pgTable("platform_settings", {
   trialDays: integer("trial_days").notNull().default(7),
   /** Off = everyone uses the app free (billing switched off). */
   billingEnabled: boolean("billing_enabled").notNull().default(true),
+  /** Stripe Product / Price ids made from the prices above (Prices can't change, so new prices get new ids). */
+  stripeProductId: text("stripe_product_id"),
+  stripeMonthlyPriceId: text("stripe_monthly_price_id"),
+  stripeYearlyPriceId: text("stripe_yearly_price_id"),
+  /** "monthlyCents/yearlyCents/currency" the cached price ids were made for. */
+  stripePricesKey: text("stripe_prices_key"),
   ...timestamps,
 });
 
-/** A family's subscription. One row per family. */
+/**
+ * A family's subscription (one row per family), kept in step with Stripe by
+ * the webhook (Supabase Edge Function `stripe-webhook`) and after each
+ * in-app action. Never holds card numbers: only the card's brand, last 4
+ * digits and expiry, for display.
+ */
 export const familyBilling = pgTable("family_billing", {
   familyId: uuid("family_id")
     .primaryKey()
     .references(() => families.id, { onDelete: "cascade" }),
-  /** none | trialing | active | past_due | canceled | complimentary */
+  /** none | trialing | active | past_due | unpaid | incomplete | canceled | expired | paused | complimentary */
   status: text("status").notNull().default("none"),
+  /** Stripe's own status, as last seen. */
+  stripeStatus: text("stripe_status"),
   plan: text("plan"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  stripePriceId: text("stripe_price_id"),
+  priceCents: integer("price_cents"),
+  currency: text("currency"),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  canceledAt: timestamp("canceled_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  /** Card shown on the billing page (no card numbers are ever stored). */
+  pmBrand: text("pm_brand"),
+  pmLast4: text("pm_last4"),
+  pmExpMonth: integer("pm_exp_month"),
+  pmExpYear: integer("pm_exp_year"),
+  /** A switch waiting for the end of the period (yearly → monthly), via a Stripe subscription schedule. */
+  pendingPlan: text("pending_plan"),
+  pendingPlanAt: timestamp("pending_plan_at", { withTimezone: true }),
+  stripeScheduleId: text("stripe_schedule_id"),
+  latestInvoiceId: text("latest_invoice_id"),
+  /** Why the last payment failed (cleared once paid). */
+  lastPaymentError: text("last_payment_error"),
   /** Why a family is free (set by an admin). */
   compNote: text("comp_note"),
   ...timestamps,
@@ -88,4 +119,40 @@ export const rateLimits = pgTable("rate_limits", {
   key: text("key").primaryKey(),
   windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
   count: integer("count").notNull().default(0),
+});
+
+/** Billing history: one row per Stripe invoice (receipts link to Stripe's hosted PDF). */
+export const billingInvoices = pgTable(
+  "billing_invoices",
+  {
+    /** Stripe invoice id (in_…). */
+    id: text("id").primaryKey(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    stripeCustomerId: text("stripe_customer_id"),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    number: text("number"),
+    /** open | paid | void | uncollectible */
+    status: text("status"),
+    amountDue: integer("amount_due").notNull().default(0),
+    amountPaid: integer("amount_paid").notNull().default(0),
+    currency: text("currency").notNull().default("usd"),
+    description: text("description"),
+    billingReason: text("billing_reason"),
+    periodStart: timestamp("period_start", { withTimezone: true }),
+    periodEnd: timestamp("period_end", { withTimezone: true }),
+    hostedInvoiceUrl: text("hosted_invoice_url"),
+    invoicePdf: text("invoice_pdf"),
+    invoiceCreatedAt: timestamp("invoice_created_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [index("billing_invoices_family_idx").on(t.familyId, t.invoiceCreatedAt)],
+);
+
+/** Stripe webhook events already processed (each is handled once). */
+export const stripeEvents = pgTable("stripe_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

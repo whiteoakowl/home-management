@@ -14,4 +14,5 @@ if (!url) {
 }
 const run = (cmd) => execSync(cmd, { stdio: "inherit", env: { ...process.env, DATABASE_URL: url } });
 run("npx drizzle-kit migrate");
+run("node scripts/secure-tables.mjs");
 if (process.env.KEEP_DEMO_DATA !== "1") run("node scripts/remove-demo-data.mjs");

@@ -344,6 +344,13 @@
       "when": 1795133950692,
       "tag": "0048_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1795134712656,
+      "tag": "0049_stripe_billing",
+      "breakpoints": true
     }
   ]
 }
