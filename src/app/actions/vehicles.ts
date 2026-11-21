@@ -146,7 +146,7 @@ export async function saveService(_: ActionState, fd: FormData): Promise<ActionS
     } else {
       await db.insert(vehicleServices).values({ familyId: viewer.family.id, ...values, loggedByMemberId: viewer.member.id });
       if (miles) await db.insert(vehicleOdometer).values({ familyId: viewer.family.id, vehicleId: v.id, date, miles });
-      if (values.costCents && f.bool(fd, "addToBudget") && (owner ? viewer.member.privateFinance : viewer.can("budget", "edit"))) {
+      if (values.costCents && f.bool(fd, "addToBudget") && (owner ? viewer.member.privateFinance && viewer.premium : viewer.can("budget", "edit"))) {
         await recordExpense(viewer, { name: `${v.nickname}: ${values.title}`, amountCents: values.costCents, date, categoryName: "Car", mine: !!owner });
         revalidatePath("/budget", "layout");
       }

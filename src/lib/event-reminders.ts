@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { calendarEvents, eventAttendees, eventRemindersSent, families, recurrenceRules } from "@/db/schema";
 import { notify } from "./automation";
 import { addDays, todayIn, utcToZoned, zonedToUtc } from "./dates";
+import { familyAccess } from "./billing";
 import { occurrencesBetween } from "./recurrence";
 
 const MAX_LEAD_MIN = 7 * 24 * 60; // reminders up to a week before
@@ -50,6 +51,11 @@ export async function sendEventReminders(now = new Date()) {
         due.push({ eventId: e.id, familyId: e.familyId, tz, title: e.title, location: e.location, start, allDay: e.allDay, minutes, creator: e.createdByMemberId });
     }
   }
+  if (!due.length) return { sent: 0 };
+  // Timed reminders are a Premium feature (families on Free keep their daily reminders).
+  const premium = new Set<string>();
+  for (const id of new Set(due.map((d) => d.familyId))) if ((await familyAccess(id)).premium) premium.add(id);
+  due.splice(0, due.length, ...due.filter((d) => premium.has(d.familyId)));
   if (!due.length) return { sent: 0 };
 
   const attendees = await db.select().from(eventAttendees).where(inArray(eventAttendees.eventId, [...new Set(due.map((d) => d.eventId))]));

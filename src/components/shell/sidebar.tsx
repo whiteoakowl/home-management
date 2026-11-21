@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Brand, BrandMark } from "@/components/brand";
+import { Lock } from "lucide-react";
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { InstallAppButton } from "@/components/pwa/install-app";
@@ -49,6 +50,7 @@ export function Sidebar({ sections, familyName, badges = {} }: { sections: NavSe
                         {!!badges[item.href] && <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-wine-500 ring-2 ring-surface lg:hidden" aria-hidden />}
                       </span>
                       <span className="hidden lg:inline">{item.label}</span>
+                      {item.locked && <Lock className={cn("ml-auto hidden size-3.5 shrink-0 lg:inline", active ? "text-white/80" : "text-muted")} aria-label="Premium" />}
                       {!!badges[item.href] && (
                         <span className={cn("ml-auto hidden min-w-5 rounded-full px-1.5 text-center text-xs font-semibold lg:inline", active ? "bg-white/25 text-white" : "bg-wine-500 text-white")} aria-label={`${badges[item.href]} new`}>
                           {badges[item.href]! > 99 ? "99+" : badges[item.href]}

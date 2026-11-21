@@ -7,7 +7,7 @@ import { eventTemplates } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { saveEvent } from "./calendar";
 import { cleanColor } from "@/lib/colors";
-import { AuthorizationError, requireModule } from "@/lib/dal";
+import { AuthorizationError, requireModule, requirePremium } from "@/lib/dal";
 import { addDays, todayIn } from "@/lib/dates";
 import { ownedCategoryId } from "@/lib/queries";
 import { f, familyMemberIds } from "@/lib/records";
@@ -22,6 +22,7 @@ const hhmm = (v: string | null) => (v && /^\d{2}:\d{2}$/.test(v) ? v : null);
 export async function saveEventTemplate(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireModule("calendar", "use");
+    requirePremium(viewer);
     const name = f.str(fd, "name");
     if (!name) return fail("Name the template.", "name");
     const duration = f.int(fd, "durationMin");
@@ -53,6 +54,7 @@ export async function saveEventTemplate(_: ActionState, fd: FormData): Promise<A
 
 export async function deleteEventTemplate(fd: FormData) {
   const viewer = await requireModule("calendar", "use");
+    requirePremium(viewer);
   const id = f.str(fd, "id") ?? "";
   const [row] = await db.select().from(eventTemplates).where(and(eq(eventTemplates.id, id), eq(eventTemplates.familyId, viewer.family.id)));
   if (!row) return;
@@ -65,6 +67,7 @@ export async function deleteEventTemplate(fd: FormData) {
 export async function useEventTemplate(state: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireModule("calendar", "use");
+    requirePremium(viewer);
     const [t] = await db.select().from(eventTemplates).where(and(eq(eventTemplates.id, f.str(fd, "id") ?? ""), eq(eventTemplates.familyId, viewer.family.id)));
     if (!t) return fail("That template is gone.");
     const from = f.date(fd, "startDate") ?? todayIn(viewer.family.timezone);

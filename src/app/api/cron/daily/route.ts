@@ -7,6 +7,7 @@ import { cleanupOldRows, cleanupOrphanFiles } from "@/lib/housekeeping";
 import { sendEventReminders } from "@/lib/event-reminders";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
+import { familyAccess } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -51,9 +52,12 @@ export async function POST(req: Request) {
   // Keep calendars brought in from Google / Outlook / iCloud fresh (a few per hour).
   let synced = 0;
   if (Date.now() - started < 20000) {
-    const stale = await db.select({ id: calendarImports.id }).from(calendarImports).where(or(isNull(calendarImports.fetchedAt), lt(calendarImports.fetchedAt, new Date(Date.now() - 3 * 3600000)))).limit(15);
-    await Promise.all(stale.map((s) => refreshImport(s.id)));
-    synced = stale.length;
+    const stale = await db.select({ id: calendarImports.id, familyId: calendarImports.familyId }).from(calendarImports).where(or(isNull(calendarImports.fetchedAt), lt(calendarImports.fetchedAt, new Date(Date.now() - 3 * 3600000)))).limit(200);
+    // Calendar sync is Premium.
+    const live: string[] = [];
+    for (const s of stale) if (live.length < 15 && (await familyAccess(s.familyId)).premium) live.push(s.id);
+    await Promise.all(live.map((id) => refreshImport(id)));
+    synced = live.length;
   }
   // Housekeeping: expired sign-ins, old notifications, unused files.
   let cleaned: Record<string, number> = {};

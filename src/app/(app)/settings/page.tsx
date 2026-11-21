@@ -8,7 +8,7 @@ import { categories } from "@/db/schema";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader, ProgressBar } from "@/components/ui/display";
 import { familyStorageBytes, familyStorageLimit } from "@/lib/housekeeping";
-import { AUTOMATIONS } from "@/lib/automation";
+import { AUTOMATIONS, FREE_AUTOMATIONS } from "@/lib/automation";
 import { listFamilyMembers, requireParent } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
 import { AppThemeForm } from "../account/forms";
@@ -16,6 +16,8 @@ import { saveFamilyTheme } from "@/app/actions/account";
 import { DataControls } from "@/components/settings/data-controls";
 import { DownloadCenter } from "@/components/settings/download-center";
 import { FAITHS, FAITH_META, familyFaiths, faithPathsOf } from "@/lib/faith-config";
+import { usage } from "@/lib/plan-limits";
+import { FREE_LIMITS } from "@/lib/plan-tiers";
 import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, FamilyFaithsForm, KidNamesForm, ModulesForm } from "./forms";
 
 export const metadata: Metadata = { title: "Account settings" };
@@ -37,6 +39,7 @@ const fmtSize = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} 
 export default async function SettingsPage() {
   const viewer = await requireParent().catch(() => notFound());
   const f = viewer.family;
+  const [photosUsed, membersUsed] = viewer.premium ? [0, 0] : await Promise.all([usage(f.id, "photos"), usage(f.id, "members")]);
   const [everyone, storageUsed] = await Promise.all([listFamilyMembers(f.id), familyStorageBytes(f.id)]);
   const storageLimit = familyStorageLimit();
   const parents = everyone.filter((m) => m.role === "parent");
@@ -125,12 +128,21 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader title="Automations" />
         <p className="mb-3 text-[15px] text-muted">Repetitive work happens automatically once a day. Switch off anything you&apos;d rather do by hand.</p>
-        <AutomationsForm automations={AUTOMATIONS.map((a) => ({ ...a }))} settings={f.settings ?? {}} />
+        {!viewer.premium && <p className="mb-3 rounded-xl bg-sunken px-3 py-2 text-sm text-ink-soft">On the Free plan, chore and event reminders, recurring chores and birthday reminders run. Automations for Premium sections (marked Premium) start again when you upgrade.</p>}
+        <AutomationsForm automations={AUTOMATIONS.map((a) => ({ ...a, label: viewer.premium || FREE_AUTOMATIONS.includes(a.key) ? a.label : `${a.label} (Premium)` }))} settings={f.settings ?? {}} />
       </Card>
       <Card>
         <CardHeader title="Photo & file storage" />
         <ProgressBar value={storageUsed} max={storageLimit} label={`${fmtSize(storageUsed)} of ${fmtSize(storageLimit)} used`} tone={storageUsed / storageLimit > 0.9 ? "wine" : "primary"} />
         <p className="mt-2 text-sm text-muted">Photos are shrunk automatically when uploaded, so most families never come close. Deleting photos and files frees up space.</p>
+        {!viewer.premium && (
+          <div className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-sm">
+            <p className="font-medium">Free plan limits</p>
+            <ProgressBar value={photosUsed} max={FREE_LIMITS.photos} label={`${photosUsed} of ${FREE_LIMITS.photos} photos`} tone={photosUsed >= FREE_LIMITS.photos ? "wine" : "primary"} />
+            <ProgressBar value={membersUsed} max={FREE_LIMITS.members} label={`${membersUsed} of ${FREE_LIMITS.members} family members`} tone={membersUsed >= FREE_LIMITS.members ? "wine" : "primary"} />
+            <p className="text-muted">Premium has no limits on photos, members or lists.</p>
+          </div>
+        )}
       </Card>
 
       {viewer.isOwner && (

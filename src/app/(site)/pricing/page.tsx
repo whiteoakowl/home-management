@@ -5,51 +5,82 @@ import { ButtonLink } from "@/components/ui/button";
 import { readSessionUser } from "@/lib/auth/session";
 import { formatPrice, getPlatformSettings } from "@/lib/billing";
 import { FAQ } from "@/lib/site-content";
-import { cn } from "@/lib/utils";
+import { FREE_FEATURES, PREMIUM_FEATURES } from "@/lib/plan-tiers";
 
-export const metadata: Metadata = { title: "Pricing", description: "One simple price for your whole family, monthly or yearly, with a free trial." };
-
-const INCLUDED = ["Every feature and section", "Unlimited family members and logins",
-  "Faith tabs: Christian, Catholic, Jewish, Hindu, Buddhist & spiritual",
-  "Google, Outlook & Apple calendar sync",
-  "Push notifications on phones and computers", "Your family's name and colors on the app", "Phones, tablets and computers", "Free updates and new features", "Cancel anytime"];
+export const metadata: Metadata = { title: "Pricing", description: "Free forever for the everyday family hub. Premium unlocks everything, monthly or yearly, with a free trial." };
 
 export default async function PricingPage() {
   const [s, user] = await Promise.all([getPlatformSettings(), readSessionUser()]);
   const trial = s.billingEnabled && s.trialDays > 0 ? s.trialDays : 0;
   const saves = s.monthlyPriceCents * 12 - s.yearlyPriceCents;
-  const plans = [
-    { key: "monthly", name: "Monthly", price: formatPrice(s.monthlyPriceCents, s.currency), per: "/ month", note: "Flexible. Cancel anytime.", best: false },
-    { key: "yearly", name: "Yearly", price: formatPrice(s.yearlyPriceCents, s.currency), per: "/ year", note: saves > 0 ? `Save ${formatPrice(saves, s.currency)} a year (about ${formatPrice(Math.round(s.yearlyPriceCents / 12), s.currency)}/month)` : "Billed once a year.", best: saves > 0 },
-  ];
+  const cta = user ? { href: "/settings/billing", label: "Manage your plan" } : { href: "/signup", label: trial ? `Start free, with ${trial} days of Premium` : "Get started free" };
   return (
     <>
       <div className="bg-hearth">
         <Section className="pb-10">
-          <SectionTitle as="h1" eyebrow="Pricing" title="One price. The whole family." intro={trial ? `Every feature included. Try it free for ${trial} days; your card isn't charged until the trial ends.` : "Every feature included, for everyone in your family."} />
-          <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-2">
-            {plans.map((p) => (
-              <div key={p.key} className={cn("relative flex flex-col gap-4 rounded-[var(--radius-card)] border bg-surface p-7 shadow-[var(--shadow-card)]", p.best ? "border-primary-400 ring-2 ring-primary-200" : "border-line")}>
-                {p.best && <span className="absolute -top-3 left-6 rounded-full bg-primary-600 px-3 py-0.5 text-xs font-semibold text-white">Best value</span>}
-                <h2 className="text-xl font-semibold">{p.name}</h2>
-                <p>
-                  <span className="font-display text-[44px] leading-none font-semibold">{p.price}</span> <span className="text-muted">{p.per}</span>
-                </p>
-                <p className="text-sm text-muted">{p.note}</p>
-                <ButtonLink href={user ? "/settings/billing" : "/signup"} variant={p.best ? "primary" : "secondary"} size="lg" className="mt-2">
-                  {user ? "Manage subscription" : trial ? "Start free trial" : "Get started"}
-                </ButtonLink>
+          <SectionTitle
+            as="h1"
+            eyebrow="Pricing"
+            title="Free for every family. Premium for everything."
+            intro={
+              trial
+                ? `Every new family gets ${trial} days of Premium free, with no card needed. After that, keep the Free plan forever or choose Premium.`
+                : "The everyday family hub is free forever. Premium unlocks every section, for the whole family."
+            }
+          />
+          <div className="mx-auto grid max-w-5xl gap-5 lg:grid-cols-3">
+            <div className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-7 shadow-[var(--shadow-card)]">
+              <h2 className="text-xl font-semibold">Free</h2>
+              <p>
+                <span className="font-display text-[44px] leading-none font-semibold">{formatPrice(0, s.currency)}</span> <span className="text-muted">forever</span>
+              </p>
+              <p className="text-sm text-muted">The everyday family hub. No card needed.</p>
+              <ButtonLink href={cta.href} variant="secondary" size="lg" className="mt-2">
+                {user ? cta.label : "Get started free"}
+              </ButtonLink>
+              <ul className="mt-2 flex flex-col gap-2 text-[15px]">
+                {FREE_FEATURES.map((i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <Check className="mt-1 size-4 shrink-0 text-olive-600" aria-hidden /> {i}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="relative flex flex-col gap-4 rounded-[var(--radius-card)] border border-primary-400 bg-surface p-7 shadow-[var(--shadow-card)] ring-2 ring-primary-200 lg:col-span-2">
+              <span className="absolute -top-3 left-6 rounded-full bg-primary-600 px-3 py-0.5 text-xs font-semibold text-white">Premium</span>
+              <h2 className="text-xl font-semibold">Premium: everything, for the whole family</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-line p-4">
+                  <p className="text-sm font-medium text-muted">Monthly</p>
+                  <p>
+                    <span className="font-display text-[40px] leading-none font-semibold">{formatPrice(s.monthlyPriceCents, s.currency)}</span> <span className="text-muted">/ month</span>
+                  </p>
+                  <p className="mt-1 text-sm text-muted">Flexible. Cancel anytime.</p>
+                </div>
+                <div className="rounded-2xl border border-primary-300 bg-primary-50/40 p-4">
+                  <p className="text-sm font-medium text-muted">Yearly {saves > 0 && <span className="ml-1 rounded-full bg-primary-600 px-2 py-0.5 text-xs font-semibold text-white">Best value</span>}</p>
+                  <p>
+                    <span className="font-display text-[40px] leading-none font-semibold">{formatPrice(s.yearlyPriceCents, s.currency)}</span> <span className="text-muted">/ year</span>
+                  </p>
+                  <p className="mt-1 text-sm text-muted">{saves > 0 ? `Save ${formatPrice(saves, s.currency)} a year (about ${formatPrice(Math.round(s.yearlyPriceCents / 12), s.currency)}/month)` : "Billed once a year."}</p>
+                </div>
               </div>
-            ))}
+              <ButtonLink href={cta.href} size="lg">
+                {cta.label}
+              </ButtonLink>
+              <p className="text-sm font-medium">Everything in Free, plus:</p>
+              <ul className="grid gap-x-6 gap-y-2 text-[15px] sm:grid-cols-2">
+                {PREMIUM_FEATURES.map((i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <Check className="mt-1 size-4 shrink-0 text-primary-600" aria-hidden /> {i}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <ul className="mx-auto mt-10 grid max-w-3xl gap-x-8 gap-y-2 sm:grid-cols-2">
-            {INCLUDED.map((i) => (
-              <li key={i} className="flex items-center gap-2 text-[15px]">
-                <Check className="size-4 shrink-0 text-olive-600" aria-hidden /> {i}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-6 text-center text-sm text-muted">Payments are handled securely by Stripe. Prices in {s.currency.toUpperCase()}; taxes may apply.</p>
+          <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-muted">
+            One price covers your whole family. If you don&apos;t upgrade, nothing is deleted: Premium sections stay view-only on the Free plan and come back the moment you upgrade. Payments are handled securely by Stripe. Prices in {s.currency.toUpperCase()}; taxes may apply.
+          </p>
         </Section>
       </div>
       <Section>

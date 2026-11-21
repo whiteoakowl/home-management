@@ -7,7 +7,7 @@ import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { bookCategories, books, categories } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, requireModule, requirePremium, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
@@ -46,6 +46,7 @@ async function getJson(url: string) {
  */
 export async function lookupIsbn(raw: string): Promise<IsbnLookupResult> {
   const viewer = await requireModule("library", "view");
+  requirePremium(viewer);
   const space = await currentLibrarySpace();
   if (!canAddBooks(viewer, space)) throw new AuthorizationError("You can't add books.");
   const isbn = normalizeIsbn(raw);
@@ -103,6 +104,7 @@ async function saveCoverFromUrl(viewer: Viewer, url: string | null) {
 export async function saveBook(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireModule("library", "view");
+    requirePremium(viewer);
     const id = f.str(fd, "id");
     const existing = id ? await getBook(viewer, id) : null;
     if (id && (!existing || !canChangeBook(viewer, existing))) throw new AuthorizationError("Book not found.");
@@ -210,6 +212,7 @@ async function isFamilyMember(viewer: Viewer, memberId: string) {
 
 export async function deleteBook(fd: FormData) {
   const viewer = await requireModule("library", "view");
+  requirePremium(viewer);
   const b = await getBook(viewer, String(fd.get("id")));
   if (!b || !canChangeBook(viewer, b)) throw new AuthorizationError("Book not found.");
   await db.delete(books).where(and(eq(books.id, b.id), eq(books.familyId, viewer.family.id)));

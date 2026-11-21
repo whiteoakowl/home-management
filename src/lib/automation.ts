@@ -51,6 +51,7 @@ import { moonForDate } from "./astro";
 import { upcomingSabbats } from "./sabbats";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { MODULE_META } from "./modules";
+import { familyAccess } from "./billing";
 import { rebalanceRotations } from "./rotation-db";
 
 /** Every automation can be switched off per family (Account settings → Automations). */
@@ -74,6 +75,8 @@ export const AUTOMATIONS = [
   { key: "recurringTransactions", label: "Recurring bills & income", description: "Record repeating expenses and income automatically when they come due." },
 ] as const;
 export type AutomationKey = (typeof AUTOMATIONS)[number]["key"];
+/** Automations that run on the Free plan (the rest belong to Premium sections). */
+export const FREE_AUTOMATIONS: readonly AutomationKey[] = ["recurringChores", "missedChores", "choreReminders", "eventReminders", "specialDateReminders"];
 
 export const automationOn = (family: Pick<Family, "settings">, key: AutomationKey) => family.settings?.automations?.[key] !== false;
 
@@ -216,7 +219,9 @@ export async function runDailyAutomation(family: Family, force = false) {
   if (!claimed.length) return;
 
   const fid = family.id;
-  const on = (k: AutomationKey) => automationOn(family, k);
+  // Free plan: the everyday automations run; those for Premium sections wait for an upgrade.
+  const { premium } = await familyAccess(fid);
+  const on = (k: AutomationKey) => automationOn(family, k) && (premium || FREE_AUTOMATIONS.includes(k));
   const enabled = (m: string) => family.enabledModules.includes(m);
 
   if (on("recurringChores") && enabled("chores")) {

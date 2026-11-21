@@ -1,5 +1,6 @@
 "use client";
 
+import { PremiumNote, usePremium } from "@/components/billing/plan-context";
 import { REMINDER_OPTIONS } from "@/lib/reminders";
 import { useState, type ReactNode } from "react";
 import { saveEvent } from "@/app/actions/calendar";
@@ -48,6 +49,7 @@ export function EventFormModal({
   triggerContent?: ReactNode;
   me: string;
 }) {
+  const premium = usePremium();
   const [allDay, setAllDay] = useState(defaults?.allDay ?? false);
   const [startTime, setStartTime] = useState(defaults?.startTime ?? "09:00");
   const [endTime, setEndTime] = useState(defaults?.endTime ?? "10:00");
@@ -97,13 +99,20 @@ export function EventFormModal({
       </Field>
       <RecurrenceField defaults={defaults?.rule} />
       <FormRow>
-        <SelectField
-          name="reminderMinutes"
-          label="Reminder"
-          defaultValue={defaults?.reminderMinutes?.toString() ?? ""}
-          placeholder="None"
-          options={REMINDER_OPTIONS}
-        />
+        {premium ? (
+          <SelectField
+            name="reminderMinutes"
+            label="Reminder"
+            defaultValue={defaults?.reminderMinutes?.toString() ?? ""}
+            placeholder="None"
+            options={REMINDER_OPTIONS}
+          />
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-ink-soft">Reminder</span>
+            <PremiumNote what="Timed reminders" />
+          </div>
+        )}
         <Field label="Attachment" htmlFor="f-attachment">
           <input id="f-attachment" name="attachment" type="file" accept="application/pdf,image/*" className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary-700" />
         </Field>

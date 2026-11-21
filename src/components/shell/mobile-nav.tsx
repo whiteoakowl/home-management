@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CalendarDays, ClipboardList, LayoutDashboard, Menu, ShoppingBasket } from "lucide-react";
+import { CalendarDays, ClipboardList, LayoutDashboard, Lock, Menu, ShoppingBasket } from "lucide-react";
 import type { Module } from "@/db/schema/_shared";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/ui/modal";
@@ -88,7 +88,10 @@ export function MobileNav({
                         isActive(pathname, item.href) ? "border-primary-300 bg-primary-50 text-primary-700" : "border-line",
                       )}
                     >
-                      <Icon name={item.icon} className="size-6" />
+                      <span className="relative">
+                        <Icon name={item.icon} className="size-6" />
+                        {item.locked && <Lock className="absolute -right-2.5 -bottom-1 size-3.5 rounded-full bg-surface p-0.5 text-muted" aria-label="Premium" />}
+                      </span>
                       {item.label}
                     </Link>
                   </li>

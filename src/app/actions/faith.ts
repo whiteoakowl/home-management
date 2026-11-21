@@ -5,7 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { faithEntries, faithHolidays, faithPracticeLogs, faithPractices, faithPrayers, faithReadingLogs, faithTexts, families, familyMembers } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule, requireParent, type Viewer } from "@/lib/dal";
+import { AuthorizationError, requireModule, requireParent, requirePremium, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { findText } from "@/lib/faith";
 import { FAITHS, isFaith, PRACTICE_UNITS, type Faith } from "@/lib/faith-config";
@@ -16,6 +16,12 @@ import { f } from "@/lib/records";
  * entries are the member's own; family holidays are shared.
  */
 const MOD = "witchcraft" as const;
+/** Personal tracking (reading, devotions, prayers, journal): anyone who can open the tab, on Premium. */
+async function personal() {
+  const viewer = await requireModule(MOD, "view");
+  requirePremium(viewer);
+  return viewer;
+}
 const uuidOk = (v: string | null): v is string => !!v && /^[0-9a-f-]{36}$/i.test(v);
 const dateOk = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const faithOf = (fd: FormData): Faith => {
@@ -62,7 +68,7 @@ async function practice(viewer: Viewer, id: string | null) {
 
 /** Check a practice off for a day (or un-check it). */
 export async function togglePractice(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const p = await practice(viewer, f.str(fd, "id"));
   const date = f.str(fd, "date") ?? todayIn(viewer.family.timezone);
   if (!dateOk(date)) throw new AuthorizationError("Pick a day.");
@@ -75,7 +81,7 @@ export async function togglePractice(fd: FormData) {
 /** Record a practice with an amount and/or note. */
 export async function logPractice(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
+    const viewer = await personal();
     const p = await practice(viewer, f.str(fd, "id"));
     const date = f.str(fd, "date") ?? todayIn(viewer.family.timezone);
     if (!dateOk(date)) return fail("Pick a day.", "date");
@@ -92,7 +98,7 @@ export async function logPractice(_: ActionState, fd: FormData): Promise<ActionS
 
 export async function savePractice(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
+    const viewer = await personal();
     const id = f.str(fd, "id");
     const name = f.str(fd, "name");
     if (!name) return fail("Name the practice.", "name");
@@ -111,14 +117,14 @@ export async function savePractice(_: ActionState, fd: FormData): Promise<Action
 
 /** Show or hide a practice on the daily checklist (history is kept). */
 export async function togglePracticeActive(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const p = await practice(viewer, f.str(fd, "id"));
   await db.update(faithPractices).set({ active: !p.active }).where(eq(faithPractices.id, p.id));
   refresh();
 }
 
 export async function deletePractice(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const p = await practice(viewer, f.str(fd, "id"));
   await db.delete(faithPractices).where(eq(faithPractices.id, p.id));
   refresh();
@@ -128,7 +134,7 @@ export async function deletePractice(fd: FormData) {
 
 /** Mark one section (chapter, portion…) read or unread. */
 export async function toggleReading(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const t = await findText(viewer, f.str(fd, "text") ?? "");
   const n = f.int(fd, "section");
   if (!t || !n || n < 1 || n > t.sections) throw new AuthorizationError("Not found.");
@@ -141,7 +147,7 @@ export async function toggleReading(fd: FormData) {
 
 /** op = "all" (mark every section read) | "reset" (start over). */
 export async function markText(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const t = await findText(viewer, f.str(fd, "text") ?? "");
   if (!t) throw new AuthorizationError("Not found.");
   const where = and(eq(faithReadingLogs.memberId, viewer.member.id), eq(faithReadingLogs.textKey, t.key));
@@ -158,7 +164,7 @@ export async function markText(fd: FormData) {
 
 export async function saveText(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
+    const viewer = await personal();
     const title = f.str(fd, "title");
     if (!title) return fail("What are you reading?", "title");
     const sections = f.int(fd, "sections");
@@ -170,7 +176,7 @@ export async function saveText(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deleteText(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const id = f.str(fd, "id");
   if (!uuidOk(id)) throw new AuthorizationError("Not found.");
   const t = await own(db.select().from(faithTexts).where(and(eq(faithTexts.id, id), eq(faithTexts.memberId, viewer.member.id))));
@@ -188,7 +194,7 @@ async function prayer(viewer: Viewer, id: string | null) {
 
 export async function savePrayer(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
+    const viewer = await personal();
     const title = f.str(fd, "title");
     if (!title) return fail("What is it for?", "title");
     const values = { title: title.slice(0, 200), forWhom: f.str(fd, "forWhom")?.slice(0, 120) ?? null, details: f.str(fd, "details")?.slice(0, 2000) ?? null, shared: f.bool(fd, "shared") };
@@ -204,7 +210,7 @@ export async function savePrayer(_: ActionState, fd: FormData): Promise<ActionSt
 
 export async function answerPrayer(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
+    const viewer = await personal();
     const p = await prayer(viewer, f.str(fd, "id"));
     await db.update(faithPrayers).set({ answeredOn: todayIn(viewer.family.timezone), answerNote: f.str(fd, "answerNote")?.slice(0, 2000) ?? null }).where(eq(faithPrayers.id, p.id));
     refresh();
@@ -213,14 +219,14 @@ export async function answerPrayer(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function reopenPrayer(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const p = await prayer(viewer, f.str(fd, "id"));
   await db.update(faithPrayers).set({ answeredOn: null, answerNote: null }).where(eq(faithPrayers.id, p.id));
   refresh();
 }
 
 export async function deletePrayer(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const p = await prayer(viewer, f.str(fd, "id"));
   await db.delete(faithPrayers).where(eq(faithPrayers.id, p.id));
   refresh();
@@ -230,7 +236,7 @@ export async function deletePrayer(fd: FormData) {
 
 export async function saveFaithEntry(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
+    const viewer = await personal();
     const body = f.str(fd, "body");
     if (!body) return fail("Write a few words.", "body");
     const date = f.str(fd, "date") ?? todayIn(viewer.family.timezone);
@@ -248,7 +254,7 @@ export async function saveFaithEntry(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function deleteFaithEntry(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const id = f.str(fd, "id");
   if (!uuidOk(id)) throw new AuthorizationError("Not found.");
   await db.delete(faithEntries).where(and(eq(faithEntries.id, id), eq(faithEntries.memberId, viewer.member.id)));
@@ -260,7 +266,7 @@ export async function deleteFaithEntry(fd: FormData) {
 /** A custom family day, or (with holidayKey) this year's date change for a built-in holiday. */
 export async function saveFaithHoliday(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule(MOD, "view");
+    const viewer = await personal();
     const faith = faithOf(fd);
     const date = f.str(fd, "date");
     if (!dateOk(date)) return fail("Pick a date.", "date");
@@ -292,7 +298,7 @@ export async function saveFaithHoliday(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function deleteFaithHoliday(fd: FormData) {
-  const viewer = await requireModule(MOD, "view");
+  const viewer = await personal();
   const id = f.str(fd, "id");
   if (!uuidOk(id)) throw new AuthorizationError("Not found.");
   const [r] = await db.select().from(faithHolidays).where(and(eq(faithHolidays.id, id), eq(faithHolidays.familyId, viewer.family.id)));

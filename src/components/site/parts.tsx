@@ -49,10 +49,10 @@ export function CallToAction({ trialDays, signedIn }: { trialDays: number; signe
     <Section>
       <div className="bg-hearth flex flex-col items-center gap-5 rounded-[2rem] border border-line px-6 py-14 text-center">
         <h2 className="max-w-xl text-[32px] leading-tight font-semibold sm:text-[40px]">Give your family one place for everything.</h2>
-        <p className="max-w-lg text-lg text-muted">{trialDays > 0 ? `Try everything free for ${trialDays} days. Cancel anytime.` : "Set up your family in minutes. Cancel anytime."}</p>
+        <p className="max-w-lg text-lg text-muted">{trialDays > 0 ? `Free forever for the everyday family hub, with ${trialDays} days of Premium free. No card needed.` : "Free forever for the everyday family hub. Set up your family in minutes."}</p>
         <div className="flex flex-wrap justify-center gap-3">
           <ButtonLink href={signedIn ? "/" : "/signup"} size="lg">
-            {signedIn ? "Open the app" : trialDays > 0 ? "Start your free trial" : "Create your account"}
+            {signedIn ? "Open the app" : "Get started free"}
           </ButtonLink>
           <ButtonLink href="/features" size="lg" variant="secondary">
             See all features

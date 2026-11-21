@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { familyMembers, pointAdjustments, rewardRedemptions, rewards } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { notify } from "@/lib/automation";
-import { AuthorizationError, requireModule, requireParent } from "@/lib/dal";
+import { AuthorizationError, requireModule, requireParent, requirePremium } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { recordExpense } from "@/lib/expenses";
 import { logActivity } from "@/lib/family";
@@ -21,6 +21,7 @@ const revalidate = () => {
 export async function saveReward(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireParent();
+    requirePremium(viewer);
     const title = f.str(fd, "title");
     const cost = f.int(fd, "cost");
     if (!title) return fail("Name the reward.", "title");
@@ -52,6 +53,7 @@ export async function deleteReward(fd: FormData) {
 /** A member asks to redeem a reward; points are held until a parent decides. */
 export async function requestReward(fd: FormData) {
   const viewer = await requireModule("chores", "use");
+  requirePremium(viewer);
   const [r] = await db.select().from(rewards).where(and(eq(rewards.id, String(fd.get("id"))), eq(rewards.familyId, viewer.family.id), eq(rewards.active, true)));
   if (!r) throw new AuthorizationError("That reward isn't available.");
   if (r.forMemberIds.length && !r.forMemberIds.includes(viewer.member.id)) throw new AuthorizationError("That reward isn't offered to you.");
@@ -69,6 +71,7 @@ export async function requestReward(fd: FormData) {
 
 export async function decideRedemption(fd: FormData) {
   const viewer = await requireParent();
+  requirePremium(viewer);
   const status = String(fd.get("status"));
   if (status !== "approved" && status !== "denied") return;
   const [x] = await db.select().from(rewardRedemptions).where(and(eq(rewardRedemptions.id, String(fd.get("id"))), eq(rewardRedemptions.familyId, viewer.family.id), eq(rewardRedemptions.status, "requested")));
@@ -96,6 +99,7 @@ export async function cancelRedemption(fd: FormData) {
 export async function adjustPoints(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireParent();
+    requirePremium(viewer);
     const memberId = await familyMemberIdOrNull(viewer.family.id, f.str(fd, "memberId"));
     const points = f.int(fd, "points");
     const reason = f.str(fd, "reason");

@@ -15,7 +15,7 @@ export const BASICS: HelpArticle[] = [
       "On **Almost ready**, enter your **Family name**, choose your **Time zone**, and add your **Town or city** if you'd like local weather.",
       "Select **Create family**. You become the family's account holder.",
       "Add the people in your household (see *Adding a family member*). Each person can have their own login, or no login for little ones.",
-      "Choose a plan in **Account settings → Subscription & billing** before your free trial ends.",
+      "Your family has Premium free for the first days. When the trial ends you keep the Free plan, or choose Premium in **Account settings → Subscription**.",
     ],
     sections: [
       {

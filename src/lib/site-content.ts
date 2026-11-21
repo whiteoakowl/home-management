@@ -64,13 +64,15 @@ export const EXTRA_FEATURES = [
 ] as const;
 
 export const FAQ = [
-  { q: "How does the free trial work?", a: "Create your account and choose a monthly or yearly plan. Your card isn't charged until the trial ends, and you can cancel anytime before then from Account settings → Subscription." },
-  { q: "Is the price per person?", a: "No. One subscription covers your whole family, with as many family members and logins as you need." },
+  { q: "Is there a free plan?", a: "Yes. The everyday family hub is free forever: the shared calendar, grocery list, chores, lists, Family Chat, contacts, Important Info and photo albums, for up to 6 family members. Premium unlocks every other section, plus calendar sync, reminders and unlimited members, lists and photos." },
+  { q: "How does the free trial work?", a: "Every new family gets Premium free for the first days, with no card needed. When the trial ends you move to the Free plan automatically, unless you choose Premium. If you choose a plan during the trial, your card is only charged when the trial ends." },
+  { q: "What happens to our information on the Free plan?", a: "Nothing is deleted. Premium sections stay visible and view-only, and everything comes back the moment you upgrade." },
+  { q: "Is the price per person?", a: "No. One Premium subscription covers your whole family, with as many family members and logins as you need." },
   { q: "Can kids use it?", a: "Yes. Kids can have their own login (or none, for little ones). You choose exactly which sections each person can see and change." },
   { q: "Does it work on iPhone and Android?", a: "Yes. It works in any modern browser and can be installed on the home screen of phones and tablets, where it shows up with your family's name." },
   { q: "Does it work with Google Calendar, Outlook or Apple Calendar?", a: "Yes. Each person can show the family calendar in Google Calendar, Outlook or Apple Calendar with one tap, and bring their own Google, Outlook or iCloud calendars into the family calendar. Everything stays in sync automatically." },
   { q: "Will I get notifications on my phone?", a: "Yes. Turn on push notifications on each phone or computer to get reminders and new chat messages, even when the app is closed. You choose what you get, and phones stay quiet overnight." },
   { q: "Does it support our faith?", a: "Yes. The Spiritual section has a tab for Christian, Catholic, Jewish, Hindu, Buddhist and spiritual families, with holidays, reading, devotions, prayer lists and a journal. Parents choose the religions the family uses and which members get each one, and those holidays can be shown on the family calendar." },
-  { q: "Can I cancel anytime?", a: "Yes. Cancel from Account settings → Subscription. You keep access until the end of the period you've paid for." },
+  { q: "Can I cancel anytime?", a: "Yes. Cancel from Account settings → Subscription. You keep Premium until the end of the period you've paid for, then your family moves to the Free plan." },
   { q: "What happens to our information?", a: "Your family's information belongs to you. It's only visible to the people in your family you share it with, and we never sell it." },
 ] as const;

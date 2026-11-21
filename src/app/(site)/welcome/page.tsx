@@ -96,14 +96,14 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
             </p>
             <div className="flex flex-wrap gap-3">
               <ButtonLink href={user ? "/" : "/signup"} size="lg">
-                {user ? "Open the app" : trial ? `Start your ${trial}-day free trial` : "Create your account"}
+                {user ? "Open the app" : "Get started free"}
               </ButtonLink>
               <ButtonLink href="/features" size="lg" variant="secondary">
                 Explore features
               </ButtonLink>
             </div>
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-soft">
-              {[trial ? `${trial} days free` : null, "One price for the whole family", "Cancel anytime"].filter(Boolean).map((t) => (
+              {["Free plan forever", trial ? `${trial} days of Premium free, no card` : null, "One price for the whole family"].filter(Boolean).map((t) => (
                 <li key={t} className="flex items-center gap-1.5">
                   <Check className="size-4 text-olive-600" aria-hidden /> {t}
                 </li>

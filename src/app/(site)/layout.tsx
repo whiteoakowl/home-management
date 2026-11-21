@@ -38,7 +38,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
                 <ButtonLink href="/login" variant="ghost">
                   Sign in
                 </ButtonLink>
-                <ButtonLink href="/signup">Start free trial</ButtonLink>
+                <ButtonLink href="/signup">Get started free</ButtonLink>
               </>
             )}
           </div>
@@ -60,7 +60,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
                   <Link href="/login" className="rounded-xl px-3 py-2.5 font-medium hover:bg-sunken">
                     Sign in
                   </Link>
-                  <ButtonLink href="/signup">Start free trial</ButtonLink>
+                  <ButtonLink href="/signup">Get started free</ButtonLink>
                 </>
               )}
             </div>

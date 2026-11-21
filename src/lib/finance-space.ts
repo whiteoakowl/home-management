@@ -1,6 +1,6 @@
 import "server-only";
 import { eq, isNull, type AnyColumn, type SQL } from "drizzle-orm";
-import { AuthorizationError, type Viewer } from "./dal";
+import { AuthorizationError, PREMIUM_MESSAGE, type Viewer } from "./dal";
 
 /**
  * Money spaces. The family's budget (Budget module access), or a member's private
@@ -37,6 +37,7 @@ export function ownerIs(column: AnyColumn, owner: string | null): SQL {
 export function financeOwnerFor(viewer: Viewer, fd: FormData): string | null {
   if (fd.get("space") === "mine") {
     if (!viewer.member.privateFinance) throw new AuthorizationError("Your private money space isn't turned on. Ask a parent.");
+    if (!viewer.premium) throw new AuthorizationError(PREMIUM_MESSAGE);
     return viewer.member.id;
   }
   if (!viewer.can("budget", "edit")) throw new AuthorizationError("You can't change the family budget.");
@@ -44,4 +45,4 @@ export function financeOwnerFor(viewer: Viewer, fd: FormData): string | null {
 }
 
 /** Can the viewer change money in this space? Private: always (it's theirs). Family: Budget edit. */
-export const canEditFinance = (viewer: Viewer, space: FinanceSpace) => (space.kind === "private" ? true : viewer.can("budget", "edit"));
+export const canEditFinance = (viewer: Viewer, space: FinanceSpace) => (space.kind === "private" ? viewer.premium : viewer.can("budget", "edit"));

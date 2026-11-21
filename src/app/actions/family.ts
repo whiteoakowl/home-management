@@ -34,6 +34,7 @@ import {
 } from "@/lib/family";
 import { LAST_STEP, ONBOARDING_STEPS, TIMEZONES } from "@/lib/onboarding";
 import { AUTOMATIONS } from "@/lib/automation";
+import { assertRoom } from "@/lib/plan-limits";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 
 // ─── Family ──────────────────────────────────────────────────────────────────
@@ -108,6 +109,11 @@ export async function createMember(_: ActionState, formData: FormData): Promise<
   const parsed = MemberSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fieldErrors(parsed.error);
   const d = parsed.data;
+  try {
+    await assertRoom(viewer, "members");
+  } catch (e) {
+    return { ok: false, message: (e as Error).message };
+  }
   try {
     await addMember({
       familyId: viewer.family.id,

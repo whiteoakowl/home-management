@@ -2,8 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { familyBilling, familyMembers, platformSettings, users } from "@/db/schema";
+import { families, familyBilling, familyMembers, platformSettings, users } from "@/db/schema";
 import { hasAccessStatus, type BillingStatus, type Plan } from "../../supabase/functions/_shared/billing-core";
+import { tierOf } from "./plan-tiers";
 import { stripeConfigured } from "./stripe";
 
 export type { BillingStatus, Plan };
@@ -34,11 +35,13 @@ export const getBrand = async () => (await getPlatformSettings()).brandName;
 export const formatPrice = (cents: number, currency = "usd") => new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
 
 /**
- * A family's billing state and whether it may use the app.
- * Access: billing switched off or Stripe not set up yet → yes; complimentary,
- * trialing (with a card on file), active → yes; past_due → yes while Stripe
- * retries the card (with a warning); anything else (none, incomplete, unpaid,
- * canceled, expired, paused) → no: they choose a plan or fix the payment.
+ * A family's billing state and plan tier.
+ *
+ * Everyone can use the app: families without a paid plan are on Free (the
+ * everyday family hub). `premium` is true when payments aren't set up yet,
+ * or the family is complimentary, active, in a Stripe trial, or past_due
+ * (while Stripe retries the card), or inside its no-card free trial
+ * (`trialDays` from when the family was created; tier "trial").
  * Families that include a platform admin are complimentary automatically.
  */
 export const familyAccess = cache(async (familyId: string) => {
@@ -64,6 +67,24 @@ export const familyAccess = cache(async (familyId: string) => {
   }
   const status = (row?.status ?? "none") as BillingStatus;
   const billingOn = settings.billingEnabled && stripeConfigured();
-  const hasAccess = !billingOn || hasAccessStatus(status);
-  return { status, row: row ?? null, hasAccess, billingOn, settings, trialUsed: !!row?.trialEndsAt || !!row?.stripeSubscriptionId };
+  const paid = hasAccessStatus(status);
+  const [fam] = await db.select({ createdAt: families.createdAt }).from(families).where(eq(families.id, familyId));
+  const { tier, trialEndsAt, trialDaysLeft } = tierOf({ billingOn, paid, familyCreatedAt: fam?.createdAt ?? new Date(0), trialDays: settings.trialDays });
+  // A paid plan started during the free trial only charges once the trial's days are over.
+  const stripeTrialUsed = !!row?.trialEndsAt || !!row?.stripeSubscriptionId;
+  return {
+    status,
+    row: row ?? null,
+    billingOn,
+    settings,
+    /** Premium (paid, complimentary, payments off, or in the free trial). */
+    premium: tier !== "free",
+    /** A paid or complimentary plan (not the no-card trial). */
+    paid: !billingOn || paid,
+    tier,
+    trialEndsAt,
+    trialDaysLeft,
+    /** Days of trial to give a new Stripe subscription, so subscribing early never cuts the trial short. */
+    stripeTrialDays: stripeTrialUsed ? 0 : trialDaysLeft,
+  };
 });

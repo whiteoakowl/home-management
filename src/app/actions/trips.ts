@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { photoAlbums, planExpenses, planItems, plans } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, canChangeItem, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, canChangeItem, requireModule, requirePremium, type Viewer } from "@/lib/dal";
 import { listGoals } from "@/lib/goals";
 import { familyMemberIds, f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 import { getPlan } from "@/lib/trips";
@@ -194,6 +194,7 @@ export async function deletePlanExpense(fd: FormData) {
 /** Make (or open) the trip's photo album. */
 export async function openTripAlbum(fd: FormData) {
   const viewer = await requireModule("plans", "view");
+  requirePremium(viewer);
   const plan = await getPlan(viewer, f.str(fd, "planId") ?? "");
   if (!plan) throw new AuthorizationError("Plan not found.");
   const [existing] = await db.select({ id: photoAlbums.id }).from(photoAlbums).where(and(eq(photoAlbums.familyId, viewer.family.id), eq(photoAlbums.planId, plan.p.id)));

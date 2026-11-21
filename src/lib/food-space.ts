@@ -3,7 +3,8 @@ import { and, eq, inArray, isNull, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { familyMembers, type Module } from "@/db/schema";
-import { AuthorizationError, type Viewer } from "./dal";
+import { AuthorizationError, PREMIUM_MESSAGE, type Viewer } from "./dal";
+import { isPremiumModule } from "./plan-tiers";
 
 /**
  * Family Pantry spaces.
@@ -30,6 +31,8 @@ export const FOOD_LABELS: Record<"kitchen" | "recipes" | "meals" | "shopping", {
 };
 
 export const hasPrivateFood = (viewer: Viewer) => viewer.member.privateFood;
+/** Free plan: private spaces of Premium sections (pantry, recipes, meal plans) are view-only. */
+const privateWritable = (viewer: Viewer, module: Module) => viewer.premium || !isPremiumModule(module);
 /** May this parent open (read-only) that member's private food space? Only if the member chose to share it. */
 export const canPeekFood = (viewer: Viewer, ownerMemberId: string) => viewer.isParent && viewer.sharedFoodOwners.includes(ownerMemberId);
 
@@ -68,7 +71,7 @@ export function canViewSpace(viewer: Viewer, module: Module, space: FoodSpace) {
 
 /** May the viewer add new records in this space? */
 export function canAddIn(viewer: Viewer, module: Module, space: FoodSpace) {
-  return space.kind === "family" ? viewer.can(module, "add") : space.own;
+  return space.kind === "family" ? viewer.can(module, "add") : space.own && privateWritable(viewer, module);
 }
 
 /**
@@ -77,7 +80,7 @@ export function canAddIn(viewer: Viewer, module: Module, space: FoodSpace) {
  * Family records: parents, or the member who added it (with Add or Add & edit).
  */
 export function canChange(viewer: Viewer, module: Module, row: { ownerMemberId: string | null; createdByMemberId?: string | null }) {
-  if (row.ownerMemberId) return row.ownerMemberId === viewer.member.id;
+  if (row.ownerMemberId) return row.ownerMemberId === viewer.member.id && privateWritable(viewer, module);
   // Parents change any family record; members change only what they added (Add or Add & edit).
   if (viewer.isParent) return true;
   return viewer.can(module, "add") && !!row.createdByMemberId && row.createdByMemberId === viewer.member.id;
@@ -91,6 +94,7 @@ export function assertChange(viewer: Viewer, module: Module, row: { ownerMemberI
 export function ownerForNew(viewer: Viewer, module: Module, fd: FormData): string | null {
   if (fd.get("space") === "mine") {
     if (!hasPrivateFood(viewer)) throw new AuthorizationError("Your private food space isn't turned on. Ask a parent.");
+    if (!privateWritable(viewer, module)) throw new AuthorizationError(PREMIUM_MESSAGE);
     return viewer.member.id;
   }
   if (!viewer.can(module, "add")) throw new AuthorizationError("You can't add to the family's food yet. Ask a parent for Add access.");

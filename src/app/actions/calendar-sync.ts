@@ -8,7 +8,7 @@ import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { LAYERS } from "@/lib/calendar";
 import { cleanCalendarUrl, FEED_EXCLUDED, feedFor, loadImportedEvents, refreshImport, resetFeedToken } from "@/lib/calendar-sync";
 import { MEMBER_COLOR_KEYS } from "@/lib/colors";
-import { AuthorizationError, requireModule } from "@/lib/dal";
+import { AuthorizationError, requireModule, requirePremium } from "@/lib/dal";
 import { rateLimit } from "@/lib/rate-limit";
 import { f } from "@/lib/records";
 
@@ -24,6 +24,7 @@ const refresh = () => {
 export async function saveFeedSettings(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireModule("calendar", "view");
+    requirePremium(viewer);
     const feed = await feedFor(viewer);
     const layers = f.list(fd, "layers").filter((l) => (LAYERS as readonly string[]).includes(l) && !FEED_EXCLUDED.includes(l));
     if (!layers.length) return fail("Pick at least one thing to include.");
@@ -36,6 +37,7 @@ export async function saveFeedSettings(_: ActionState, fd: FormData): Promise<Ac
 /** New link; the old one stops working (use it if a link was shared by mistake). */
 export async function resetFeed() {
   const viewer = await requireModule("calendar", "view");
+  requirePremium(viewer);
   await resetFeedToken(viewer);
   refresh();
 }
@@ -43,6 +45,7 @@ export async function resetFeed() {
 export async function addCalendarImport(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await requireModule("calendar", "view");
+    requirePremium(viewer);
     const url = cleanCalendarUrl(f.str(fd, "url") ?? "");
     if (!url) return fail("Paste the calendar's iCal link (it starts with https:// or webcal://).", "url");
     const name = f.str(fd, "name")?.slice(0, 60) || "My calendar";
@@ -87,12 +90,14 @@ export async function removeCalendarImport(fd: FormData) {
 }
 
 export async function refreshCalendarImport(fd: FormData) {
+  requirePremium(await requireModule("calendar", "view"));
   const row = await myImport(f.str(fd, "id"));
   await refreshImport(row.id);
   refresh();
 }
 
 export async function toggleImportShared(fd: FormData) {
+  requirePremium(await requireModule("calendar", "view"));
   const row = await myImport(f.str(fd, "id"));
   await db.update(calendarImports).set({ shared: !row.shared }).where(eq(calendarImports.id, row.id));
   refresh();

@@ -68,9 +68,10 @@ export async function subscribe(plan: Plan, setupIntentId: string): Promise<Flow
     const viewer = await accountHolder();
     const ctx = billingCtx();
     const settings = await getPlatformSettings();
+    const { stripeTrialDays } = await familyAccess(viewer.family.id);
     const prices = await ensurePrices(ctx, settings);
     const customerId = await ensureCustomer(ctx, viewer.family.id, { email: viewer.user.email, name: `${viewer.family.name} family (${viewer.user.name})` });
-    return done(await startFlow(ctx, { familyId: viewer.family.id, customerId, setupIntentId: String(setupIntentId), plan: asPlan(plan), prices, trialDays: settings.trialDays }));
+    return done(await startFlow(ctx, { familyId: viewer.family.id, customerId, setupIntentId: String(setupIntentId), plan: asPlan(plan), prices, trialDays: stripeTrialDays }));
   } catch (e) {
     return fail(e);
   }

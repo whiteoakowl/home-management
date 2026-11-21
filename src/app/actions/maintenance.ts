@@ -25,7 +25,7 @@ const edit = () => requireModule("maintenance", "edit");
  */
 async function editProjects() {
   const viewer = await getViewer();
-  if (!viewer.can("projects", "edit") && !(viewer.member.privateProjects && !viewer.isParent)) throw new AuthorizationError("You can't change house projects.");
+  if (!viewer.can("projects", "edit") && !(viewer.member.privateProjects && !viewer.isParent && viewer.premium)) throw new AuthorizationError("You can't change house projects.");
   return viewer;
 }
 function revalidateHome() {
@@ -227,7 +227,7 @@ export async function recordProjectExpense(_: ActionState, fd: FormData): Promis
     const p = await ownProject(viewer, f.str(fd, "projectId"));
     // Private projects record into the owner's own My Budget, never the family budget.
     const mine = !!p.privateOwnerId;
-    if (mine ? !viewer.member.privateFinance : !viewer.can("budget", "edit")) return fail(mine ? "Turn on My Budget (ask a parent) to track costs." : "You can't edit the budget.");
+    if (mine ? !(viewer.member.privateFinance && viewer.premium) : !viewer.can("budget", "edit")) return fail(mine ? "Turn on My Budget (ask a parent) to track costs." : "You can't edit the budget.");
     const cents = f.cents(fd, "amount");
     if (!cents || cents <= 0) return fail("Enter an amount.", "amount");
     await recordExpense(viewer, { name: `${p.title}: ${f.str(fd, "what") ?? "expense"}`, amountCents: cents, date: f.date(fd, "date") ?? todayIn(viewer.family.timezone), categoryName: "Home improvement", projectId: p.id, mine });

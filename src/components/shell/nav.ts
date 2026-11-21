@@ -1,12 +1,15 @@
 import type { Viewer } from "@/lib/dal";
 import { FAITH_META, faithHref, faithPathsOf } from "@/lib/faith-config";
 import { MODULE_META, NAV_GROUPS } from "@/lib/modules";
+import { isPremiumModule } from "@/lib/plan-tiers";
 
 export type NavItem = {
   href: string;
   label: string;
   icon: string;
   children?: { href: string; label: string }[];
+  /** Premium section on the Free plan (view-only): shows a small lock. */
+  locked?: boolean;
 };
 
 /** Submenus for the larger areas (shown under the active item in the sidebar). */
@@ -84,7 +87,8 @@ export function buildNav(viewer: Viewer): NavSection[] {
               viewer.member.privateVehicles &&
               !viewer.isParent)),
       )
-      .map((m) =>
+      .map((m) => ({ m, locked: !viewer.premium && isPremiumModule(m.id) }))
+      .map(({ m, locked }) => ({ locked, ...(
         // Members never see the family budget; with a private money space they get "My Budget".
         m.id === "budget" && !viewer.can("budget")
           ? { href: "/budget?space=mine", label: "My Budget", icon: m.icon }
@@ -106,8 +110,7 @@ export function buildNav(viewer: Viewer): NavSection[] {
                       m.label),
                   icon: m.icon,
                   children: SUBMENUS[m.href],
-                },
-      ),
+                }) })),
   }));
   sections[0]!.items.unshift({
     href: "/",

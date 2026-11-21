@@ -14,7 +14,7 @@ export async function recordExpense(
   e: { name: string; amountCents: number; date: string; categoryName: string; notes?: string | null; repairId?: string; projectId?: string; celebrationId?: string; /** Into the viewer's own My Budget instead of the family budget. */ mine?: boolean },
 ) {
   const owner = e.mine ? viewer.member.id : null;
-  if ((owner ? !viewer.member.privateFinance : !viewer.can("budget", "edit")) || e.amountCents <= 0) return null;
+  if ((owner ? !(viewer.member.privateFinance && viewer.premium) : !viewer.can("budget", "edit")) || e.amountCents <= 0) return null;
   let [cat] = await db
     .select({ id: categories.id })
     .from(categories)

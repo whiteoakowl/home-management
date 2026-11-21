@@ -45,7 +45,7 @@ const BRAND: Record<string, string> = { visa: "Visa", mastercard: "Mastercard", 
  */
 export default async function SubscriptionPage() {
   const viewer = await requireParent().catch(() => notFound());
-  const { status, row, settings, billingOn } = await familyAccess(viewer.family.id);
+  const { status, row, settings, billingOn, tier, trialDaysLeft, trialEndsAt, paid } = await familyAccess(viewer.family.id);
   const canManage = viewer.isOwner;
 
   // Billing history: kept in sync by the webhook; filled from Stripe on first visit.
@@ -65,7 +65,8 @@ export default async function SubscriptionPage() {
   const other = plan === "yearly" ? "monthly" : "yearly";
   const saves = settings.monthlyPriceCents * 12 - settings.yearlyPriceCents;
   const renews = status === "trialing" ? row?.trialEndsAt : row?.currentPeriodEnd;
-  const label = LABEL[status] ?? { text: status, tone: "neutral" as const };
+  // Without a paid plan the family is on its free trial, then the Free plan.
+  const label = billingOn && !paid ? (tier === "trial" ? { text: `Premium free trial · ${trialDaysLeft} ${trialDaysLeft === 1 ? "day" : "days"} left`, tone: "primary" as const } : { text: "Free plan", tone: "neutral" as const }) : (LABEL[status] ?? { text: status, tone: "neutral" as const });
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -135,10 +136,21 @@ export default async function SubscriptionPage() {
               endsOn={longDate(renews)}
               hasCard={!!row?.pmLast4}
             />
-          ) : canManage ? (
-            <ButtonLink href="/billing">Choose a plan</ButtonLink>
           ) : (
-            <p className="text-sm text-muted">{holder?.name ?? "The account holder"} manages the subscription.</p>
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted">
+                {tier === "trial"
+                  ? `Your family has every Premium feature free until ${longDate(trialEndsAt)}. After that you keep the Free plan (calendar, shopping list, chores, lists, chat, Important Info and more), or choose Premium to keep everything. No card is needed for the trial.`
+                  : "Your family is on the Free plan: calendar, shopping list, chores, lists, chat, contacts, Important Info and photos. Premium sections are view-only, and everything you saved is kept."}
+              </p>
+              {canManage ? (
+                <ButtonLink href="/billing" className="w-fit">
+                  {tier === "trial" ? "Choose a Premium plan" : "Upgrade to Premium"}
+                </ButtonLink>
+              ) : (
+                <p className="text-sm text-muted">{holder?.name ?? "The account holder"} manages the subscription.</p>
+              )}
+            </div>
           )}
           {!canManage && status !== "complimentary" && billingOn && <p className="mt-3 text-xs text-muted">{holder?.name ?? "The account holder"} is the family&apos;s account holder.</p>}
         </div>

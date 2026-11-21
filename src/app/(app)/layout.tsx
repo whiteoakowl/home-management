@@ -9,7 +9,6 @@ import { Sidebar } from "@/components/shell/sidebar";
 import { TopBar } from "@/components/shell/top-bar";
 import { getViewer } from "@/lib/dal";
 import { familyAccess, isPlatformAdmin } from "@/lib/billing";
-import { redirect } from "next/navigation";
 import { unreadMessages } from "@/lib/hub";
 import { LegalFooter } from "@/components/legal-footer";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
@@ -18,6 +17,10 @@ import { getBrand } from "@/lib/billing";
 import Link from "next/link";
 import { runDailyAutomation } from "@/lib/automation";
 import { themeStyle } from "@/lib/theme";
+import { PlanBanner, type LockedArea } from "@/components/billing/plan-banner";
+import { PlanProvider } from "@/components/billing/plan-context";
+import { MODULE_META } from "@/lib/modules";
+import { isPremiumModule } from "@/lib/plan-tiers";
 import { fileUrl } from "@/lib/files";
 
 /** Inside the app, the home-screen title is the family's own name (iPhone and Android). */
@@ -32,9 +35,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const viewer = await getViewer();
-  // Families without a subscription (or free trial) choose a plan first.
+  // Families without a paid plan use the Free plan (Premium sections are read-only).
   const billing = await familyAccess(viewer.family.id);
-  if (!billing.hasAccess) redirect("/billing");
   // Recurring chores, reminders, low-stock → shopping… (once per family per day).
   await runDailyAutomation(viewer.family);
   const [members, [unread]] = await Promise.all([
@@ -45,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .where(and(eq(notifications.memberId, viewer.member.id), isNull(notifications.readAt))),
   ]);
   const sections = buildNav(viewer);
+  const holderName = members.find((m) => m.id === viewer.family.ownerMemberId)?.displayName ?? "the account holder";
   // The account holder confirms their email once email sending is set up.
   const unverifiedEmail =
     viewer.isOwner && emailConfigured() ? ((await db.select({ v: users.emailVerifiedAt }).from(users).where(eq(users.id, viewer.user.id)))[0]?.v ? null : viewer.user.email) : null;
@@ -71,6 +74,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           editable={editable}
         />
         <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-28 sm:px-6 sm:pb-12 lg:px-8 lg:pt-8">
+          <PlanBanner tier={billing.tier} trialDaysLeft={billing.trialDaysLeft} isOwner={viewer.isOwner} isParent={viewer.isParent} holder={holderName} locked={lockedAreas(viewer.premium)} />
           {viewer.isParent && billing.billingOn && (billing.status === "past_due" || (billing.status === "trialing" && billing.row?.trialEndsAt)) && (
             <Link
               href="/settings/billing"
@@ -82,7 +86,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           )}
           {unverifiedEmail && <VerifyEmailBanner email={unverifiedEmail} />}
-          {children}
+          <PlanProvider premium={viewer.premium}>{children}</PlanProvider>
           <LegalFooter brand={await getBrand()} className="mt-12 print:hidden" />
         </main>
       </div>
@@ -96,6 +100,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
     </div>
   );
+}
+
+/** Pages that are Premium (view-only on the Free plan). */
+function lockedAreas(premium: boolean): LockedArea[] {
+  if (premium) return [];
+  const areas: LockedArea[] = Object.values(MODULE_META)
+    .filter((m) => isPremiumModule(m.id))
+    .map((m) => ({ href: m.href, label: m.label, exact: m.id === "house" }));
+  return [
+    ...areas,
+    { href: "/house/documents", label: "House" },
+    { href: "/calendar/templates", label: "Event templates" },
+    { href: "/calendar/sync", label: "Calendar sync" },
+    { href: "/house/rewards", label: "Chore rewards" },
+  ];
 }
 
 function trialLeft(end: Date) {

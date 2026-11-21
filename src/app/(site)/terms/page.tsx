@@ -24,13 +24,14 @@ export default async function TermsPage() {
       <h2>2. Subscriptions, free trial and automatic renewal</h2>
       <ul>
         <li>
-          {b} is a paid subscription: {formatPrice(s.monthlyPriceCents, s.currency)} per month or {formatPrice(s.yearlyPriceCents, s.currency)} per year, plus any applicable taxes. One subscription covers the whole family.
+          {b} has a Free plan, free of charge with the limits shown on the Pricing page, and a paid Premium subscription: {formatPrice(s.monthlyPriceCents, s.currency)} per month or {formatPrice(s.yearlyPriceCents, s.currency)} per year, plus any applicable taxes. One subscription covers the whole family.
         </li>
         {s.trialDays > 0 && (
           <li>
-            New families get a {s.trialDays}-day free trial (once per family). A payment card is required to start it. <strong>Unless you cancel before the trial ends, your card is charged automatically when it ends</strong> for the plan you chose.
+            New families get Premium free for {s.trialDays} days (once per family). No payment card is needed. When the trial ends, the family moves to the Free plan unless the account holder chooses Premium. <strong>If you choose Premium during the trial, your card is charged automatically when the trial ends</strong> unless you cancel before then.
           </li>
         )}
+        <li>On the Free plan, Premium sections and features are view-only. Nothing you saved is deleted; it&apos;s all available again when you upgrade.</li>
         <li>
           <strong>Your subscription renews automatically</strong> at the end of each month or year and your card on file is charged, until you cancel.
         </li>
@@ -47,12 +48,12 @@ export default async function TermsPage() {
       <h2>4. Cancelling</h2>
       <ul>
         <li>The account holder can cancel anytime in <strong>Account settings → Subscription &amp; billing</strong>, with no need to contact us.</li>
-        <li>After cancelling you keep access until the end of the period you&apos;ve paid for (or the end of the trial), and you won&apos;t be charged again. You can resume before then.</li>
+        <li>After cancelling you keep Premium until the end of the period you&apos;ve paid for (or the end of the trial), and you won&apos;t be charged again. Then your family moves to the Free plan. You can resume before then.</li>
         <li>Payments already made are not refunded, including for partly used periods, except where the law requires a refund.</li>
       </ul>
 
       <h2>5. Failed payments</h2>
-      <p>If a renewal payment fails, we&apos;ll let you know in the app and retry the card for a limited time. You can update your card or pay the open amount in Account settings → Subscription &amp; billing. If payment isn&apos;t completed, access is paused until a payment succeeds; your family&apos;s information is kept.</p>
+      <p>If a renewal payment fails, we&apos;ll let you know in the app and retry the card for a limited time. You can update your card or pay the open amount in Account settings → Subscription &amp; billing. If payment isn&apos;t completed, your family moves to the Free plan until a payment succeeds; your family&apos;s information is kept.</p>
 
       <h2>6. Price changes</h2>
       <p>We may change our prices. Changes apply to new subscriptions; we&apos;ll tell existing subscribers in advance before any change affects their renewal, and you can cancel before it takes effect.</p>

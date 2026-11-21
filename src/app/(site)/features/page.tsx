@@ -7,6 +7,7 @@ import { CallToAction, Section, SectionTitle } from "@/components/site/parts";
 import { readSessionUser } from "@/lib/auth/session";
 import { getPlatformSettings } from "@/lib/billing";
 import { FEATURE_CATALOG } from "@/lib/feature-catalog";
+import { FREE_SECTION_NAMES, PREMIUM_TABS } from "@/lib/plan-tiers";
 import { EXTRA_FEATURES } from "@/lib/site-content";
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ export default async function FeaturesPage() {
     <>
       <div className="bg-hearth">
         <Section className="pb-8">
-          <SectionTitle as="h1" eyebrow="Features" title="Everything your family needs. Nothing it doesn't." intro={`${count} sections, each with its own tabs. Turn on the ones your family uses and hide the rest.`} />
+          <SectionTitle as="h1" eyebrow="Features" title="Everything your family needs. Nothing it doesn't." intro={`${count} sections, each with its own tabs. The everyday family hub is free forever; Premium unlocks everything else. Turn on the sections your family uses and hide the rest.`} />
           {/* Jump to a group */}
           <nav aria-label="Feature groups" className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
             {FEATURE_CATALOG.map((g) => (
@@ -56,7 +57,14 @@ export default async function FeaturesPage() {
                     <Icon name={s.icon} className="size-5" />
                   </span>
                   <div>
-                    <h3 className="text-lg leading-tight font-semibold">{s.name}</h3>
+                    <h3 className="flex flex-wrap items-center gap-2 text-lg leading-tight font-semibold">
+                      {s.name}
+                      {FREE_SECTION_NAMES.includes(s.name) ? (
+                        <span className="rounded-full bg-olive-50 px-2 py-0.5 text-xs font-semibold text-olive-700">Free</span>
+                      ) : (
+                        <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700">Premium</span>
+                      )}
+                    </h3>
                     <p className="text-sm text-muted">{s.summary}</p>
                   </div>
                 </div>
@@ -65,7 +73,10 @@ export default async function FeaturesPage() {
                     <div key={t.name} className="flex gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-olive-600" aria-hidden />
                       <div>
-                        <dt className="inline font-semibold text-ink">{t.name}: </dt>
+                        <dt className="inline font-semibold text-ink">
+                          {t.name}
+                          {PREMIUM_TABS[s.name]?.includes(t.name) && <span className="ml-1 text-xs font-semibold text-primary-700">(Premium)</span>}:{" "}
+                        </dt>
                         <dd className="inline text-ink-soft">{t.does}</dd>
                       </div>
                     </div>

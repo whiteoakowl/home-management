@@ -16,6 +16,7 @@ import {
 } from "@/db/schema";
 import { readSessionUser } from "./auth/session";
 import { atLeast, effectiveAccess } from "./permissions";
+import { capForPlan, isPremiumModule, type PlanTier } from "./plan-tiers";
 
 export type Family = typeof families.$inferSelect;
 export type Member = typeof familyMembers.$inferSelect;
@@ -28,6 +29,10 @@ export type Viewer = {
   isOwner: boolean;
   access: Record<Module, AccessLevel>;
   can: (module: Module, level?: AccessLevel) => boolean;
+  /** The family's plan: premium (paid, complimentary or payments off), trial, or free. */
+  tier: PlanTier;
+  /** Premium features available (premium or trial). On Free, Premium sections are view-only. */
+  premium: boolean;
   /** Parents: members who chose to let parents see their private food space. */
   sharedFoodOwners: string[];
 };
@@ -59,9 +64,6 @@ export const getViewer = cache(async (opts?: { allowOnboarding?: boolean }): Pro
   const { user, member, family } = await getMembership();
   if (!member || !family) redirect("/onboarding");
   if (!family.onboardingCompletedAt && !opts?.allowOnboarding) redirect("/onboarding");
-  // No plan or trial: only onboarding and billing (allowOnboarding) work, on pages and in actions alike.
-  if (!opts?.allowOnboarding && !(await familyAccess(family.id)).hasAccess) redirect("/billing");
-
   return resolveViewer(user, member, family);
 });
 
@@ -75,10 +77,12 @@ export async function resolveViewer(user: Viewer["user"], member: Member, family
     .from(memberPermissions)
     .where(eq(memberPermissions.memberId, member.id));
   const storedMap = Object.fromEntries(stored.map((p) => [p.module, p.level]));
+  const { tier, premium } = await familyAccess(family.id);
   const access = Object.fromEntries(
     MODULES.map((m) => [
       m,
-      effectiveAccess({ role: member.role, module: m, enabledModules: family.enabledModules, stored: storedMap }),
+      // Free plan: Premium sections stay visible (everything saved) but view-only.
+      capForPlan(m, effectiveAccess({ role: member.role, module: m, enabledModules: family.enabledModules, stored: storedMap }), premium),
     ]),
   ) as Record<Module, AccessLevel>;
 
@@ -102,8 +106,17 @@ export async function resolveViewer(user: Viewer["user"], member: Member, family
     isParent: member.role === "parent",
     isOwner: family.ownerMemberId === member.id,
     access,
+    tier,
+    premium,
     can: (module, level = "view") => atLeast(access[module], level),
   };
+}
+
+export const PREMIUM_MESSAGE = "That's part of Premium. Your family is on the Free plan, so this is view-only. The account holder can upgrade in Account settings → Subscription.";
+
+/** For Premium extras inside free sections (templates, rewards…). */
+export function requirePremium(viewer: Viewer) {
+  if (!viewer.premium) throw new AuthorizationError(PREMIUM_MESSAGE);
 }
 
 export class AuthorizationError extends Error {
@@ -118,6 +131,7 @@ export async function requireParent() {
 
 export async function requireModule(module: Module, level: AccessLevel = "view") {
   const viewer = await getViewer();
+  if (level !== "view" && !viewer.premium && isPremiumModule(module) && viewer.can(module, "view")) throw new AuthorizationError(PREMIUM_MESSAGE);
   if (!viewer.can(module, level)) throw new AuthorizationError("You don't have access to that.");
   return viewer;
 }

@@ -32,7 +32,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/calendar/feed/[
   const { feed, member, family } = row;
   const name = `${family.name} Family`;
   // Lapsed subscription: an empty calendar (subscriptions keep working once it's renewed).
-  if (!(await familyAccess(family.id)).hasAccess) return ics(buildIcs({ name, timezone: family.timezone, items: [] }));
+  if (!(await familyAccess(family.id)).premium) return ics(buildIcs({ name, timezone: family.timezone, items: [] }));
 
   const [u] = member.userId ? await db.select({ id: users.id, email: users.email, name: users.name }).from(users).where(eq(users.id, member.userId)) : [];
   const viewer = await resolveViewer(u ?? { id: "", email: "", name: member.displayName }, member, family);

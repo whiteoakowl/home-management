@@ -112,7 +112,8 @@ export async function saveChore(_: ActionState, fd: FormData): Promise<ActionSta
       dueDate: rule ? null : f.date(fd, "dueDate"),
       notes: f.str(fd, "notes"),
       points: manager ? Math.max(0, Math.min(1000, f.int(fd, "points") ?? 0)) || null : null,
-      rotationMemberIds: manager ? await familyMemberIds(viewer.family.id, f.list(fd, "rotation")) : [],
+      // Rotation is Premium; on Free an existing rotation is left as it was.
+      ...(viewer.premium ? { rotationMemberIds: manager ? await familyMemberIds(viewer.family.id, f.list(fd, "rotation")) : [] } : {}),
       ...(fd.has("estimatedCost") ? { estimatedCostCents: f.cents(fd, "estimatedCost") } : {}),
       // Cross-module links are only touched when the form carries them.
       ...(fd.has("petId") ? { petId: await ownedId(viewer, pets, f.str(fd, "petId")) } : {}),

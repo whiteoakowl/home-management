@@ -222,10 +222,37 @@ export const SETTINGS: HelpArticle[] = [
     openIn: { label: "Open Subscription & billing", href: "/settings/billing" },
     steps: ["Open **Account settings**.", "Select **Subscription** (or open **Subscription & billing**).", "**Your plan** shows your plan, price and when it renews or ends.", "**Billing history** lists every payment with a **Receipt** link."],
     sections: [
-      { heading: "Free trial", body: "New families get a free trial. Your card isn't charged until it ends, and you can cancel any time before then." },
+      { heading: "Free trial", body: "New families get Premium free for the first days, with no card needed. When it ends you move to the Free plan, unless the account holder chooses Premium. Choosing a plan during the trial only charges the card when the trial ends." },
       { heading: "Who manages it", body: "Parents can see the subscription. Only the account holder can change the plan, update the card or cancel." },
     ],
     related: ["change-plan", "update-card", "cancel-subscription"],
+  },
+  {
+    slug: "free-vs-premium",
+    category: "billing",
+    title: "Free and Premium plans",
+    summary: "What's free forever, what Premium adds, and what happens to Premium sections on the Free plan.",
+    keywords: ["free", "free plan", "premium", "upgrade", "lock", "locked", "view only", "read only", "limit", "trial", "price", "plan"],
+    sections: [
+      {
+        heading: "Free, forever",
+        bullets: [
+          "Calendar (with repeating events) and the grocery **Shopping** list",
+          "Chores with streaks, and tasks",
+          "Up to 5 lists (the grocery list doesn't count)",
+          "**Family Chat**, announcements and **Contacts**",
+          "**Important Info** (your family binder)",
+          "Photo albums and memories, up to 200 photos",
+          "Up to 6 family members, each with their own login",
+          "Phone notifications, and your private health areas",
+        ],
+      },
+      { heading: "Premium adds", body: "Every other section (meals, recipes and pantry, budget, goals, medical, pets, vehicles, home maintenance, garden, farm, sports, dance, work, trips, journal, library, fitness and the faith tabs), plus calendar sync, event templates, timed reminders, chore rewards and rotation, automations, and no limits on members, lists or photos." },
+      { heading: "Sections with a lock", body: "A small lock in the menu marks a Premium section. On the Free plan you can still open it and see everything you saved, but you can't add or change things there. Nothing is deleted, and it all works again when you upgrade." },
+      { heading: "Free trial", body: "New families get Premium free for the first days, with no card needed. Afterwards you keep the Free plan unless the account holder chooses Premium." },
+      { heading: "Upgrading", steps: ["The account holder taps **Upgrade** (on a locked page or on Home), or opens **Account settings → Subscription**.", "Choose monthly or yearly and add a card.", "Premium starts right away for the whole family."] },
+    ],
+    related: ["subscription-overview", "change-plan", "cancel-subscription"],
   },
   {
     slug: "change-plan",
@@ -254,13 +281,16 @@ export const SETTINGS: HelpArticle[] = [
     slug: "cancel-subscription",
     category: "billing",
     title: "Cancelling (or resuming) your subscription",
-    summary: "Cancel any time; you keep access until the end of the period you've paid for.",
+    summary: "Cancel any time; you keep Premium until the end of the period you've paid for, then move to the Free plan.",
     keywords: ["cancel", "cancel subscription", "stop paying", "resume", "unsubscribe"],
     audience: "owner",
     openIn: { label: "Open Subscription & billing", href: "/settings/billing" },
     steps: ["Open **Account settings → Subscription**.", "Select **Cancel subscription**.", "Optionally tell us why, then confirm **Cancel subscription**."],
-    sections: [{ heading: "Changed your mind?", body: "Before the period ends, select **Resume subscription** on the same page." }],
-    related: ["delete-account", "subscription-overview"],
+    sections: [
+      { heading: "What happens next", body: "Your family moves to the Free plan when the paid period ends. Nothing is deleted; Premium sections become view-only." },
+      { heading: "Changed your mind?", body: "Before the period ends, select **Resume subscription** on the same page." },
+    ],
+    related: ["delete-account", "subscription-overview", "free-vs-premium"],
   },
 
   // ─── Troubleshooting & support ─────────────────────────────────────────────

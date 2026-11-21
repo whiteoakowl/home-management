@@ -13,7 +13,7 @@ export type VehicleRow = typeof vehicles.$inferSelect;
  */
 export function vehicleScope(viewer: Viewer): { owner: string | null; canEdit: boolean; canUse: boolean } | null {
   if (viewer.can("vehicles")) return { owner: null, canEdit: viewer.can("vehicles", "edit"), canUse: viewer.can("vehicles", "use") };
-  if (!viewer.isParent && viewer.member.privateVehicles) return { owner: viewer.member.id, canEdit: true, canUse: true };
+  if (!viewer.isParent && viewer.member.privateVehicles) return { owner: viewer.member.id, canEdit: viewer.premium, canUse: viewer.premium };
   return null;
 }
 

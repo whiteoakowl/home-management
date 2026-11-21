@@ -61,7 +61,8 @@ test("parents see parent and owner help; kids don't", () => {
   assert.ok(p.articles.some((a) => a.slug === "permissions"));
   assert.ok(p.articles.some((a) => a.slug === "cancel-subscription"));
   assert.ok(!k.articles.some((a) => a.audience === "parents" || a.audience === "owner"));
-  assert.ok(!k.categories.some((c) => c.key === "billing"));
+  // Kids only see the plain-language Free vs Premium article under billing.
+  assert.deepEqual(k.articles.filter((a) => a.category === "billing").map((a) => a.slug), ["free-vs-premium"]);
   assert.ok(!helpFor({ ...parent, isOwner: false }).articles.some((a) => a.audience === "owner"));
 });
 
