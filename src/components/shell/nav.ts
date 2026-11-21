@@ -73,6 +73,8 @@ export function buildNav(viewer: Viewer): NavSection[] {
           m.group === group &&
           m.inNav &&
           (viewer.can(m.id) ||
+            // Important Info: every family member can open it; each entry decides who sees it.
+            (m.id === "info" && viewer.family.enabledModules.includes("info")) ||
             (FOOD_MODULES.includes(m.id) && viewer.member.privateFood) ||
             (m.id === "budget" && viewer.member.privateFinance) ||
             (m.id === "projects" &&
@@ -144,16 +146,6 @@ export function buildNav(viewer: Viewer): NavSection[] {
       ],
     },
     { href: "/health/food", label: "Food Journal", icon: "Utensils" },
-    // Each family member's own Important Info; parents share the family's instead.
-    ...(!viewer.isParent && viewer.member.privateInfo
-      ? [
-          {
-            href: "/house/info?space=mine",
-            label: "My Important Info",
-            icon: "KeyRound",
-          },
-        ]
-      : []),
     ...(hidden.includes("wellness")
       ? []
       : [{ href: "/wellness", label: "Mental Wellness", icon: "Smile" }]),

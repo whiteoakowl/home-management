@@ -7,7 +7,7 @@ import { entityPhotos, familyDates, mediaComments, mediaFavorites, mediaReaction
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, requireModule } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
-import { deleteFamilyFile, familyVideos, saveUpload } from "@/lib/files";
+import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { canSeeEntity, memoryVisible, REACTION_EMOJI } from "@/lib/memories";
 import { f, familyMemberIds } from "@/lib/records";
 
@@ -54,8 +54,7 @@ export async function saveMemory(_: ActionState, fd: FormData): Promise<ActionSt
       const fileId = await saveUpload(viewer, file);
       if (fileId) photos.push(fileId);
     }
-    const videos = await familyVideos(viewer.family.id, f.list(fd, "videoIds"));
-    const media = [...photos.map((fileId) => ({ fileId, mediaType: "photo" })), ...videos.map((fileId) => ({ fileId, mediaType: "video" }))];
+    const media = photos.map((fileId) => ({ fileId, mediaType: "photo" }));
     if (media.length) await db.insert(memoryMedia).values(media.map((x, i) => ({ ...x, memoryId: memoryId!, familyId: viewer.family.id, sort: i })));
     refresh();
     return ok(m ? "Saved." : "Memory added.");

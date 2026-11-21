@@ -24,7 +24,10 @@ async function infoActor(fd: FormData) {
     if (viewer.isParent || !viewer.member.privateInfo) throw new AuthorizationError("Your private Important Info isn't turned on.");
     return { viewer, privateOwner: viewer.member.id as string | null };
   }
-  return { viewer: await requireModule("info", "edit"), privateOwner: null as string | null };
+  // Everyone in the family can add to Important Info; each entry says who can see it.
+  const viewer = await getViewer();
+  if (!viewer.family.enabledModules.includes("info")) throw new AuthorizationError("Important Info is turned off for your family.");
+  return { viewer, privateOwner: null as string | null };
 }
 const infoOwnerIs = (owner: string | null) => (owner ? eq(householdInfo.privateOwnerId, owner) : isNull(householdInfo.privateOwnerId));
 

@@ -47,7 +47,6 @@ export default async function AlbumPage({ params }: PageProps<"/photos/[albumId]
     const k = monthLabel(p.takenAt ?? p.createdAt);
     months.set(k, [...(months.get(k) ?? []), p]);
   }
-  const videoCount = photos.filter((p) => p.mediaType === "video").length;
 
   return (
     <>
@@ -57,7 +56,7 @@ export default async function AlbumPage({ params }: PageProps<"/photos/[albumId]
       <PageHeader
         eyebrow={
           <span className="flex flex-wrap items-center gap-2">
-            {album.eventDate ? formatLongDate(album.eventDate) : `${photos.length - videoCount} photo${photos.length - videoCount === 1 ? "" : "s"}${videoCount ? ` · ${videoCount} video${videoCount === 1 ? "" : "s"}` : ""}`}
+            {album.eventDate ? formatLongDate(album.eventDate) : `${photos.length} photo${photos.length === 1 ? "" : "s"}`}
             {owner && <Badge tone="primary">{owner.displayName.split(" ")[0]}&apos;s album</Badge>}
             {album.private && (
               <Badge>
@@ -84,7 +83,7 @@ export default async function AlbumPage({ params }: PageProps<"/photos/[albumId]
       )}
       {photos.length === 0 ? (
         <Card>
-          <EmptyState icon={<Images />} title="No photos yet" description="Add photos and videos from your phone or computer. Everyone who can see this album can add to it." action={canUse ? <AddPhotosModal albumId={album.id} /> : undefined} />
+          <EmptyState icon={<Images />} title="No photos yet" description="Add photos from your phone or computer. Everyone who can see this album can add to it." action={canUse ? <AddPhotosModal albumId={album.id} /> : undefined} />
         </Card>
       ) : (
         <div className="flex flex-col gap-6">
@@ -132,7 +131,7 @@ export default async function AlbumPage({ params }: PageProps<"/photos/[albumId]
         </div>
       )}
       {canChangeAlbum && (
-        <ActionButton action={deleteAlbum} fields={{ id: album.id }} confirm={`Delete the album "${album.title}" and all its photos and videos? This can't be undone.`} className="mt-6 text-sm font-medium text-wine-600 hover:underline">
+        <ActionButton action={deleteAlbum} fields={{ id: album.id }} confirm={`Delete the album "${album.title}" and all its photos? This can't be undone.`} className="mt-6 text-sm font-medium text-wine-600 hover:underline">
           <Trash2 className="size-4" /> Delete album
         </ActionButton>
       )}

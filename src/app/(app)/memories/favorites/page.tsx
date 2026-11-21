@@ -42,11 +42,11 @@ export default async function FavoritesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Memories" title="My favorites" description="Photos, videos and memories you've hearted. Only you see this list." />
+      <PageHeader eyebrow="Memories" title="My favorites" description="Photos and memories you've hearted. Only you see this list." />
       <MemoriesTabs active="favorites" />
       {items.length === 0 ? (
         <Card>
-          <EmptyState icon={<Heart />} title="No favorites yet" description="Tap the heart on any photo, video or memory to keep it here." />
+          <EmptyState icon={<Heart />} title="No favorites yet" description="Tap the heart on any photo or memory to keep it here." />
         </Card>
       ) : (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

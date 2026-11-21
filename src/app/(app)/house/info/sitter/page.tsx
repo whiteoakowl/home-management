@@ -23,7 +23,7 @@ const ORDER: BinderKind[] = ["emergency", "phone", "address", "doctor", "insuran
  */
 export default async function SitterSheet() {
   const viewer = await getViewer();
-  if (!viewer.can("info")) notFound();
+  if (!viewer.family.enabledModules.includes("info")) notFound();
   const rows = await db
     .select()
     .from(householdInfo)
@@ -38,7 +38,7 @@ export default async function SitterSheet() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link href="/house/info" className="inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline">
-          <ArrowLeft className="size-4" /> Family binder
+          <ArrowLeft className="size-4" /> Important Info
         </Link>
         <PrintButton />
       </div>
@@ -52,7 +52,7 @@ export default async function SitterSheet() {
           <p className="text-sm">In an emergency, call <strong>911</strong> first, then the people below.</p>
         </header>
         {sections.length === 0 ? (
-          <p className="text-muted">Add emergency contacts, doctors, house rules and Wi-Fi to the family binder and they&apos;ll appear here.</p>
+          <p className="text-muted">Add emergency contacts, doctors, house rules and Wi-Fi to Important Info and they&apos;ll appear here.</p>
         ) : (
           <div className="flex flex-col gap-5">
             {sections.map(({ k, list }) => (

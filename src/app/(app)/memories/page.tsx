@@ -67,7 +67,7 @@ export default async function MemoriesPage({ searchParams }: PageProps<"/memorie
       <PageHeader
         eyebrow="Family"
         title="Memories"
-        description="Your family's story: big moments, everyday memories, photos and videos, year by year."
+        description="Your family's story: big moments, everyday memories and photos, year by year."
         actions={
           canUse ? (
             <>
@@ -121,7 +121,7 @@ export default async function MemoriesPage({ searchParams }: PageProps<"/memorie
           <EmptyState
             icon={<Sparkles />}
             title={q ? "Nothing found" : milestones ? "No milestones yet" : "Start your family timeline"}
-            description={q ? "Try another word." : "Add a memory with photos or videos: first steps, birthdays, road trips, the funny thing someone said at dinner. Albums and trips show up here too."}
+            description={q ? "Try another word." : "Add a memory with photos: first steps, birthdays, road trips, the funny thing someone said at dinner. Albums and trips show up here too."}
             action={canUse && !q ? <MemoryModal members={opts} today={today} milestone={milestones} /> : undefined}
           />
         </Card>

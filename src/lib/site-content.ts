@@ -5,10 +5,10 @@ export const HOME_HIGHLIGHTS = [
   { icon: "ListChecks", title: "Chores that get done", body: "Assign chores to one person or several, repeat them on any schedule, and reward points everyone can cash in." },
   { icon: "UtensilsCrossed", title: "Meals without the stress", body: "Plan the week, keep your recipes, know what's in the pantry and build the shopping list automatically." },
   { icon: "Trophy", title: "Sports, dance & activities", body: "Teams, practices, games, recitals and stats for every kid, all on the calendar so nobody misses a pickup." },
-  { icon: "MessagesSquare", title: "Family chat & memories", body: "Family group chats with push notifications, plus a year-by-year timeline of memories, milestones, photos and videos." },
+  { icon: "MessagesSquare", title: "Family chat & memories", body: "Family group chats with push notifications, plus a year-by-year timeline of memories, milestones and photos." },
   { icon: "Gift", title: "Wishlists that keep the surprise", body: "Everyone keeps a gift wishlist. Family members quietly mark what they're buying, and the list owner never sees it." },
   { icon: "Wallet", title: "Budget & goals", body: "Bills, income, expenses and savings goals in one view, with private money spaces for each person." },
-  { icon: "House", title: "Family binder & more", body: "Emergency contacts, doctors, school, insurance and Wi-Fi in one binder with a printable babysitter sheet, plus home, pets, health and more." },
+  { icon: "House", title: "Important Info & more", body: "A family binder of emergency contacts, doctors, school, insurance and Wi-Fi in one binder with a printable babysitter sheet, plus home, pets, health and more." },
 ] as const;
 
 /** The Spiritual section's religion tabs, for the public website. */

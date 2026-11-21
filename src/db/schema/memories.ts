@@ -3,7 +3,7 @@ import { id, timestamps } from "./_shared";
 import { families, familyMembers, files } from "./core";
 
 /**
- * Memories & Photos: family entries and milestones with photos and videos,
+ * Memories & Photos: family entries and milestones with photos,
  * shown on a year-by-year timeline with photo albums and trips.
  */
 export const memories = pgTable(

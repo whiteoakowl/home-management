@@ -1,4 +1,4 @@
-import { Download, Heart, Play, Trash2 } from "lucide-react";
+import { Download, Heart, Trash2 } from "lucide-react";
 import { addMediaComment, deleteMediaComment, toggleFavorite, toggleMediaReaction } from "@/app/actions/memories";
 import { ActionForm } from "@/components/forms/action-form";
 import { TextField } from "@/components/forms/fields";
@@ -9,21 +9,8 @@ import { fileUrl } from "@/lib/files";
 import { REACTION_EMOJI } from "@/lib/memories";
 import { cn } from "@/lib/utils";
 
-/** A photo or video tile (videos load only their first frame until played). */
-export function MediaTile({ fileId, mediaType, alt, className, controls }: { fileId: string; mediaType: string; alt: string; className?: string; controls?: boolean }) {
-  if (mediaType === "video")
-    return controls ? (
-      <video src={fileUrl(fileId)!} controls playsInline preload="metadata" className={cn("size-full bg-black object-contain", className)} aria-label={alt} />
-    ) : (
-      <span className={cn("relative block size-full bg-black", className)}>
-        <video src={`${fileUrl(fileId)!}#t=0.1`} muted playsInline preload="metadata" className="size-full object-cover" aria-label={alt} />
-        <span className="absolute inset-0 flex items-center justify-center">
-          <span className="flex size-10 items-center justify-center rounded-full bg-black/55 text-white">
-            <Play className="size-5" />
-          </span>
-        </span>
-      </span>
-    );
+/** A photo tile (thumbnail in grids, full size with `controls`). */
+export function MediaTile({ fileId, alt, className, controls }: { fileId: string; mediaType?: string; alt: string; className?: string; controls?: boolean }) {
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={fileUrl(fileId, !controls)!} alt={alt} className={cn("size-full object-cover", className)} loading="lazy" />;
 }

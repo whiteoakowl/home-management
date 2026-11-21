@@ -2,12 +2,11 @@ import { Pencil, Plus } from "lucide-react";
 import { saveMemory } from "@/app/actions/memories";
 import { FormModal } from "@/components/forms/action-form";
 import { CheckboxField, DateField, FormRow, MemberChips, PhotosField, TextAreaField, TextField, type MemberOption } from "@/components/forms/fields";
-import { VideoField } from "@/components/photos/video-field";
 import { Field } from "@/components/ui/form";
 
 export type MemoryDefaults = { id: string; title: string; body: string | null; date: string; milestone: boolean; memberIds: string[]; place: string | null; private: boolean };
 
-/** Add or edit a memory: what happened, when, who, photos and videos. */
+/** Add or edit a memory: what happened, when, who, and photos. */
 export function MemoryModal({ members, today, item, milestone, label }: { members: MemberOption[]; today: string; item?: MemoryDefaults; milestone?: boolean; label?: string }) {
   return (
     <FormModal
@@ -31,7 +30,6 @@ export function MemoryModal({ members, today, item, milestone, label }: { member
         <MemberChips name="people" members={members} defaultValue={item?.memberIds ?? []} />
       </Field>
       <PhotosField name="photos" label={item ? "Add more photos" : "Photos"} max={30} />
-      <VideoField />
       <CheckboxField name="milestone" label="Milestone" description="A big moment (first steps, first day of school, graduation). Shown with a ⭐ on the timeline." defaultChecked={item ? item.milestone : milestone} />
       <CheckboxField name="private" label="Only me" description="Keep this memory private to you." defaultChecked={item?.private} />
     </FormModal>

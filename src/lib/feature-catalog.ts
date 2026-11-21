@@ -79,7 +79,7 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         tabs: [
           { name: "Itinerary", does: "A day-by-day plan with a countdown; every stop and reservation also shows on the family calendar." },
           { name: "Travel & reservations", does: "Flights, hotels, rental cars, dinner reservations and park tickets with confirmation numbers." },
-          { name: "Trip photos", does: "One shared album for the trip, so everyone's photos and videos end up together." },
+          { name: "Trip photos", does: "One shared album for the trip, so everyone's photos end up together." },
           { name: "Budget & expenses", does: "What you booked and what you spent, against the trip budget and a savings goal." },
         ],
       },
@@ -112,10 +112,10 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
       {
         name: "Memories & Photos",
         icon: "Images",
-        summary: "Your family's story: memories, milestones, photos and videos, year by year. Family-only and private.",
+        summary: "Your family's story: memories, milestones and photos, year by year. Family-only and private.",
         tabs: [
           { name: "Timeline", does: "Every memory, milestone, album and trip on one year-by-year timeline, with search and an \"On this day\" look back." },
-          { name: "Memories & milestones", does: "Write what happened, when and who was there, with photos and videos; mark the big moments as milestones." },
+          { name: "Memories & milestones", does: "Write what happened, when and who was there, with photos; mark the big moments as milestones." },
           { name: "Albums", does: "Shared family albums, someone's own album, or a private one; photos sorted by when they were taken; videos too." },
           { name: "Comments, reactions & favorites", does: "React and comment on any photo or memory, keep favorites, and download originals." },
           { name: "Birthdays & anniversaries", does: "Countdowns with ages and years together, on the calendar, with reminders (never spoiling the birthday person's surprise)." },
@@ -131,7 +131,7 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
           { name: "Chores", does: "Repeating chores for one person, several people, or taking turns; everyone assigned earns the points, with 🔥 streaks for chores done day after day." },
           { name: "Rewards", does: "Points earned for chores, rewards to cash them in for, and parent approval." },
           { name: "Cleaning", does: "Daily to annual cleaning, room by room, with cleanliness meters and checklists." },
-          { name: "Family binder", does: "Emergency contacts, important numbers, school, doctors, insurance, babysitter notes, household instructions, addresses, memberships and Wi-Fi (with a scan-to-join QR code), plus a one-page printable babysitter sheet." },
+          { name: "Important Info", does: "Your family binder: emergency contacts, important numbers, school, doctors, insurance, babysitter notes, household instructions, addresses, memberships and Wi-Fi (with a scan-to-join QR code), plus a one-page printable babysitter sheet. Everyone in the family can open it, and you choose who sees each entry." },
         ],
       },
       {
@@ -386,6 +386,7 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         tabs: [
           { name: "Sections", does: "Turn whole sections on or off (no pool? no farm? hide them)." },
           { name: "Religions", does: "Check the religions your family uses and choose which members get each one." },
+          { name: "Download your data", does: "Download all your photos (in folders by album, memory and pet) and all your saved information as spreadsheets, anytime." },
           { name: "Family name & colours", does: "Your family's name becomes the app's name on everyone's phone." },
           { name: "Subscription & billing", does: "Plan, card, receipts, switch monthly or yearly, or cancel, all in the app." },
         ],

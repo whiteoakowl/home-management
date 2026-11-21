@@ -576,7 +576,7 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
             <p className="text-sm text-muted">
               {album
                 ? "No photos yet. Everyone going can add theirs."
-                : "One shared album for the trip, so everyone's photos and videos end up in one place."}
+                : "One shared album for the trip, so everyone's photos end up in one place."}
             </p>
           )}
         </Card>

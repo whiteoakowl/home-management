@@ -113,7 +113,6 @@ npx supabase secrets set --project-ref YOUR_PROJECT_REF STRIPE_SECRET_KEY=sk_tes
 
 - [ ] **Supabase → Billing:** move to the **Pro plan** (the free plan pauses after a quiet week and is small),
       and **turn off the Spend Cap** so storage keeps growing with your customers. Details: `docs/STORAGE.md`.
-- [ ] **Supabase → Storage → Settings:** set the **upload file size limit to 300 MB** so videos can be added to memories and albums.
 - [ ] **Supabase → Database → Backups:** confirm daily backups (consider Point-in-Time Recovery).
 - [ ] **Supabase → Advisors → Security Advisor:** should show no errors (the app locks every table).
 
@@ -157,7 +156,6 @@ npx supabase secrets set --project-ref YOUR_PROJECT_REF STRIPE_SECRET_KEY=sk_tes
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Push keys (Step 2b) | for push |
 | `VAPID_SUBJECT` | `mailto:hello@your-address.com` | for push |
 | `CRON_SECRET` | any long random text (hourly reminders) | for push |
-| `MAX_VIDEO_MB` | largest video people can upload (default 300) | optional |
 | `FAMILY_STORAGE_GB` | photo/file allowance per family (default 10) | optional |
 | `HEALTH_CHECK_KEY` | any long random text, to open `/api/health?key=…` | optional |
 

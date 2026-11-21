@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { calendarEvents, contacts, entityPhotos, familyMessages, files, messageReactions, photoAlbums, pollVotes } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getViewer, requireModule } from "@/lib/dal";
-import { deleteFamilyFile, familyVideos, saveUpload } from "@/lib/files";
+import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { f, familyMemberIds } from "@/lib/records";
 import { CONTACT_CATEGORIES, markRead } from "@/lib/hub";
 import { pushChat } from "@/lib/push-chat";
@@ -268,21 +268,18 @@ export async function addPhotosToAlbum(_: ActionState, fd: FormData): Promise<Ac
       const fileId = await saveUpload(viewer, file);
       if (fileId) ids.push(fileId);
     }
-    const videos = await familyVideos(viewer.family.id, f.list(fd, "videoIds"));
-    if (!ids.length && !videos.length) return fail("Choose at least one photo or video.", "photos");
+    if (!ids.length) return fail("Choose at least one photo.", "photos");
     const caption = f.str(fd, "caption")?.slice(0, 200) ?? null;
     const milestone = f.str(fd, "milestone")?.slice(0, 120) ?? null;
     // Date order: when each photo was taken (camera data), else now.
     const taken = new Map((await db.select({ id: files.id, at: files.takenAt }).from(files).where(inArray(files.id, ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]))).map((r) => [r.id, r.at]));
     await db.insert(entityPhotos).values([
       ...ids.map((fileId) => ({ familyId: viewer.family.id, entityType: "album", entityId: a.id, fileId, caption, milestone, mediaType: "photo", takenAt: taken.get(fileId) ?? new Date(), createdByMemberId: viewer.member.id })),
-      ...videos.map((fileId) => ({ familyId: viewer.family.id, entityType: "album", entityId: a.id, fileId, caption, milestone, mediaType: "video", takenAt: new Date(), createdByMemberId: viewer.member.id })),
     ]);
     await db.update(photoAlbums).set({ updatedAt: new Date() }).where(eq(photoAlbums.id, a.id));
     revalidatePath("/photos", "layout");
     revalidatePath("/memories", "layout");
-    const n = ids.length + videos.length;
-    return ok(`${n} ${videos.length && !ids.length ? "video" : "item"}${n === 1 ? "" : "s"} added.`);
+    return ok(`${ids.length} photo${ids.length === 1 ? "" : "s"} added.`);
   });
 }
 

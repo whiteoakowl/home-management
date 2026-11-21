@@ -4,7 +4,6 @@ import { ImagePlus, ImageUp, Pencil, UserPlus } from "lucide-react";
 import { addPhotosToAlbum, saveAlbum, saveContact } from "@/app/actions/hub";
 import { FormModal } from "@/components/forms/action-form";
 import { CheckboxField, DateField, FormRow, PhotosField, SelectField, TextAreaField, TextField, type MemberOption } from "@/components/forms/fields";
-import { VideoField } from "@/components/photos/video-field";
 import { CONTACT_CATEGORIES, CONTACT_LABEL } from "@/lib/hub-shared";
 
 const editIcon = <Pencil className="mx-auto size-4" />;
@@ -91,10 +90,9 @@ export function AlbumModal({ item, members }: { item?: AlbumDefaults; members?: 
 
 export function AddPhotosModal({ albumId }: { albumId: string }) {
   return (
-    <FormModal title="Add photos & videos" triggerLabel="Add photos" triggerIcon={<ImageUp className="size-4" />} action={addPhotosToAlbum} submitLabel="Upload" size="sm" refreshOnSuccess>
+    <FormModal title="Add photos" triggerLabel="Add photos" triggerIcon={<ImageUp className="size-4" />} action={addPhotosToAlbum} submitLabel="Upload" size="sm" refreshOnSuccess>
       <input type="hidden" name="albumId" value={albumId} />
-      <PhotosField name="photos" label="Photos" max={20} />
-      <VideoField />
+      <PhotosField name="photos" label="Photos" required max={20} />
       <TextField name="caption" label="Caption (optional)" maxLength={200} />
       <TextField name="milestone" label="Milestone (optional)" maxLength={120} placeholder="First day of kindergarten" hint="Shows on the family timeline with a ⭐." />
     </FormModal>

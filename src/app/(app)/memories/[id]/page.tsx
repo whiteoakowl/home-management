@@ -64,7 +64,7 @@ export default async function MemoryPage({ params }: PageProps<"/memories/[id]">
         {canChange && (
           <span className="flex shrink-0">
             <MemoryModal members={opts} today={todayIn(viewer.family.timezone)} item={{ id: m.id, title: m.title, body: m.body, date: m.date, milestone: m.kind === "milestone", memberIds: m.memberIds, place: m.place, private: m.visibility === "private" }} />
-            <ActionButton action={deleteMemory} fields={{ id: m.id }} confirm={`Delete "${m.title}" and its photos and videos? This can't be undone.`} label="Delete memory" className="size-9 rounded-full text-muted hover:bg-sunken hover:text-wine-700">
+            <ActionButton action={deleteMemory} fields={{ id: m.id }} confirm={`Delete "${m.title}" and its photos? This can't be undone.`} label="Delete memory" className="size-9 rounded-full text-muted hover:bg-sunken hover:text-wine-700">
               <Trash2 className="size-4" />
             </ActionButton>
           </span>
@@ -86,15 +86,9 @@ export default async function MemoryPage({ params }: PageProps<"/memories/[id]">
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {media.map((x) => (
             <li key={x.id} className="group relative overflow-hidden rounded-2xl bg-sunken">
-              {x.mediaType === "video" ? (
-                <div className="aspect-video">
-                  <MediaTile fileId={x.fileId} mediaType="video" alt={m.title} controls />
-                </div>
-              ) : (
-                <a href={fileUrl(x.fileId)!} target="_blank" rel="noreferrer" className="block aspect-[4/3]">
+              <a href={fileUrl(x.fileId)!} target="_blank" rel="noreferrer" className="block aspect-[4/3]">
                   <MediaTile fileId={x.fileId} mediaType="photo" alt={x.caption ?? m.title} controls />
                 </a>
-              )}
               <span className="absolute top-2 right-2 flex gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                 <a href={downloadHref(x.fileId)} download className="rounded-full bg-surface/90 px-3 py-1.5 text-xs font-medium">
                   Download

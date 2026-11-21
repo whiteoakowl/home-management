@@ -65,8 +65,8 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     phase: 2,
     inNav: true,
     defaultMemberAccess: "use",
-    tagline: "Your family's memories, milestones, photos and videos, year by year.",
-    highlights: ["Year-by-year family timeline", "Shared and private albums with videos", "Birthdays & anniversaries"],
+    tagline: "Your family's memories, milestones and photos, year by year.",
+    highlights: ["Year-by-year family timeline", "Shared and private photo albums", "Birthdays & anniversaries"],
   },
   sports: {
     id: "sports",
@@ -149,8 +149,8 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     phase: 2,
     inNav: true,
     defaultMemberAccess: "use",
-    tagline: "Wi-Fi, shut-offs, contacts: key household details.",
-    highlights: ["Private or shared", "Searchable", "In the household manual"],
+    tagline: "Your family binder: emergency contacts, doctors, school, insurance, Wi-Fi and more, each shared with just the people you choose.",
+    highlights: ["Choose who sees each entry", "Printable babysitter sheet", "Wi-Fi QR code"],
   },
   chores: {
     id: "chores",

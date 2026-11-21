@@ -14,6 +14,7 @@ import { fileUrl } from "@/lib/files";
 import { AppThemeForm } from "../account/forms";
 import { saveFamilyTheme } from "@/app/actions/account";
 import { DataControls } from "@/components/settings/data-controls";
+import { DownloadCenter } from "@/components/settings/download-center";
 import { FAITHS, FAITH_META, familyFaiths, faithPathsOf } from "@/lib/faith-config";
 import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, FamilyFaithsForm, KidNamesForm, ModulesForm } from "./forms";
 
@@ -134,9 +135,13 @@ export default async function SettingsPage() {
 
       {viewer.isOwner && (
         <Card>
-          <CardHeader title="Your family's data" />
-          <p className="mb-4 text-[15px] text-muted">Download a copy of everything your family has added (other people&apos;s private journals and health records aren&apos;t included), or delete the family account and all its information for good.</p>
-          <DataControls familyName={f.name} />
+          <CardHeader title="Download your family's data" />
+          <p className="mb-4 text-[15px] text-muted">Keep your own copy of everything: all your photos, and all the information your family has saved. Other people&apos;s private items (private journals, health tracking) aren&apos;t included.</p>
+          <DownloadCenter familyName={f.name} />
+          <div className="mt-6 border-t border-line pt-5">
+            <p className="mb-3 text-sm text-muted">Done with the app? Delete the family account and all its information for good.</p>
+            <DataControls familyName={f.name} />
+          </div>
         </Card>
       )}
 

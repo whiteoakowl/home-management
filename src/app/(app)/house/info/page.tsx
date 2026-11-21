@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { KeyRound, Lock, Printer } from "lucide-react";
 import { db } from "@/db";
 import { householdInfo } from "@/db/schema";
@@ -16,40 +16,41 @@ import { canChangeItem, getViewer, visibleTo } from "@/lib/dal";
 import { memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
 import { HouseTabs } from "../house-tabs";
-import { SegmentLinks } from "@/components/ui/tabs";
 
-export const metadata: Metadata = { title: "Important info" };
+export const metadata: Metadata = { title: "Important Info" };
 
 type I = typeof householdInfo.$inferSelect;
 const kindOf = (i: I): BinderKind => (isBinderKind(i.kind) ? i.kind : "note");
 const defaultsOf = (i: I): Record<string, string> => (kindOf(i) === "note" && !Object.keys(i.fields).length ? { title: i.title, body: i.body } : i.fields);
 
-export default async function InfoPage({ searchParams }: PageProps<"/house/info">) {
+export default async function InfoPage() {
   const viewer = await getViewer();
-  const sp = await searchParams;
-  // Family members have their own private Important Info ("My info"), which parents never see.
-  const hasMine = !viewer.isParent && viewer.member.privateInfo;
-  const mine = hasMine && (sp.space === "mine" || !viewer.can("info"));
-  if (!mine && !viewer.can("info")) notFound();
-  const canManage = mine || viewer.can("info", "edit");
+  // Everyone in the family can open Important Info; each entry decides who sees it.
+  if (!viewer.family.enabledModules.includes("info")) notFound();
+  const canManage = true;
   const [members, rows] = await Promise.all([
     memberOptions(viewer),
     db
       .select()
       .from(householdInfo)
       .where(
-        mine
-          ? and(eq(householdInfo.familyId, viewer.family.id), eq(householdInfo.privateOwnerId, viewer.member.id))
-          : and(eq(householdInfo.familyId, viewer.family.id), isNull(householdInfo.privateOwnerId), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info")),
+        and(
+          eq(householdInfo.familyId, viewer.family.id),
+          or(
+            and(isNull(householdInfo.privateOwnerId), visibleTo(viewer, { id: householdInfo.id, visibility: householdInfo.visibility, author: householdInfo.createdByMemberId }, "household_info")),
+            // Older "My info" entries: still only their owner's.
+            eq(householdInfo.privateOwnerId, viewer.member.id),
+          ),
+        ),
       )
       .orderBy(asc(householdInfo.title)),
   ]);
   const access = await getRecordAccess("household_info", rows.map((r) => r.id));
-  const hidden = (k: BinderKind, i?: I): Record<string, string> => ({ kind: k, ...(i ? { id: i.id } : {}), ...(mine ? { space: "mine" } : {}) });
-  const vis = (i?: I) => (mine ? undefined : { defaultValue: i?.visibility ?? (k0(i) === "insurance" ? "parents" : "family"), selected: i ? access.get(i.id) : undefined, privateLabel: "Only me" });
-  const k0 = (i?: I) => (i ? kindOf(i) : null);
+  const own = (i?: I) => !!i?.privateOwnerId;
+  const hidden = (k: BinderKind, i?: I): Record<string, string> => ({ kind: k, ...(i ? { id: i.id } : {}), ...(own(i) ? { space: "mine" } : {}) });
+  const vis = (i?: I) => (own(i) ? undefined : { defaultValue: i?.visibility ?? (i && kindOf(i) === "insurance" ? "parents" : "family"), selected: i ? access.get(i.id) : undefined, privateLabel: "Only me" });
   const addFor = (k: BinderKind, variant: "primary" | "secondary" | "soft" | "ghost" = "soft", label?: string) => (
-    <RecordModal title={`Add ${BINDER[k].one}`} triggerLabel={label ?? "Add"} triggerVariant={variant} action={saveInfo} fields={BINDER[k].fields} hidden={hidden(k)} members={members} visibility={vis()} size="md" />
+    <RecordModal title={`Add ${BINDER[k].one}`} triggerLabel={label ?? "Add"} triggerVariant={variant} action={saveInfo} fields={BINDER[k].fields} hidden={hidden(k)} members={members} visibility={{ defaultValue: k === "insurance" ? "parents" : "family", privateLabel: "Only me" }} size="md" />
   );
   const byKind = new Map<BinderKind, I[]>();
   for (const r of rows) byKind.set(kindOf(r), [...(byKind.get(kindOf(r)) ?? []), r]);
@@ -59,11 +60,11 @@ export default async function InfoPage({ searchParams }: PageProps<"/house/info"
   return (
     <>
       <PageHeader
-        eyebrow={mine ? "My private" : "House"}
-        title={mine ? "My important info" : "Family binder"}
-        description={mine ? "Your own codes, accounts, contacts and notes. Only you can see these, not even parents." : "Your family binder: emergency contacts, doctors, school, insurance, Wi-Fi and everything a sitter needs."}
+        eyebrow="House"
+        title="Important Info"
+        description="Your family binder: emergency contacts, doctors, school, insurance, Wi-Fi and everything a sitter needs. Each entry is shared only with the people you choose."
         actions={
-          !mine && rows.some((r) => BINDER[kindOf(r)].sitter) ? (
+          rows.some((r) => BINDER[kindOf(r)].sitter) ? (
             <ButtonLink href="/house/info/sitter" variant="secondary" icon={<Printer className="size-4" />}>
               Babysitter sheet
             </ButtonLink>
@@ -71,11 +72,6 @@ export default async function InfoPage({ searchParams }: PageProps<"/house/info"
         }
       />
       {viewer.can("house") && <HouseTabs active="info" viewer={viewer} />}
-      {hasMine && viewer.can("info") && (
-        <div className="mb-5">
-          <SegmentLinks fit active={mine ? "mine" : "family"} items={[{ key: "family", href: "/house/info", label: "Family info" }, { key: "mine", href: "/house/info?space=mine", label: "My info (private)" }]} />
-        </div>
-      )}
       {used.length > 1 && (
         <nav aria-label="Binder sections" className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1">
           {used.map((k) => (
@@ -101,15 +97,15 @@ export default async function InfoPage({ searchParams }: PageProps<"/house/info"
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-sans text-[15px] font-semibold">{i.title}</h3>
                       <div className="-mt-2 -mr-2 flex items-center">
-                        {!mine && i.visibility !== "family" && (
+                        {(own(i) || i.visibility !== "family") && (
                           <Badge tone="mist">
-                            <Lock className="size-3" /> {i.visibility === "private" ? "Only me" : i.visibility === "parents" ? "Parents" : "Shared"}
+                            <Lock className="size-3" /> {own(i) || i.visibility === "private" ? "Only me" : i.visibility === "parents" ? "Parents" : `${(access.get(i.id) ?? []).length + 1} people`}
                           </Badge>
                         )}
-                        {canManage && (mine || canChangeItem(viewer, i.createdByMemberId)) && (
+                        {canManage && (own(i) || canChangeItem(viewer, i.createdByMemberId)) && (
                           <>
                             <RecordModal title={`Edit ${BINDER[k].one}`} edit action={saveInfo} fields={BINDER[k].fields} defaults={defaultsOf(i)} hidden={hidden(k, i)} members={members} visibility={vis(i)} size="md" />
-                            <DeleteButton action={deleteInfo} fields={{ id: i.id, ...(mine ? { space: "mine" } : {}) }} what={`"${i.title}"`} />
+                            <DeleteButton action={deleteInfo} fields={{ id: i.id, ...(own(i) ? { space: "mine" } : {}) }} what={`"${i.title}"`} />
                           </>
                         )}
                       </div>
@@ -124,8 +120,8 @@ export default async function InfoPage({ searchParams }: PageProps<"/house/info"
       </div>
       {canManage && empty.length > 0 && (
         <section className={used.length ? "mt-10" : ""}>
-          <h2 className="mb-1 text-lg font-semibold">{used.length ? "Add more to your binder" : "Start your family binder"}</h2>
-          <p className="mb-4 text-sm text-muted">Everything a grandparent, babysitter or the family needs, in one place.</p>
+          <h2 className="mb-1 text-lg font-semibold">{used.length ? "Add more to Important Info" : "Start your family binder"}</h2>
+          <p className="mb-4 text-sm text-muted">Everything a grandparent, babysitter or the family needs, in one place. You choose who can see each entry.</p>
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {empty.map((k) => (
               <li key={k} className="flex items-start gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/60 p-4">

@@ -16,7 +16,7 @@ import { familyMembersFor } from "@/lib/names";
 
 export const metadata: Metadata = { title: "Photo" };
 
-/** One photo or video: full size, reactions, comments, favorite, download, milestone. */
+/** One photo: full size, reactions, comments, favorite, download, milestone. */
 export default async function PhotoPage({ params }: PageProps<"/photos/[albumId]/[photoId]">) {
   const viewer = await getViewer();
   if (!viewer.can("photos")) notFound();
