@@ -8,6 +8,7 @@ import { readSessionUser } from "@/lib/auth/session";
 import { getPlatformSettings } from "@/lib/billing";
 import { FEATURE_CATALOG } from "@/lib/feature-catalog";
 import { FREE_SECTION_NAMES, PREMIUM_TABS } from "@/lib/plan-tiers";
+import { PlanCards } from "@/components/site/plans";
 import { EXTRA_FEATURES } from "@/lib/site-content";
 
 export const metadata: Metadata = {
@@ -36,6 +37,11 @@ export default async function FeaturesPage() {
             ))}
           </nav>
           <p className="mt-6 text-center text-[15px]">
+            <a href="#plans" className="font-medium text-primary-700 hover:underline">
+              Free forever for the everyday family hub{trial ? ` · ${trial} days of Premium free, no card needed` : ""} →
+            </a>
+          </p>
+          <p className="mt-3 text-center text-[15px]">
             <a href="#faith" className="font-medium text-primary-700 hover:underline">
               ✝️ ⛪ ✡️ 🕉️ ☸️ 🌙 Faith tabs for Christian, Catholic, Jewish, Hindu, Buddhist and spiritual families →
             </a>
@@ -108,6 +114,10 @@ export default async function FeaturesPage() {
         </Section>
       </div>
 
+      <Section id="plans" className="scroll-mt-20">
+        <SectionTitle eyebrow="Plans" title="What's free and what's Premium" intro={trial ? `Sections marked Free are free forever. Try every Premium section free for ${trial} days, no card needed.` : "Sections marked Free are free forever. Premium unlocks the rest."} />
+        <PlanCards s={settings} signedIn={!!user} />
+      </Section>
       <CallToAction trialDays={trial} signedIn={!!user} />
     </>
   );

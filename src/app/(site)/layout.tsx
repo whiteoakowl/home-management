@@ -3,7 +3,8 @@ import { Menu } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { ButtonLink } from "@/components/ui/button";
 import { readSessionUser } from "@/lib/auth/session";
-import { getBrand } from "@/lib/billing";
+import { OfferBar, trialOf } from "@/components/site/plans";
+import { getBrand, getPlatformSettings } from "@/lib/billing";
 
 const NAV = [
   { href: "/features", label: "Features" },
@@ -14,10 +15,11 @@ const NAV = [
 
 /** The public website: home, features, pricing, reviews, contact. */
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [brand, user] = await Promise.all([getBrand(), readSessionUser()]);
+  const [brand, user, settings] = await Promise.all([getBrand(), readSessionUser(), getPlatformSettings()]);
   const year = new Date().getFullYear();
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
+      {!user && <OfferBar trial={trialOf(settings)} />}
       <header className="sticky top-0 z-30 border-b border-line/70 bg-canvas/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
           <Link href="/welcome" aria-label={`${brand} home`}>
@@ -75,6 +77,12 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <div className="flex flex-col gap-3">
             <Brand title={brand} />
             <p className="max-w-xs text-sm text-muted">One home base for your family&apos;s calendar, chores, meals, activities and everything in between.</p>
+            <p className="max-w-xs text-sm font-medium text-ink-soft">
+              Free forever for the everyday family hub.{trialOf(settings) > 0 ? ` Premium free for ${trialOf(settings)} days, no card needed.` : ""}{" "}
+              <Link href="/pricing" className="text-primary-700 hover:underline">
+                See plans
+              </Link>
+            </p>
           </div>
           <nav aria-label="Footer" className="flex flex-col gap-2 text-sm">
             <span className="font-semibold">Product</span>

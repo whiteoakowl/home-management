@@ -9,14 +9,15 @@ import { FaithShowcase } from "@/components/site/faith";
 import { CallToAction, ReviewCard, Section, SectionTitle } from "@/components/site/parts";
 import { ButtonLink } from "@/components/ui/button";
 import { readSessionUser } from "@/lib/auth/session";
-import { formatPrice, getPlatformSettings } from "@/lib/billing";
+import { getPlatformSettings } from "@/lib/billing";
+import { PlanCards } from "@/components/site/plans";
 import { HOME_HIGHLIGHTS, PILLARS, STEPS } from "@/lib/site-content";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { brandName } = await getPlatformSettings();
   return {
     title: { absolute: `${brandName}: your family's home base` },
-    description: "One app for your family's calendar, chores, meals, sports, chat, wishlists, budget, faith and more. Everyone gets their own login.",
+    description: "One app for your family's calendar, chores, meals, sports, chat, wishlists, budget, faith and more. Free forever for the everyday family hub, with a free Premium trial. Everyone gets their own login.",
   };
 }
 
@@ -89,7 +90,9 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
       <div className="bg-hearth overflow-x-clip">
         <Section className="grid items-center gap-12 pt-12 sm:pt-16 lg:grid-cols-[1.1fr_1fr]">
           <div className="flex flex-col gap-6">
-            <p className="w-fit rounded-full border border-primary-200 bg-surface/70 px-3 py-1 text-sm font-medium text-primary-700">The family organizer that grows with you</p>
+            <Link href="#plans" className="w-fit rounded-full border border-primary-200 bg-surface/70 px-3 py-1 text-sm font-medium text-primary-700 hover:bg-primary-50">
+              Free forever{trial ? ` · ${trial}-day Premium trial, no card` : ""} →
+            </Link>
             <h1 className="text-[42px] leading-[1.05] font-semibold sm:text-[56px]">Your whole family, finally on the same page.</h1>
             <p className="max-w-xl text-lg text-muted">
               {settings.brandName} brings your calendar, chores, meals, kids&apos; activities, chat, wishlists and budget into one app, with a login for everyone and your family&apos;s name on the home screen.
@@ -186,17 +189,18 @@ export default async function WelcomePage({ searchParams }: PageProps<"/welcome"
         </Section>
       )}
 
-      <Section className="pt-0">
-        <div className="flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-8 text-center shadow-[var(--shadow-card)]">
-          <p className="text-sm font-semibold tracking-[0.14em] text-primary-600 uppercase">Simple pricing</p>
-          <p className="font-display text-3xl font-semibold">
-            {formatPrice(settings.monthlyPriceCents, settings.currency)}/month <span className="text-muted">or</span> {formatPrice(settings.yearlyPriceCents, settings.currency)}/year
-          </p>
-          <p className="text-muted">One price covers your whole family. Every feature included.</p>
-          <ButtonLink href="/pricing" variant="secondary">
-            See pricing
-          </ButtonLink>
-        </div>
+      <Section id="plans" className="scroll-mt-20 pt-0">
+        <SectionTitle
+          eyebrow="Plans"
+          title="Start free. Upgrade when you're ready."
+          intro={trial ? `The everyday family hub is free forever. Every new family also gets ${trial} days of Premium free, with no card needed.` : "The everyday family hub is free forever. Premium unlocks everything else."}
+        />
+        <PlanCards s={settings} signedIn={!!user} />
+        <p className="mt-6 text-center">
+          <Link href="/pricing" className="inline-flex items-center gap-1 font-medium text-primary-700 hover:underline">
+            Pricing questions <ChevronRight className="size-4" />
+          </Link>
+        </p>
       </Section>
 
       <CallToAction trialDays={trial} signedIn={!!user} />
