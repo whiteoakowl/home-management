@@ -64,7 +64,7 @@ export default async function MemoriesPage({ searchParams }: PageProps<"/memorie
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="memories"
         eyebrow="Family"
         title="Memories"
         description="Your family's story: big moments, everyday memories and photos, year by year."

@@ -45,7 +45,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <PageHeader title="Account settings" description={`Customize the ${f.name} Family.`} />
+      <PageHeader help="account-settings" title="Account settings" description={`Customize the ${f.name} Family.`} />
       <div className="grid gap-6 md:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader title="Family details" />

@@ -103,7 +103,7 @@ export default async function FoodJournalPage({ searchParams }: PageProps<"/heal
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <PageHeader
+      <PageHeader help="food-journal"
         eyebrow="My private · Personal Health"
         title={own ? "Food Journal" : `${subject.displayName}'s Food Journal`}
         description="A personal record of what you eat and drink and how you felt. No counting, no rules."

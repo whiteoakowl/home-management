@@ -13,7 +13,7 @@ export default async function AccountPage() {
   const viewer = await getViewer();
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <PageHeader eyebrow="Account" title="My settings" description={`Signed in as ${viewer.user.email}.`} />
+      <PageHeader help="my-settings" eyebrow="Account" title="My settings" description={`Signed in as ${viewer.user.email}.`} />
       <Card className="flex flex-wrap items-center gap-4">
         <Avatar name={viewer.member.displayName} color={viewer.member.color} size="xl" photoUrl={fileUrl(viewer.member.avatarFileId, true)} />
         <div className="flex-1">

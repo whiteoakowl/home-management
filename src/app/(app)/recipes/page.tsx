@@ -37,7 +37,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="recipes"
         eyebrow={isPrivate ? "My private food" : "Family Pantry"}
         title={isPrivate ? (space.own ? "My Recipes" : `${space.memberName}'s Recipes`) : "Family Recipes"}
         description={isPrivate ? "Recipes only you can see." : "Your family's recipe book."}

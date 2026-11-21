@@ -113,7 +113,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="create-chore"
         eyebrow={kind === "farm" ? "Farm" : "House"}
         title={tab === "archived" ? `Archived ${copy.many}` : who === "mine" ? copy.mine : copy.title}
         description={tab === "archived" ? `${copy.title} you've put away. Restore one to bring it back.` : copy.description}

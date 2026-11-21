@@ -71,7 +71,7 @@ export default async function RewardsPage() {
   const totalMinutes = month.reduce((s, m) => s + m.minutes, 0);
   return (
     <>
-      <PageHeader
+      <PageHeader help="points-rewards"
         eyebrow="House"
         title="Points & rewards"
         description="Chores earn points. Save them up for rewards the parents set, from screen time to allowance."

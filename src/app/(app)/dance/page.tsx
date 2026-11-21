@@ -79,7 +79,7 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
 
   return (
     <>
-      <PageHeader eyebrow="Activities" title="Dance" description="Classes, teams and levels, days off and performances for each dancer. Everything shows on the family calendar." actions={actions} />
+      <PageHeader help="dance" eyebrow="Activities" title="Dance" description="Classes, teams and levels, days off and performances for each dancer. Everything shows on the family calendar." actions={actions} />
       {dancers.length > 0 && (
         <div className="mb-5">
           <SegmentLinks fit active={member || "all"} items={[{ key: "all", href: `/dance?week=${week}`, label: "Everyone" }, ...dancers.map((m) => ({ key: m.id, href: `/dance?member=${m.id}&week=${week}`, label: m.displayName.split(" ")[0]! }))]} />

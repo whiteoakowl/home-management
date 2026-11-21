@@ -7,7 +7,7 @@ import { CalendarDays, Check, CheckCheck, ChevronRight, FileText, Megaphone, Mes
 import { db } from "@/db";
 import { calendarEvents, familyMessages, files, messageReactions, messageReads, pollVotes } from "@/db/schema";
 import { ChatComposer, ChatLive, MembersButton, MessageTools, NewMenu, PollCard, Reactions } from "@/components/hub/chat";
-import { Avatar, EmptyState } from "@/components/ui/display";
+import { Avatar, EmptyState, HelpButton } from "@/components/ui/display";
 import { memberColor } from "@/lib/colors";
 import { getViewer } from "@/lib/dal";
 import { addDays, formatTime, todayIn } from "@/lib/dates";
@@ -99,7 +99,9 @@ export default async function MessagesPage({ searchParams }: PageProps<"/message
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="text-[26px] leading-tight font-semibold sm:text-[30px]">Family Chat</h1>
+          <h1 className="flex items-center gap-1 text-[26px] leading-tight font-semibold sm:text-[30px]">
+            Family Chat <HelpButton slug="family-chat" className="size-9" />
+          </h1>
           <MembersButton count={audience.length} members={audience.map((m) => ({ id: m.id, name: m.displayName, color: m.color, photo: fileUrl(m.avatarFileId, true), holder: m.id === holder }))} />
         </div>
         <details className="group relative">

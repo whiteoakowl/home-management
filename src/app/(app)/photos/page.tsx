@@ -32,7 +32,7 @@ export default async function PhotosPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Memories" title="Photo albums" description="Family albums everyone can add to, plus private albums of your own: trips, holidays, recitals, game days and everyday moments." actions={canUse ? <AlbumModal members={members} /> : undefined} />
+      <PageHeader help="albums" eyebrow="Memories" title="Photo albums" description="Family albums everyone can add to, plus private albums of your own: trips, holidays, recitals, game days and everyday moments." actions={canUse ? <AlbumModal members={members} /> : undefined} />
       <MemoriesTabs active="albums" />
       {albums.length === 0 ? (
         <Card>

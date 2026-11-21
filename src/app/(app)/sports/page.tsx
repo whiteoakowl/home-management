@@ -67,7 +67,7 @@ export default async function SportsPage({ searchParams }: PageProps<"/sports">)
 
   return (
     <>
-      <PageHeader eyebrow="Activities" title="Sports" description="Teams, practices, games and stats for every athlete in the family. Practices and games show on the family calendar." actions={action} />
+      <PageHeader help="sports" eyebrow="Activities" title="Sports" description="Teams, practices, games and stats for every athlete in the family. Practices and games show on the family calendar." actions={action} />
       {athletes.length > 1 && (
         <div className="mb-5">
           <SegmentLinks fit active={member || "all"} items={[{ key: "all", href: "/sports", label: "Everyone" }, ...athletes.map((m) => ({ key: m.id, href: `/sports?member=${m.id}`, label: m.displayName.split(" ")[0]! }))]} />

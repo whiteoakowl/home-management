@@ -45,7 +45,7 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
 
   return (
     <>
-      <PageHeader title="Goals & savings" description="What your family is working toward, from six months to twenty years out." actions={canEdit ? add : undefined} />
+      <PageHeader help="goals" title="Goals & savings" description="What your family is working toward, from six months to twenty years out." actions={canEdit ? add : undefined} />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Card>
           <p className="flex items-center gap-2 text-sm text-muted">

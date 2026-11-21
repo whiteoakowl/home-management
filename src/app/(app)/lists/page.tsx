@@ -32,7 +32,7 @@ export default async function ListsPage({ searchParams }: PageProps<"/lists">) {
 
   return (
     <>
-      <PageHeader title="Lists" description="Checklists, to-dos, packing lists, ideas: anything worth writing down." actions={canEdit ? add : undefined} />
+      <PageHeader help="lists" title="Lists" description="Checklists, to-dos, packing lists, ideas: anything worth writing down." actions={canEdit ? add : undefined} />
       <div className="mb-5 flex flex-wrap gap-2">
         <SegmentLinks active="lists" items={[{ key: "lists", href: "/lists", label: "Lists" }, { key: "wishlists", href: "/lists/wishlists", label: "Wishlists" }]} />
         <SegmentLinks active={archived ? "archived" : "active"} items={[{ key: "active", href: "/lists", label: "Active" }, { key: "archived", href: "/lists?show=archived", label: "Archived" }]} />

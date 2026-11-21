@@ -50,7 +50,7 @@ export default async function MedicalDashboard() {
   ];
   return (
     <>
-      <PageHeader
+      <PageHeader help="medical"
         eyebrow="Household"
         title="Family Medical & Health"
         description="Profiles, allergies, conditions, medications and documents, private to each person and the parents unless shared."

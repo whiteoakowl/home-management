@@ -139,7 +139,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   return (
     <>
       {layersChanged && <RememberLayers layers={layers.join(",")} hide={hidden.join(",")} />}
-      <PageHeader
+      <PageHeader help="create-event"
         title="Calendar"
         description="Everyone's schedule in one place, with privacy per event."
         actions={

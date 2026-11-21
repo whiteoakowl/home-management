@@ -34,7 +34,7 @@ export default async function ShoppingPage({ searchParams }: PageProps<"/shoppin
   const others = await privateSpaceMembers(viewer);
   return (
     <>
-      <PageHeader
+      <PageHeader help="shopping-list"
         eyebrow={owner ? "My private food" : "Family Pantry"}
         title={owner ? (own ? "My Shopping List" : `${space.kind === "private" ? space.memberName : ""}'s Shopping List`) : "Grocery Shopping"}
         description={owner ? "Shopping lists only you can see." : "Grouped by aisle, built from recipes, meal plans and low stock."}

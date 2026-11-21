@@ -30,7 +30,7 @@ export default async function PeriodPage({ searchParams }: PageProps<"/health/pe
 
   const header = (
     <>
-      <PageHeader eyebrow="My private · Personal Health" title={own ? "Period Tracker" : `${subject.displayName}'s Period Tracker`} description="Track your cycle, flow, symptoms and feelings. Private unless you choose to share it." />
+      <PageHeader help="period-tracker" eyebrow="My private · Personal Health" title={own ? "Period Tracker" : `${subject.displayName}'s Period Tracker`} description="Track your cycle, flow, symptoms and feelings. Private unless you choose to share it." />
       <PersonalSwitcher subjects={subjects} current={subject.id} base="/health/period" />
     </>
   );

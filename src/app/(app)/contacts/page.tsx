@@ -47,7 +47,7 @@ export default async function ContactsPage({ searchParams }: PageProps<"/contact
 
   return (
     <>
-      <PageHeader eyebrow="Household" title="Contacts" description="The family address book. Tap a number to call or text. Birthdays show on the family calendar." actions={canUse ? <ContactModal defaultCategory={group || undefined} /> : undefined} />
+      <PageHeader help="contacts" eyebrow="Household" title="Contacts" description="The family address book. Tap a number to call or text. Birthdays show on the family calendar." actions={canUse ? <ContactModal defaultCategory={group || undefined} /> : undefined} />
       {all.length === 0 ? (
         <Card>
           <EmptyState icon={<ContactIcon />} title="Start your family address book" description="Add babysitters, teachers, doctors, neighbors and relatives so everyone has the numbers they need." example="Ms. Garcia · 2nd grade teacher · (555) 123-4567" action={canUse ? <ContactModal /> : undefined} />

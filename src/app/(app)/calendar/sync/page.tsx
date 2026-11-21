@@ -65,7 +65,7 @@ export default async function CalendarSyncPage() {
       <Link href="/calendar" className="inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline">
         <ArrowLeft className="size-4" /> Calendar
       </Link>
-      <PageHeader eyebrow="Calendar" title="Sync with Google, Outlook & Apple" description="See the family calendar in the calendar app you already use, and bring your other calendars in here." />
+      <PageHeader help="calendar-sync" eyebrow="Calendar" title="Sync with Google, Outlook & Apple" description="See the family calendar in the calendar app you already use, and bring your other calendars in here." />
 
       <Card>
         <CardHeader title="1. Family calendar → your calendar app" icon={<CalendarArrowUp className="size-4" />} />

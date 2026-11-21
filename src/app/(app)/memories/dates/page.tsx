@@ -54,7 +54,7 @@ export default async function DatesPage() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="special-dates"
         eyebrow="Memories"
         title="Birthdays & anniversaries"
         description="Every birthday and anniversary coming up, with how old or how many years. They're on the family calendar too, with reminders."

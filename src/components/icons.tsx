@@ -40,6 +40,12 @@ import {
   Images,
   MessagesSquare,
   Gift,
+  UserRound,
+  ClipboardCheck,
+  MessageCircle,
+  CreditCard,
+  LifeBuoy,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +91,12 @@ const ICONS: Record<string, LucideIcon> = {
   Images,
   MessagesSquare,
   Gift,
+  UserRound,
+  ClipboardCheck,
+  MessageCircle,
+  CreditCard,
+  LifeBuoy,
+  CircleHelp,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {

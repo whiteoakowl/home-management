@@ -169,5 +169,7 @@ export function buildNav(viewer: Viewer): NavSection[] {
       group: "Admin",
       items: [{ href: "/settings", label: "Account settings", icon: "Settings" }],
     });
+  // Everyone can reach the Help Center.
+  sections.push({ group: "Help", items: [{ href: "/help", label: "Help & Support", icon: "LifeBuoy" }] });
   return sections.filter((s) => s.items.length > 0);
 }

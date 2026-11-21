@@ -43,7 +43,7 @@ export default async function LibraryDashboard() {
   const completed = list.filter((b) => b.status === "completed").sort((a, b) => (b.finishedOn ?? "").localeCompare(a.finishedOn ?? "")).slice(0, 6);
 
   const header = (
-    <PageHeader
+    <PageHeader help="library"
       eyebrow="Personal"
       title={space === "mine" ? "My Library" : "Book Library"}
       description={space === "mine" ? "Your own books, reading list and progress. Private to you." : "Every book in the house: what you own, what you're reading and what's next."}

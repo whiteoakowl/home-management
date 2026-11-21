@@ -59,7 +59,7 @@ export default async function InfoPage() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="important-info"
         eyebrow="House"
         title="Important Info"
         description="Your family binder: emergency contacts, doctors, school, insurance, Wi-Fi and everything a sitter needs. Each entry is shared only with the people you choose."

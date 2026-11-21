@@ -49,7 +49,7 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
 
   return (
     <>
-      <PageHeader eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canAdd ? form : undefined} />
+      <PageHeader help="cleaning" eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canAdd ? form : undefined} />
       <HouseTabs active="cleaning" viewer={viewer} />
       <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("cleaning", "use")} />
       {overdue.length > 0 && (

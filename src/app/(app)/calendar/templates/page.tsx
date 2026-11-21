@@ -86,7 +86,7 @@ export default async function TemplatesPage() {
       <Link href="/calendar" className="inline-flex items-center gap-1 text-sm font-medium text-primary-700 hover:underline">
         <ArrowLeft className="size-4" /> Calendar
       </Link>
-      <PageHeader eyebrow="Calendar" title="Event templates" description="Set up a regular activity once (day, time, place, who, reminder), then add it to the calendar for the whole season in one tap." actions={canUse ? add : undefined} />
+      <PageHeader help="event-templates" eyebrow="Calendar" title="Event templates" description="Set up a regular activity once (day, time, place, who, reminder), then add it to the calendar for the whole season in one tap." actions={canUse ? add : undefined} />
       {rows.length === 0 ? (
         <Card>
           <EmptyState icon={<LayoutTemplate />} title="No templates yet" description="Great for practices, lessons, carpools, church and anything that happens every week." example="Soccer practice · Tuesdays 5:30 PM · Field 3 · Jack · remind 1 hour before" action={canUse ? add : undefined} />

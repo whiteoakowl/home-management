@@ -72,7 +72,7 @@ export default async function HousePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Household" title="House" description="Everything that keeps the home running, in one place." />
+      <PageHeader help="house-overview" eyebrow="Household" title="House" description="Everything that keeps the home running, in one place." />
       <HouseTabs active="overview" viewer={viewer} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

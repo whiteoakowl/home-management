@@ -85,7 +85,7 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="meal-plan"
         eyebrow={owner ? "My private food" : "Family Pantry"}
         title={owner ? (own ? "My Meal Plans" : `${space.kind === "private" ? space.memberName : ""}'s Meal Plans`) : "Family Meal Plans"}
         description={owner ? "Your own meal plan, private to you." : "Plan the week. We'll check your pantry and build the shopping list."}

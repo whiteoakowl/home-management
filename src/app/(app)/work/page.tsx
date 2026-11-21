@@ -51,7 +51,7 @@ export default async function WorkPage({ searchParams }: PageProps<"/work">) {
 
   return (
     <>
-      <PageHeader eyebrow="Activities" title="Work schedules" description="Everyone's shifts, week by week. They show on the family calendar." actions={
+      <PageHeader help="work-schedules" eyebrow="Activities" title="Work schedules" description="Everyone's shifts, week by week. They show on the family calendar." actions={
           workers.length ? (
             <>
               <WorkSharingModal members={members.filter((m) => m.id !== viewer.member.id)} visibility={share.visibility} shared={share.memberIds} />

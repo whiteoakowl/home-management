@@ -32,7 +32,7 @@ export default async function NotificationsPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1.5fr_1fr]">
       <div>
-        <PageHeader
+        <PageHeader help="notifications-preferences"
           title="Notifications"
           description={unread ? `${unread} unread` : "You're all caught up."}
           actions={

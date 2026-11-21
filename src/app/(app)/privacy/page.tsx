@@ -43,7 +43,7 @@ export default async function PrivacyCenterPage() {
   );
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <PageHeader eyebrow="My private" title="Privacy Center" description="You decide who can see your personal information. Everything here starts private." />
+      <PageHeader help="privacy-overview" eyebrow="My private" title="Privacy Center" description="You decide who can see your personal information. Everything here starts private." />
       <p className="flex items-start gap-2 rounded-xl border border-dashed border-olive-400 bg-olive-50 px-4 py-3 text-sm text-olive-700">
         <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
         Nothing personal appears on the family dashboard or the family calendar unless you share it here. Family areas (calendar, chores, pantry, recipes, meal plans) are shared with the family as usual.

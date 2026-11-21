@@ -43,7 +43,7 @@ export default async function PersonalHealthPage() {
   ];
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <PageHeader eyebrow="My private" title="Personal Health" description="Your own space for your cycle, food, wellbeing, fitness and medical information. Private unless you choose to share." />
+      <PageHeader help="personal-health" eyebrow="My private" title="Personal Health" description="Your own space for your cycle, food, wellbeing, fitness and medical information. Private unless you choose to share." />
       <div className="grid gap-4 sm:grid-cols-2">
         {tiles.map((t) => (
           <Link key={t.href} href={t.href} className="group">
