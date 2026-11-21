@@ -36,7 +36,7 @@ export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
   "/library": [
     { href: "/library", label: "Dashboard" },
     { href: "/library/books", label: "All books" },
-    { href: "/library/books?status=reading", label: "Currently reading" },
+    { href: "/library/reading", label: "Reading log" },
     { href: "/library/categories", label: "Categories" },
     { href: "/library/scan", label: "Scan barcode" },
     { href: "/library/add", label: "Add a book" },

@@ -41,7 +41,7 @@ export function LibraryTabs({ active, canEdit, space = "family" }: { active: str
         tabs={[
           { key: "dashboard", href: "/library", label: "Dashboard" },
           { key: "books", href: "/library/books", label: space === "mine" ? "My books" : "All books" },
-          { key: "reading", href: "/library/books?status=reading", label: "Currently reading" },
+          { key: "reading", href: "/library/reading", label: "Reading log" },
           { key: "categories", href: "/library/categories", label: "Categories" },
           ...(canEdit
             ? [

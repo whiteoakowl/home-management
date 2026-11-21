@@ -13,7 +13,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { todayIn } from "@/lib/dates";
-import { bookCategoryList, canAddBooks, libraryStats, listBooks } from "@/lib/library";
+import { bookCategoryList, canAddBooks, libraryStats, listBooks, readingLog } from "@/lib/library";
 import { percentRead } from "@/lib/library-config";
 import { cn } from "@/lib/utils";
 import { resolveSectionLayout, sectionTitles } from "@/lib/widgets";
@@ -38,9 +38,10 @@ export default async function LibraryDashboard() {
     db.select().from(sectionLayouts).where(and(eq(sectionLayouts.memberId, viewer.member.id), eq(sectionLayouts.section, "library"))),
   ]);
   const s = libraryStats(list, cats, year);
+  const family = (await readingLog(viewer, { statuses: ["reading"], limit: 20 })).filter((r) => r.entry.memberId !== viewer.member.id);
   const layout = resolveSectionLayout("library", saved[0]?.widgets);
   const recent = [...list].sort((a, b) => +b.createdAt - +a.createdAt).slice(0, 6);
-  const completed = list.filter((b) => b.status === "completed").sort((a, b) => (b.finishedOn ?? "").localeCompare(a.finishedOn ?? "")).slice(0, 6);
+  const completed = list.filter((b) => b.reading?.status === "completed").sort((a, b) => (b.reading?.finishedOn ?? "").localeCompare(a.reading?.finishedOn ?? "")).slice(0, 6);
 
   const header = (
     <PageHeader help="library"
@@ -116,18 +117,18 @@ export default async function LibraryDashboard() {
     stats: (
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stat("Books", s.total, <LibraryBig className="size-5" />, "/library/books")}
-        {stat("Reading now", s.reading.length, <BookOpen className="size-5" />, "/library/books?status=reading")}
-        {stat("Completed", s.completed, <CheckCircle2 className="size-5" />, "/library/books?status=completed")}
-        {stat("To read", s.toRead.length, <BookMarked className="size-5" />, "/library/books?status=to_read")}
+        {stat("I'm reading", s.reading.length, <BookOpen className="size-5" />, "/library/reading")}
+        {stat("I've finished", s.completed, <CheckCircle2 className="size-5" />, "/library/reading")}
+        {stat("I want to read", s.toRead.length, <BookMarked className="size-5" />, "/library/reading")}
       </div>
     ),
     reading: (
       <Card>
-        <CardHeader title="Currently reading" icon={<BookOpen className="size-4" />} href="/library/books?status=reading" />
+        <CardHeader title="Currently reading" icon={<BookOpen className="size-4" />} href="/library/reading?view=family" hrefLabel="Reading log" />
         {s.reading.length ? (
           <ul className="flex flex-col gap-4">
             {s.reading.slice(0, 4).map((b) => {
-              const pct = percentRead(b);
+              const pct = percentRead(b.reading, b.pageCount);
               return (
                 <li key={b.id}>
                   <Link href={`/library/books/${b.id}`} className="flex items-center gap-4 hover:text-primary-700">
@@ -139,7 +140,7 @@ export default async function LibraryDashboard() {
                       <p className="truncate text-sm text-muted">{b.author}</p>
                       <div className="mt-2 flex items-center gap-2">
                         <ProgressBar value={pct} label={`${b.title}: ${pct}% read`} />
-                        <span className="shrink-0 text-xs text-muted tabular-nums">{b.pageCount ? `p. ${b.currentPage ?? 0}/${b.pageCount}` : `${pct}%`}</span>
+                        <span className="shrink-0 text-xs text-muted tabular-nums">{b.pageCount ? `p. ${b.reading?.currentPage ?? 0}/${b.pageCount}` : `${pct}%`}</span>
                       </div>
                     </div>
                   </Link>
@@ -148,7 +149,23 @@ export default async function LibraryDashboard() {
             })}
           </ul>
         ) : (
-          <Quiet>Nothing on the go. Open a book and tap &ldquo;Start reading&rdquo; to track your progress.</Quiet>
+          <Quiet>Nothing on the go. Open a book and tap &ldquo;I&apos;m reading this&rdquo; to add it to your reading log.</Quiet>
+        )}
+        {family.length > 0 && (
+          <div className="mt-4 border-t border-line pt-3">
+            <p className="mb-2 text-sm font-semibold">The family is reading</p>
+            <ul className="flex flex-col gap-1.5 text-sm">
+              {family.slice(0, 5).map(({ entry: e, book: bk, reader: r }) => (
+                <li key={e.id} className="flex items-center gap-2">
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: r.color }} aria-hidden />
+                  <span className="shrink-0 font-medium">{r.name}</span>
+                  <Link href={`/library/books/${bk.id}`} className="truncate text-ink-soft hover:text-primary-700">
+                    {bk.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </Card>
     ),
@@ -185,8 +202,8 @@ export default async function LibraryDashboard() {
     ),
     toRead: (
       <Card>
-        <CardHeader title="To read" icon={<BookMarked className="size-4" />} href="/library/books?status=to_read" />
-        {s.toRead.length ? <BookGrid books={s.toRead.slice(0, 3)} compact /> : <Quiet>Mark books &ldquo;Want to Read&rdquo; to build your reading list.</Quiet>}
+        <CardHeader title="To read" icon={<BookMarked className="size-4" />} href="/library/reading" />
+        {s.toRead.length ? <BookGrid books={s.toRead.slice(0, 3)} compact /> : <Quiet>Open a book and tap &ldquo;Want to read&rdquo; to build your reading list.</Quiet>}
       </Card>
     ),
     favorites: (
@@ -197,7 +214,7 @@ export default async function LibraryDashboard() {
     ),
     completed: (
       <Card>
-        <CardHeader title="Recently completed" icon={<CheckCircle2 className="size-4" />} href="/library/books?status=completed" />
+        <CardHeader title="Recently completed" icon={<CheckCircle2 className="size-4" />} href="/library/reading" />
         {completed.length ? <BookGrid books={completed.slice(0, 3)} compact /> : <Quiet>Finished books land here.</Quiet>}
       </Card>
     ),

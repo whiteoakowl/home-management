@@ -43,7 +43,6 @@ import { utcToZoned } from "./dates";
 import { craftVisible } from "./craft";
 import { notOthersSavings } from "./goals";
 import { bookVisible } from "./library";
-import { statusLabel } from "./library-config";
 import { fitnessVisibleIds } from "./fitness";
 import { medicalVisible } from "./medical";
 
@@ -373,11 +372,11 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
       "Books",
       "LibraryBig",
       db
-        .select({ id: books.id, title: books.title, author: books.author, status: books.status })
+        .select({ id: books.id, title: books.title, author: books.author })
         .from(books)
         .where(and(eq(books.familyId, fid), bookVisible(viewer), or(ilike(books.title, like), ilike(books.author, like), ilike(books.coAuthor, like), ilike(books.isbn, like), ilike(books.genre, like))))
         .limit(LIMIT)
-        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: [x.author, statusLabel(x.status)].filter(Boolean).join(" · "), href: `/library/books/${x.id}` }))),
+        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: x.author ?? "Book", href: `/library/books/${x.id}` }))),
     );
   }
 

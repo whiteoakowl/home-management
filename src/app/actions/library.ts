@@ -5,14 +5,14 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { bookCategories, books, categories } from "@/db/schema";
+import { bookCategories, books, categories, readingEntries } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, requireModule, requirePremium, type Viewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { mergeLookups, normalizeIsbn, parseGoogleBooks, parseOpenLibrary, type BookLookup } from "@/lib/isbn";
-import { bookVisible, canAddBooks, canChangeBook, currentLibrarySpace, getBook, LIBRARY_SPACE_COOKIE, type LibrarySpace } from "@/lib/library";
+import { bookVisible, canAddBooks, canChangeBook, canChangeEntry, currentLibrarySpace, getBook, LIBRARY_SPACE_COOKIE, type LibrarySpace } from "@/lib/library";
 import { BOOK_FORMATS, STATUS_VALUES } from "@/lib/library-config";
 import { f, familyMemberIdOrNull, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 import { safeFetch } from "@/lib/safe-fetch";
@@ -117,33 +117,17 @@ export async function saveBook(_: ActionState, fd: FormData): Promise<ActionStat
     const rawIsbn = f.str(fd, "isbn");
     const isbn = rawIsbn ? normalizeIsbn(rawIsbn) : null;
     if (rawIsbn && !isbn) return fail("That ISBN doesn't look right. Check the digits, or leave it blank.", "isbn");
-    const status = f.str(fd, "status") ?? "not_started";
-    if (!STATUS_VALUES.includes(status)) return fail("Choose a reading status.", "status");
     const format = f.str(fd, "format");
     if (format && !BOOK_FORMATS.some((x) => x.value === format)) return fail("Choose a format.", "format");
     const rating = f.int(fd, "rating");
     if (rating !== null && (rating < 1 || rating > 5)) return fail("Ratings go from 1 to 5 stars.", "rating");
     const pageCount = f.int(fd, "pageCount");
     if (pageCount !== null && (pageCount < 1 || pageCount > 50000)) return fail("Enter a page count between 1 and 50,000.", "pageCount");
-    let currentPage = f.int(fd, "currentPage");
-    if (currentPage !== null && currentPage < 0) return fail("The current page can't be negative.", "currentPage");
-    if (currentPage !== null && pageCount && currentPage > pageCount) return fail(`The book has ${pageCount} pages.`, "currentPage");
     const price = f.num(fd, "price");
     if (price !== null && (price < 0 || price > 100000)) return fail("Enter a price, like 14.99.", "price");
 
-    const today = todayIn(viewer.family.timezone);
-    let startedOn = f.date(fd, "startedOn");
-    let finishedOn = f.date(fd, "finishedOn");
-    if (startedOn && finishedOn && finishedOn < startedOn) return fail("The finish date is before the start date.", "finishedOn");
-    if ((status === "reading" || status === "completed") && !startedOn) startedOn = existing?.startedOn ?? (status === "reading" ? today : null);
-    if (status === "completed") {
-      finishedOn ??= today;
-      if (pageCount) currentPage = pageCount;
-    }
-
     const catIds = await familyBookCategoryIds(viewer.family.id, f.list(fd, "categoryIds"));
     const { visibility, memberIds } = visibilityFromForm(fd);
-    const readerId = f.str(fd, "readerMemberId");
 
     let coverFileId: string | null | undefined;
     const uploaded = await saveUpload(viewer, fd.get("cover"));
@@ -170,12 +154,6 @@ export async function saveBook(_: ActionState, fd: FormData): Promise<ActionStat
       rating,
       notes: f.str(fd, "notes"),
       isFavorite: f.bool(fd, "isFavorite"),
-      status,
-      readerMemberId: readerId && (await isFamilyMember(viewer, readerId)) ? readerId : null,
-      startedOn,
-      finishedOn: status === "completed" || status === "abandoned" ? finishedOn : null,
-      currentPage,
-      readingNotes: f.str(fd, "readingNotes"),
       visibility: personal ? ("private" as const) : visibility,
       ...(coverFileId !== undefined ? { coverFileId } : {}),
     };
@@ -197,9 +175,6 @@ export async function saveBook(_: ActionState, fd: FormData): Promise<ActionStat
       await saveRecordAccess(tx, viewer.family.id, "book", bookId!, personal ? [] : memberIds);
     });
     if (existing?.coverFileId && coverFileId !== undefined && coverFileId !== existing.coverFileId) await deleteFamilyFile(viewer.family.id, existing.coverFileId);
-    if (!personal && visibility === "family" && existing && existing.status !== "completed" && status === "completed") {
-      await logActivity(db, viewer.family.id, viewer.member.id, "book.finished", `finished reading "${title}" 📚`, { module: "library", entityId: bookId! });
-    }
     revalidateLibrary();
     if (fd.get("then") === "view") redirect(`/library/books/${bookId}`);
     return ok(existing ? "Book saved." : `"${title}" added to ${personal ? "My Library" : "the library"}.`);
@@ -229,44 +204,131 @@ export async function toggleBookFavorite(fd: FormData) {
   revalidateLibrary();
 }
 
-/** Reading progress: current page, start, pause, finish, or give up. */
-export async function updateReading(_: ActionState, fd: FormData): Promise<ActionState> {
+// ─── Reading log (separate from the book) ────────────────────────────────────
+
+/** Reading is personal tracking: anyone who can open the library, on Premium. */
+async function reader() {
+  const viewer = await requireModule("library", "view");
+  requirePremium(viewer);
+  return viewer;
+}
+
+/** Whose log: yourself, or (parents) a family member, e.g. a little one without a login. */
+async function readerFor(viewer: Viewer, raw: string | null) {
+  if (!raw || raw === viewer.member.id) return viewer.member.id;
+  if (!viewer.isParent || !(await isFamilyMember(viewer, raw))) throw new AuthorizationError("You can only keep your own reading log.");
+  return raw;
+}
+
+async function ownEntry(viewer: Viewer, id: string | null) {
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Reading entry not found.");
+  const [e] = await db.select().from(readingEntries).where(and(eq(readingEntries.id, id), eq(readingEntries.familyId, viewer.family.id)));
+  if (!e || !canChangeEntry(viewer, e)) throw new AuthorizationError("Reading entry not found.");
+  return e;
+}
+
+/** "Family member finished a book" in the family feed, when the entry is shared and the book is the family's. */
+async function announceFinished(viewer: Viewer, entry: { shared: boolean; memberId: string }, b: { id: string; title: string; ownerMemberId: string | null; visibility: string }) {
+  if (entry.shared && !b.ownerMemberId && b.visibility === "family") await logActivity(db, viewer.family.id, entry.memberId, "book.finished", `finished reading "${b.title}" 📚`, { module: "library", entityId: b.id });
+}
+
+/**
+ * Add a book to someone's reading log, or move it along: start, want to read,
+ * pause, finish, stop, or read again. One entry per person per book.
+ */
+export async function logReading(fd: FormData) {
+  const viewer = await reader();
+  const b = await getBook(viewer, String(fd.get("bookId")));
+  if (!b) throw new AuthorizationError("Book not found.");
+  const memberId = await readerFor(viewer, f.str(fd, "memberId"));
+  const intent = f.str(fd, "intent") ?? "start";
+  const today = todayIn(viewer.family.timezone);
+  const [old] = await db.select().from(readingEntries).where(and(eq(readingEntries.bookId, b.id), eq(readingEntries.memberId, memberId)));
+  if (old && !canChangeEntry(viewer, old)) throw new AuthorizationError("Reading entry not found.");
+  const set: Partial<typeof readingEntries.$inferInsert> =
+    intent === "want"
+      ? { status: "want_to_read" }
+      : intent === "pause"
+        ? { status: "paused" }
+        : intent === "complete"
+          ? { status: "completed", startedOn: old?.startedOn ?? today, finishedOn: today, currentPage: b.pageCount ?? old?.currentPage ?? null }
+          : intent === "abandon"
+            ? { status: "abandoned", finishedOn: today }
+            : intent === "again"
+              ? { status: "reading", startedOn: today, finishedOn: null, currentPage: null }
+              : { status: "reading", startedOn: old?.startedOn ?? today, finishedOn: null };
+  if (old) await db.update(readingEntries).set(set).where(eq(readingEntries.id, old.id));
+  else
+    await db.insert(readingEntries).values({
+      familyId: viewer.family.id,
+      bookId: b.id,
+      memberId,
+      status: "reading",
+      ...set,
+      // Personal-library books stay private unless the reader shares the entry.
+      shared: !b.ownerMemberId,
+      createdByMemberId: viewer.member.id,
+    });
+  if (set.status === "completed" && old?.status !== "completed") await announceFinished(viewer, { shared: old?.shared ?? !b.ownerMemberId, memberId }, b);
+  revalidateLibrary();
+}
+
+/** Progress: current page, dates and notes for a reading-log entry. */
+export async function saveReadingEntry(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("library", "use");
-    const b = await getBook(viewer, String(fd.get("id")));
-    if (!b || !canChangeBook(viewer, b)) throw new AuthorizationError("Book not found.");
+    const viewer = await reader();
+    const e = await ownEntry(viewer, f.str(fd, "id"));
+    const [b] = await db.select().from(books).where(eq(books.id, e.bookId));
+    if (!b) throw new AuthorizationError("Book not found.");
+    const page = f.int(fd, "currentPage");
+    if (page !== null && page < 0) return fail("The current page can't be negative.", "currentPage");
+    if (page !== null && b.pageCount && page > b.pageCount) return fail(`The book has ${b.pageCount} pages.`, "currentPage");
+    const status = f.str(fd, "status") ?? e.status;
+    if (!STATUS_VALUES.includes(status)) return fail("Choose a status.", "status");
     const today = todayIn(viewer.family.timezone);
-    const intent = f.str(fd, "intent") ?? "progress";
-    const set: Partial<typeof books.$inferInsert> = {};
-    if (intent === "progress") {
-      const page = f.int(fd, "currentPage");
-      if (page === null || page < 0) return fail("Enter the page you're on.", "currentPage");
-      if (b.pageCount && page > b.pageCount) return fail(`The book has ${b.pageCount} pages.`, "currentPage");
-      set.currentPage = page;
-      if (b.status !== "reading") set.status = "reading";
-      set.startedOn = b.startedOn ?? today;
-      if (b.pageCount && page === b.pageCount) {
-        set.status = "completed";
-        set.finishedOn = today;
-      }
-    } else if (intent === "start") {
-      Object.assign(set, { status: "reading", startedOn: b.startedOn ?? today, finishedOn: null });
-    } else if (intent === "pause") {
-      set.status = "paused";
-    } else if (intent === "complete") {
-      Object.assign(set, { status: "completed", startedOn: b.startedOn ?? today, finishedOn: today, currentPage: b.pageCount ?? b.currentPage });
-    } else if (intent === "abandon") {
-      Object.assign(set, { status: "abandoned", finishedOn: today });
-    } else return fail("Unknown action.");
-    const notes = f.str(fd, "readingNotes");
-    if (notes !== null) set.readingNotes = notes;
-    await db.update(books).set(set).where(eq(books.id, b.id));
-    if (!b.ownerMemberId && b.visibility === "family" && set.status === "completed" && b.status !== "completed") {
-      await logActivity(db, viewer.family.id, viewer.member.id, "book.finished", `finished reading "${b.title}" 📚`, { module: "library", entityId: b.id });
+    const startedOn = f.date(fd, "startedOn") ?? (fd.has("startedOn") ? null : e.startedOn);
+    let finishedOn = f.date(fd, "finishedOn") ?? (fd.has("finishedOn") ? null : e.finishedOn);
+    if (startedOn && finishedOn && finishedOn < startedOn) return fail("The finish date is before the start date.", "finishedOn");
+    let currentPage = page ?? e.currentPage;
+    let next = status;
+    // Reaching the last page finishes the book.
+    if (next === "reading" && b.pageCount && currentPage === b.pageCount) next = "completed";
+    if (next === "completed") {
+      finishedOn ??= today;
+      if (b.pageCount) currentPage = b.pageCount;
     }
+    if (next !== "completed" && next !== "abandoned") finishedOn = null;
+    await db
+      .update(readingEntries)
+      .set({
+        status: next,
+        currentPage,
+        startedOn: startedOn ?? (next === "reading" || next === "completed" ? today : null),
+        finishedOn,
+        notes: fd.has("notes") ? f.str(fd, "notes") : e.notes,
+        shared: fd.has("sharedField") ? f.bool(fd, "shared") : e.shared,
+      })
+      .where(eq(readingEntries.id, e.id));
+    if (next === "completed" && e.status !== "completed") await announceFinished(viewer, { shared: fd.has("sharedField") ? f.bool(fd, "shared") : e.shared, memberId: e.memberId }, b);
     revalidateLibrary();
-    return ok(set.status === "completed" ? "Finished! 🎉" : "Progress saved.");
+    return ok(next === "completed" && e.status !== "completed" ? "Finished! 🎉" : "Reading log saved.");
   });
+}
+
+/** Share (or stop sharing) a reading-log entry with the family. */
+export async function toggleReadingShared(fd: FormData) {
+  const viewer = await reader();
+  const e = await ownEntry(viewer, f.str(fd, "id"));
+  await db.update(readingEntries).set({ shared: !e.shared }).where(eq(readingEntries.id, e.id));
+  revalidateLibrary();
+}
+
+/** Take a book out of someone's reading log (the book stays in the library). */
+export async function removeReadingEntry(fd: FormData) {
+  const viewer = await requireModule("library", "view");
+  const e = await ownEntry(viewer, f.str(fd, "id"));
+  await db.delete(readingEntries).where(eq(readingEntries.id, e.id));
+  revalidateLibrary();
 }
 
 // ─── Categories (shared `categories` table, domain 'book') ──────────────────
@@ -354,11 +416,6 @@ export async function reorderBookCategory(fd: FormData) {
     for (const [k, c] of list.entries()) await tx.update(categories).set({ sortOrder: k }).where(eq(categories.id, c.id));
   });
   revalidateLibrary();
-}
-
-/** Button form of updateReading (start / pause / complete / abandon). */
-export async function setReadingStatus(fd: FormData) {
-  await updateReading(undefined, fd);
 }
 
 /** Form-modal version of deleteBookCategory. */

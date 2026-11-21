@@ -1,11 +1,12 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { bookCategories, books, categories } from "@/db/schema";
+import { bookCategories, books, categories, familyMembers, readingEntries } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
 
 export type Book = typeof books.$inferSelect;
+export type ReadingEntry = typeof readingEntries.$inferSelect;
 export type BookCategory = { id: string; name: string; color: string | null; sortOrder: number };
 
 /**
@@ -48,9 +49,17 @@ export async function listBooks(viewer: Viewer, space?: LibrarySpace) {
     .from(books)
     .where(and(eq(books.familyId, viewer.family.id), bookVisible(viewer), s === "mine" ? eq(books.ownerMemberId, viewer.member.id) : isNull(books.ownerMemberId)))
     .orderBy(asc(books.title));
-  const links = rows.length ? await db.select().from(bookCategories).where(inArray(bookCategories.bookId, rows.map((b) => b.id))) : [];
+  const ids = rows.map((b) => b.id);
+  const [links, mine] = ids.length
+    ? await Promise.all([
+        db.select().from(bookCategories).where(inArray(bookCategories.bookId, ids)),
+        db.select().from(readingEntries).where(and(eq(readingEntries.memberId, viewer.member.id), inArray(readingEntries.bookId, ids))),
+      ])
+    : [[], []];
   const byBook = Map.groupBy(links, (l) => l.bookId);
-  return rows.map((b) => ({ ...b, categoryIds: (byBook.get(b.id) ?? []).map((l) => l.categoryId) }));
+  const myEntry = new Map(mine.map((e) => [e.bookId, e]));
+  // `reading` is the viewer's own reading-log entry for the book (null if it isn't in their log).
+  return rows.map((b) => ({ ...b, categoryIds: (byBook.get(b.id) ?? []).map((l) => l.categoryId), reading: myEntry.get(b.id) ?? null }));
 }
 export type BookWithCats = Awaited<ReturnType<typeof listBooks>>[number];
 
@@ -62,13 +71,14 @@ export async function getBook(viewer: Viewer, id: string) {
   return { ...b, categoryIds: links.map((l) => l.categoryId) };
 }
 
-/** Reading statistics for the dashboard. */
+/** Reading statistics for the dashboard (from the viewer's own reading log). */
 export function libraryStats(list: BookWithCats[], cats: BookCategory[], year: string) {
-  const done = list.filter((b) => b.status === "completed");
-  const thisYear = done.filter((b) => b.finishedOn?.startsWith(year));
+  const st = (b: BookWithCats) => b.reading?.status;
+  const done = list.filter((b) => st(b) === "completed");
+  const thisYear = done.filter((b) => b.reading?.finishedOn?.startsWith(year));
   const pagesThisYear = thisYear.reduce((s, b) => s + (b.pageCount ?? 0), 0);
-  // "Favourite" = most-read (completed), weighted up by favourites and high ratings.
-  const weight = (b: BookWithCats) => (b.status === "completed" ? 1 : 0) + (b.isFavorite ? 1 : 0) + ((b.rating ?? 0) >= 4 ? 1 : 0);
+  // "Favourite" = most-read (finished), weighted up by favourites and high ratings.
+  const weight = (b: BookWithCats) => (st(b) === "completed" ? 1 : 0) + (b.isFavorite ? 1 : 0) + ((b.rating ?? 0) >= 4 ? 1 : 0);
   const tally = (keys: (b: BookWithCats) => string[]) => {
     const m = new Map<string, number>();
     for (const b of list) for (const k of keys(b)) if (weight(b)) m.set(k, (m.get(k) ?? 0) + weight(b));
@@ -79,9 +89,9 @@ export function libraryStats(list: BookWithCats[], cats: BookCategory[], year: s
   for (const b of list) if (b.author) authors.set(b.author, (authors.get(b.author) ?? 0) + 1);
   return {
     total: list.length,
-    reading: list.filter((b) => b.status === "reading"),
+    reading: list.filter((b) => st(b) === "reading"),
     completed: done.length,
-    toRead: list.filter((b) => b.status === "want_to_read" || b.status === "not_started"),
+    toRead: list.filter((b) => st(b) === "want_to_read"),
     favorites: list.filter((b) => b.isFavorite),
     booksThisYear: thisYear.length,
     pagesThisYear,
@@ -92,3 +102,43 @@ export function libraryStats(list: BookWithCats[], cats: BookCategory[], year: s
     uncategorized: list.filter((b) => !b.categoryIds.length).length,
   };
 }
+
+// ─── Reading log ─────────────────────────────────────────────────────────────
+
+/**
+ * Reading-log entries the viewer may see: their own, ones they logged for
+ * someone (a parent for a little one), and anything the reader shared with
+ * the family.
+ */
+export const readingVisible = (viewer: Viewer): SQL =>
+  and(
+    eq(readingEntries.familyId, viewer.family.id),
+    or(eq(readingEntries.memberId, viewer.member.id), eq(readingEntries.createdByMemberId, viewer.member.id), eq(readingEntries.shared, true)),
+  )!;
+
+/** May the viewer change this entry? The reader, or whoever logged it for them. */
+export const canChangeEntry = (viewer: Viewer, e: { memberId: string; createdByMemberId: string | null }) => e.memberId === viewer.member.id || e.createdByMemberId === viewer.member.id;
+
+/** Reading-log entries with their book and reader, newest activity first. */
+export async function readingLog(viewer: Viewer, opts: { memberId?: string; statuses?: string[]; bookId?: string; limit?: number } = {}) {
+  return db
+    .select({
+      entry: readingEntries,
+      book: { id: books.id, title: books.title, author: books.author, coverFileId: books.coverFileId, pageCount: books.pageCount },
+      reader: { id: familyMembers.id, name: familyMembers.displayName, color: familyMembers.color },
+    })
+    .from(readingEntries)
+    .innerJoin(books, eq(books.id, readingEntries.bookId))
+    .innerJoin(familyMembers, eq(familyMembers.id, readingEntries.memberId))
+    .where(
+      and(
+        readingVisible(viewer),
+        opts.memberId ? eq(readingEntries.memberId, opts.memberId) : undefined,
+        opts.statuses?.length ? inArray(readingEntries.status, opts.statuses) : undefined,
+        opts.bookId ? eq(readingEntries.bookId, opts.bookId) : undefined,
+      ),
+    )
+    .orderBy(desc(readingEntries.updatedAt))
+    .limit(opts.limit ?? 500);
+}
+export type ReadingLogRow = Awaited<ReturnType<typeof readingLog>>[number];

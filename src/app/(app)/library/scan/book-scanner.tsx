@@ -166,7 +166,6 @@ export function BookScanner({ categories, members, personal }: { categories: { i
                 pageCount: b?.pageCount,
                 coverPreview: b?.coverUrl,
                 coverUrl: b?.coverUrl,
-                status: "not_started",
               }}
             />
           </ActionForm>

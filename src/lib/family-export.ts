@@ -72,6 +72,8 @@ export async function exportFamily(familyId: string, holderMemberId: string) {
     if (has("private_owner_member_id") && r.private_owner_member_id && r.private_owner_member_id !== holderMemberId) return false;
     if (has("owner_member_id") && r.owner_member_id && r.owner_member_id !== holderMemberId && table !== "families") return false;
     if (table === "contacts" && r.private && r.created_by_member_id !== holderMemberId) return false;
+    // Reading-log entries someone kept to themselves.
+    if (table === "reading_entries" && !r.shared && r.member_id !== holderMemberId && r.created_by_member_id !== holderMemberId) return false;
     if (table === "list_items" && r.personal_for_member_id && r.personal_for_member_id !== holderMemberId) return false;
     return true;
   };

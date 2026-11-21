@@ -65,8 +65,8 @@ export default async function BooksPage({
           ].some((x) => x?.toLowerCase().includes(needle))) &&
         (!status ||
           (status === "to_read"
-            ? b.status === "want_to_read" || b.status === "not_started"
-            : b.status === status)) &&
+            ? b.reading?.status === "want_to_read"
+            : b.reading?.status === status)) &&
         (!category ||
           (category === "none"
             ? !b.categoryIds.length
@@ -86,7 +86,7 @@ export default async function BooksPage({
         return (
           (b.rating ?? 0) - (a.rating ?? 0) || a.title.localeCompare(b.title)
         );
-      if (sort === "progress") return percentRead(b) - percentRead(a);
+      if (sort === "progress") return percentRead(b.reading, b.pageCount) - percentRead(a.reading, a.pageCount);
       return a.title.localeCompare(b.title);
     });
   const filtered = !!(
@@ -136,7 +136,7 @@ export default async function BooksPage({
           ? READING_STATUSES.map((s) => ({
               key: s.value,
               title: s.label,
-              books: shown.filter((b) => b.status === s.value),
+              books: shown.filter((b) => b.reading?.status === s.value),
             })).filter((g) => g.books.length)
           : [];
 
@@ -144,7 +144,7 @@ export default async function BooksPage({
     <>
       <PageHeader
         eyebrow="Book Library"
-        title={status === "reading" ? "Currently reading" : "All books"}
+        title="All books"
         description={`${all.length} book${all.length === 1 ? "" : "s"} in your library.`}
         actions={
           canEdit && (
@@ -167,7 +167,7 @@ export default async function BooksPage({
         }
       />
       <LibraryTabs
-        active={status === "reading" ? "reading" : "books"}
+        active="books"
         canEdit={canEdit}
         space={space}
       />
@@ -202,10 +202,9 @@ export default async function BooksPage({
               <Select
                 name="status"
                 defaultValue={status}
-                aria-label="Reading status"
+                aria-label="My reading status"
               >
-                <option value="">Any status</option>
-                <option value="to_read">To read (any)</option>
+                <option value="">My reading status: any</option>
                 {READING_STATUSES.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}

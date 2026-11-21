@@ -279,7 +279,8 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         icon: "LibraryBig",
         summary: "Every book in the house.",
         tabs: [
-          { name: "All books & currently reading", does: "Reading status, progress, ratings and notes." },
+          { name: "All books", does: "Every book in the house, with ratings, notes and your own shelves." },
+          { name: "Reading log", does: "Tap \"I'm reading this\" on any book to track pages, dates and notes. Share it, and the family sees what you're reading on your profile." },
           { name: "Scan barcode / Add a book", does: "Scan with your phone's camera and details fill in." },
           { name: "Categories", does: "Your own shelves, with yearly reading stats." },
         ],

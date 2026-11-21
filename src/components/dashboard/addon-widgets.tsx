@@ -2,8 +2,8 @@ import Link from "next/link";
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
 import { HeartPulse, LibraryBig, Moon, PawPrint, Trophy, Wrench } from "lucide-react";
 import { BookCover } from "@/components/library/book-cover";
-import { listBooks } from "@/lib/library";
 import { percentRead } from "@/lib/library-config";
+import { readingLog } from "@/lib/library";
 import { MoonDisc } from "@/components/craft/moon-card";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, EmptyState, ProgressBar } from "@/components/ui/display";
@@ -176,19 +176,28 @@ export async function PointsWidget({ scope }: { scope: Scope }) {
   );
 }
 
-/** Books in progress (the person's own on their portal), with progress bars. */
+/**
+ * What someone is reading right now, from the reading log. On a person's profile it shows
+ * their books (only what they shared with the family, unless it's you); on Home, yours.
+ */
 export async function ReadingWidget({ scope }: { scope: Scope }) {
-  const all = await listBooks(scope.viewer, "family");
-  const reading = all.filter((b) => b.status === "reading" && (!scope.subjectId || b.readerMemberId === scope.subjectId || (!b.readerMemberId && b.createdByMemberId === scope.subjectId)));
+  const who = scope.subjectId ?? scope.viewer.member.id;
+  const self = who === scope.viewer.member.id;
+  const [reading, finished] = await Promise.all([
+    readingLog(scope.viewer, { memberId: who, statuses: ["reading", "paused"], limit: 6 }),
+    readingLog(scope.viewer, { memberId: who, statuses: ["completed"], limit: 200 }),
+  ]);
+  const year = scope.today.slice(0, 4);
+  const thisYear = finished.filter((r) => r.entry.finishedOn?.startsWith(year)).length;
   return (
     <Card>
-      <CardHeader title="Reading" icon={<LibraryBig className={ic} />} href="/library" />
+      <CardHeader title={self ? "My reading" : "Currently reading"} icon={<LibraryBig className={ic} />} href="/library/reading" hrefLabel="Reading log" />
       {reading.length ? (
         <ul className="flex flex-col gap-3">
-          {reading.slice(0, 3).map((b) => {
-            const pct = percentRead(b);
+          {reading.slice(0, 3).map(({ entry: e, book: b }) => {
+            const pct = percentRead(e, b.pageCount);
             return (
-              <li key={b.id}>
+              <li key={e.id}>
                 <Link href={`/library/books/${b.id}`} className="flex items-center gap-3 hover:text-primary-700">
                   <div className="w-9 shrink-0">
                     <BookCover title={b.title} coverFileId={b.coverFileId} />
@@ -197,7 +206,7 @@ export async function ReadingWidget({ scope }: { scope: Scope }) {
                     <p className="truncate text-sm font-medium">{b.title}</p>
                     <div className="mt-1 flex items-center gap-2">
                       <ProgressBar value={pct} label={`${pct}% read`} />
-                      <span className="text-xs text-muted tabular-nums">{pct}%</span>
+                      <span className="text-xs text-muted tabular-nums">{e.status === "paused" ? "Paused" : `${pct}%`}</span>
                     </div>
                   </div>
                 </Link>
@@ -206,8 +215,9 @@ export async function ReadingWidget({ scope }: { scope: Scope }) {
           })}
         </ul>
       ) : (
-        <EmptyState compact icon={<LibraryBig />} title={all.length ? "Nothing on the go" : "Your library is empty."} description={all.length ? "Start a book to see your progress here." : "Scan or add your first book."} />
+        <EmptyState compact icon={<LibraryBig />} title={self ? "Nothing on the go" : "Nothing shared right now"} description={self ? "Open a book in the library and tap \u201cI'm reading this\u201d." : "Books they're reading show here when they share them with the family."} />
       )}
+      {thisYear > 0 && <p className="mt-3 text-xs text-muted">{thisYear} {thisYear === 1 ? "book" : "books"} finished in {year}</p>}
     </Card>
   );
 }

@@ -1,4 +1,4 @@
-import { boolean, date, index, integer, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { categories, families, familyMembers, files, visibility } from "./core";
 
@@ -34,13 +34,6 @@ export const books = pgTable(
     rating: integer("rating"),
     notes: text("notes"),
     isFavorite: boolean("is_favorite").notNull().default(false),
-    /** want_to_read | not_started | reading | paused | completed | abandoned */
-    status: text("status").notNull().default("not_started"),
-    readerMemberId: uuid("reader_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
-    startedOn: date("started_on"),
-    finishedOn: date("finished_on"),
-    currentPage: integer("current_page"),
-    readingNotes: text("reading_notes"),
     visibility: visibility("visibility").notNull().default("family"),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     /** NULL = the Family Library; set = that member's personal library, visible only to them. */
@@ -48,6 +41,44 @@ export const books = pgTable(
     ...timestamps,
   },
   (t) => [index("books_family_idx").on(t.familyId), index("books_isbn_idx").on(t.familyId, t.isbn), index("books_owner_idx").on(t.ownerMemberId)],
+);
+
+/**
+ * The reading log: who is reading (or wants to read, or finished) which book.
+ * Separate from the book itself, so a book is just a book and several people
+ * can read the same one. One entry per person per book (reading it again
+ * restarts the entry). `shared` = the family can see it on profiles and the
+ * Reading log; otherwise only the reader (and whoever logged it for them).
+ */
+export const readingEntries = pgTable(
+  "reading_entries",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    bookId: uuid("book_id")
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    /** The reader. */
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    /** want_to_read | reading | paused | completed | abandoned */
+    status: text("status").notNull().default("reading"),
+    startedOn: date("started_on"),
+    finishedOn: date("finished_on"),
+    currentPage: integer("current_page"),
+    notes: text("notes"),
+    shared: boolean("shared").notNull().default(true),
+    createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("reading_entries_book_member_uq").on(t.bookId, t.memberId),
+    index("reading_entries_member_idx").on(t.memberId, t.status),
+    index("reading_entries_family_idx").on(t.familyId, t.status),
+  ],
 );
 
 export const bookCategories = pgTable(

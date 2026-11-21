@@ -435,6 +435,13 @@
       "when": 1795237096116,
       "tag": "0061_file_taken_at",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1795282990584,
+      "tag": "0062_reading_log",
+      "breakpoints": true
     }
   ]
 }

@@ -34,7 +34,7 @@ export default async function AddBookPage({ searchParams }: PageProps<"/library/
       />
       <LibraryTabs active="add" canEdit space={viewer.librarySpace} />
       <Card className="mx-auto max-w-3xl">
-        <BookForm d={{ isbn, status: "not_started", readerMemberId: null }} categories={cats} members={members} submitLabel={viewer.librarySpace === "mine" ? "Add to My Library" : "Add to library"} personal={viewer.librarySpace === "mine"} />
+        <BookForm d={{ isbn }} categories={cats} members={members} submitLabel={viewer.librarySpace === "mine" ? "Add to My Library" : "Add to library"} personal={viewer.librarySpace === "mine"} />
       </Card>
     </>
   );
