@@ -15,7 +15,6 @@ function compareRows() {
   const rows: { name: string; free: string | boolean; premium: string | boolean }[] = [
     { name: "Family members (each with their own login)", free: `Up to ${FREE_LIMITS.members}`, premium: "Unlimited" },
     { name: "Lists", free: `Up to ${FREE_LIMITS.lists}`, premium: "Unlimited" },
-    { name: "Photos in albums & memories", free: `Up to ${FREE_LIMITS.photos}`, premium: "Unlimited" },
   ];
   for (const g of FEATURE_CATALOG)
     for (const sec of g.sections) {

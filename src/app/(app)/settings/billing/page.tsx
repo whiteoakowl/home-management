@@ -141,7 +141,7 @@ export default async function SubscriptionPage() {
               <p className="text-sm text-muted">
                 {tier === "trial"
                   ? `Your family has every Premium feature free until ${longDate(trialEndsAt)}. After that you keep the Free plan (calendar, shopping list, chores, lists, chat, Important Info and more), or choose Premium to keep everything. No card is needed for the trial.`
-                  : "Your family is on the Free plan: calendar, shopping list, chores, lists, chat, contacts, Important Info and photos. Premium sections are view-only, and everything you saved is kept."}
+                  : "Your family is on the Free plan: calendar, shopping list, chores, lists, chat, contacts and Important Info. Premium sections are view-only, and everything you saved is kept."}
               </p>
               {canManage ? (
                 <ButtonLink href="/billing" className="w-fit">

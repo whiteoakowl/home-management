@@ -11,7 +11,7 @@ import type { Module } from "@/db/schema/_shared";
 export type PlanTier = "premium" | "trial" | "free";
 
 /** Always free: the daily family hub. */
-export const FREE_MODULES: readonly Module[] = ["calendar", "shopping", "chores", "lists", "messages", "contacts", "info", "photos"];
+export const FREE_MODULES: readonly Module[] = ["calendar", "shopping", "chores", "lists", "messages", "contacts", "info"];
 
 /** Everything else is Premium. */
 export const isPremiumModule = (m: Module) => !FREE_MODULES.includes(m);
@@ -22,8 +22,6 @@ export const FREE_LIMITS = {
   members: 6,
   /** Lists (to-do, packing, wishlists…). */
   lists: 5,
-  /** Photos in albums and memories. */
-  photos: 200,
 } as const;
 
 /** Extras inside free sections that are Premium. */
@@ -46,11 +44,10 @@ export const FREE_FEATURES = [
   "Family Chat and announcements",
   "Contacts",
   "Important Info (family binder)",
-  `Photo albums and memories (up to ${FREE_LIMITS.photos} photos)`,
   `Up to ${FREE_LIMITS.members} family members, each with their own login`,
   "Phone notifications",
-  "Personal Health, Period Tracker, Food Journal and Mental Wellness",
-  "Download all your photos and information",
+  "Personal Health, Food Journal and Mental Wellness",
+  "Download all your information",
 ];
 
 export const PREMIUM_FEATURES = [
@@ -65,7 +62,9 @@ export const PREMIUM_FEATURES = [
   "Automations",
   "Spiritual & faith tabs",
   "Journal, Book Library and Fitness",
-  "Unlimited family members, lists and photos",
+  "Memories, milestones and photo albums",
+  "Period Tracker",
+  "Unlimited family members and lists",
 ];
 
 /**
@@ -90,8 +89,9 @@ export function capForPlan<L extends string>(m: Module, level: L, premium: boole
 }
 
 /** Website Features page: which sections are free, and the Premium tabs inside free sections. */
-export const FREE_SECTION_NAMES = ["Home", "Calendar", "Family Chat", "Family", "Contacts", "Memories & Photos", "House", "Lists", "Grocery Shopping", "Personal Health", "Mental Wellness", "Account settings", "Notifications", "Feedback & feature ideas"];
+export const FREE_SECTION_NAMES = ["Home", "Calendar", "Family Chat", "Family", "Contacts", "House", "Lists", "Grocery Shopping", "Personal Health", "Mental Wellness", "Account settings", "Notifications", "Feedback & feature ideas"];
 export const PREMIUM_TABS: Record<string, string[]> = {
   Calendar: ["Event templates", "Reminders", "Sync"],
   House: ["Overview", "Rewards", "Cleaning"],
+  "Personal Health": ["Period tracker"],
 };

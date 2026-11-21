@@ -7,7 +7,6 @@ import { animals, entityPhotos, familyMembers, pets, plants } from "@/db/schema"
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, getFamilyMember, getViewer, type Viewer } from "@/lib/dal";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
-import { assertRoom } from "@/lib/plan-limits";
 import { f } from "@/lib/records";
 
 type Kind = "animal" | "plant" | "member";
@@ -41,7 +40,6 @@ export async function addAlbumPhotos(_: ActionState, fd: FormData): Promise<Acti
     await assertCanEdit(viewer, kind, id);
     const ids: string[] = [];
     const chosen = fd.getAll("photos").filter((v) => v instanceof File && v.size > 0).slice(0, 12);
-    await assertRoom(viewer, "photos", chosen.length);
     for (const file of chosen) {
       const fileId = await saveUpload(viewer, file);
       if (fileId) ids.push(fileId);

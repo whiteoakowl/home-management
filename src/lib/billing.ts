@@ -18,7 +18,7 @@ export const platformAdminEmails = () =>
     .filter(Boolean);
 export const isPlatformAdmin = (email: string | null | undefined) => !!email && platformAdminEmails().includes(email.toLowerCase());
 
-const DEFAULTS = { id: "default", brandName: "Family Bubble", monthlyPriceCents: 499, yearlyPriceCents: 4900, currency: "usd", trialDays: 7, billingEnabled: true };
+const DEFAULTS = { id: "default", brandName: "Family Bubble", monthlyPriceCents: 1299, yearlyPriceCents: 12999, currency: "usd", trialDays: 7, billingEnabled: true };
 
 /** Service-wide settings (brand, prices, trial). Falls back to defaults before the first migration. */
 export const getPlatformSettings = cache(async () => {

@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { periodDays, personalHealthProfiles } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { getViewer } from "@/lib/dal";
+import { getViewer, requirePremium } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { isMinor } from "@/lib/privacy";
 import { healthProfile, managedMember } from "@/lib/personal-health";
@@ -19,6 +19,7 @@ const clean = (xs: string[], max = 40) => [...new Set(xs.map((x) => x.trim()).fi
 export async function savePeriodDay(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await getViewer();
+    requirePremium(viewer); // The Period Tracker is part of Premium.
     const member = await managedMember(viewer, fd.get("memberId"));
     const date = f.date(fd, "date");
     if (!date) return fail("Pick a day.", "date");
@@ -47,6 +48,7 @@ export async function savePeriodDay(_: ActionState, fd: FormData): Promise<Actio
 export async function savePeriodSettings(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const viewer = await getViewer();
+    requirePremium(viewer); // The Period Tracker is part of Premium.
     const member = await managedMember(viewer, fd.get("memberId"));
     await healthProfile(viewer.family.id, member.id);
     const cycle = f.int(fd, "typicalCycleLength");
@@ -74,6 +76,7 @@ export async function savePeriodSettings(_: ActionState, fd: FormData): Promise<
 /** Turn the period tracker on for myself (one tap from Personal Health). */
 export async function enablePeriodTracker() {
   const viewer = await getViewer();
+    requirePremium(viewer); // The Period Tracker is part of Premium.
   await healthProfile(viewer.family.id, viewer.member.id);
   await db.update(personalHealthProfiles).set({ periodEnabled: true }).where(eq(personalHealthProfiles.memberId, viewer.member.id));
   revalidatePath("/health", "layout");

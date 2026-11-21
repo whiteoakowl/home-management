@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, eq, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
-import { entityPhotos, familyMembers, lists, memoryMedia } from "@/db/schema";
+import { familyMembers, lists } from "@/db/schema";
 import { AuthorizationError, type Viewer } from "./dal";
 import { FREE_LIMITS } from "./plan-tiers";
 
@@ -11,7 +11,6 @@ const UPGRADE = "The account holder can upgrade in Account settings → Subscrip
 const MESSAGES: Record<Limit, (n: number) => string> = {
   members: (n) => `The Free plan includes up to ${n} family members. ${UPGRADE}`,
   lists: (n) => `The Free plan includes up to ${n} lists (your grocery list doesn't count). Archive or delete one, or upgrade. ${UPGRADE}`,
-  photos: (n) => `The Free plan includes up to ${n} photos. ${UPGRADE}`,
 };
 
 /** How many the family has now (what the Free limits count). */
@@ -20,15 +19,8 @@ export async function usage(familyId: string, what: Limit): Promise<number> {
     const [r] = await db.select({ n: count() }).from(familyMembers).where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.isActive, true)));
     return r?.n ?? 0;
   }
-  if (what === "lists") {
-    const [r] = await db.select({ n: count() }).from(lists).where(and(eq(lists.familyId, familyId), ne(lists.kind, "shopping"), isNull(lists.archivedAt)));
-    return r?.n ?? 0;
-  }
-  const [[a], [b]] = await Promise.all([
-    db.select({ n: count() }).from(entityPhotos).where(eq(entityPhotos.familyId, familyId)),
-    db.select({ n: count() }).from(memoryMedia).where(eq(memoryMedia.familyId, familyId)),
-  ]);
-  return (a?.n ?? 0) + (b?.n ?? 0);
+  const [r] = await db.select({ n: count() }).from(lists).where(and(eq(lists.familyId, familyId), ne(lists.kind, "shopping"), isNull(lists.archivedAt)));
+  return r?.n ?? 0;
 }
 
 /** How many more can be added on this plan (Infinity on Premium). */

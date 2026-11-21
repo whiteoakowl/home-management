@@ -9,7 +9,6 @@ import { AuthorizationError, requireModule } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { canSeeEntity, memoryVisible, REACTION_EMOJI } from "@/lib/memories";
-import { assertRoom } from "@/lib/plan-limits";
 import { f, familyMemberIds } from "@/lib/records";
 
 /** Memories & Photos: memories, milestones, comments, reactions, favorites, special dates. */
@@ -35,7 +34,6 @@ export async function saveMemory(_: ActionState, fd: FormData): Promise<ActionSt
     const title = f.str(fd, "title");
     if (!title) return fail("Give the memory a title.", "title");
     const chosen = fd.getAll("photos").filter((v) => v instanceof File && v.size > 0).slice(0, 30);
-    await assertRoom(viewer, "photos", chosen.length);
     const date = f.date(fd, "date") ?? todayIn(viewer.family.timezone);
     const values = {
       title: title.slice(0, 160),

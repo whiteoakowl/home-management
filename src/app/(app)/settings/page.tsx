@@ -39,7 +39,7 @@ const fmtSize = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} 
 export default async function SettingsPage() {
   const viewer = await requireParent().catch(() => notFound());
   const f = viewer.family;
-  const [photosUsed, membersUsed] = viewer.premium ? [0, 0] : await Promise.all([usage(f.id, "photos"), usage(f.id, "members")]);
+  const membersUsed = viewer.premium ? 0 : await usage(f.id, "members");
   const [everyone, storageUsed] = await Promise.all([listFamilyMembers(f.id), familyStorageBytes(f.id)]);
   const storageLimit = familyStorageLimit();
   const parents = everyone.filter((m) => m.role === "parent");
@@ -138,9 +138,8 @@ export default async function SettingsPage() {
         {!viewer.premium && (
           <div className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-sm">
             <p className="font-medium">Free plan limits</p>
-            <ProgressBar value={photosUsed} max={FREE_LIMITS.photos} label={`${photosUsed} of ${FREE_LIMITS.photos} photos`} tone={photosUsed >= FREE_LIMITS.photos ? "wine" : "primary"} />
             <ProgressBar value={membersUsed} max={FREE_LIMITS.members} label={`${membersUsed} of ${FREE_LIMITS.members} family members`} tone={membersUsed >= FREE_LIMITS.members ? "wine" : "primary"} />
-            <p className="text-muted">Premium has no limits on photos, members or lists.</p>
+            <p className="text-muted">Premium has no limits on members or lists.</p>
           </div>
         )}
       </Card>

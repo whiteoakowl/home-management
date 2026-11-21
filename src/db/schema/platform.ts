@@ -11,8 +11,8 @@ import { families, familyMembers } from "./core";
 export const platformSettings = pgTable("platform_settings", {
   id: text("id").primaryKey().default("default"),
   brandName: text("brand_name").notNull().default("Family Bubble"),
-  monthlyPriceCents: integer("monthly_price_cents").notNull().default(499),
-  yearlyPriceCents: integer("yearly_price_cents").notNull().default(4900),
+  monthlyPriceCents: integer("monthly_price_cents").notNull().default(1299),
+  yearlyPriceCents: integer("yearly_price_cents").notNull().default(12999),
   currency: text("currency").notNull().default("usd"),
   trialDays: integer("trial_days").notNull().default(7),
   /** Off = everyone uses the app free (billing switched off). */

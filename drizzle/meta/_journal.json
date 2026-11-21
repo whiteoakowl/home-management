@@ -442,6 +442,13 @@
       "when": 1795282990584,
       "tag": "0062_reading_log",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1795285182490,
+      "tag": "0063_premium_price",
+      "breakpoints": true
     }
   ]
 }

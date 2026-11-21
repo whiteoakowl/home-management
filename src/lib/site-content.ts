@@ -64,7 +64,7 @@ export const EXTRA_FEATURES = [
 ] as const;
 
 export const FAQ = [
-  { q: "Is there a free plan?", a: "Yes. The everyday family hub is free forever: the shared calendar, grocery list, chores, lists, Family Chat, contacts, Important Info and photo albums, for up to 6 family members. Premium unlocks every other section, plus calendar sync, reminders and unlimited members, lists and photos." },
+  { q: "Is there a free plan?", a: "Yes. The everyday family hub is free forever: the shared calendar, grocery list, chores, lists, Family Chat, contacts and Important Info, for up to 6 family members. Premium unlocks every other section (including memories and photo albums, and the Period Tracker), plus calendar sync, reminders and unlimited members and lists." },
   { q: "How does the free trial work?", a: "Every new family gets Premium free for the first days, with no card needed. When the trial ends you move to the Free plan automatically, unless you choose Premium. If you choose a plan during the trial, your card is only charged when the trial ends." },
   { q: "What happens to our information on the Free plan?", a: "Nothing is deleted. Premium sections stay visible and view-only, and everything comes back the moment you upgrade." },
   { q: "Is the price per person?", a: "No. One Premium subscription covers your whole family, with as many family members and logins as you need." },

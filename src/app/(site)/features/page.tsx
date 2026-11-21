@@ -36,16 +36,6 @@ export default async function FeaturesPage() {
               </a>
             ))}
           </nav>
-          <p className="mt-6 text-center text-[15px]">
-            <a href="#plans" className="font-medium text-primary-700 hover:underline">
-              Free forever for the everyday family hub{trial ? ` · ${trial} days of Premium free, no card needed` : ""} →
-            </a>
-          </p>
-          <p className="mt-3 text-center text-[15px]">
-            <a href="#faith" className="font-medium text-primary-700 hover:underline">
-              ✝️ ⛪ ✡️ 🕉️ ☸️ 🌙 Faith tabs for Christian, Catholic, Jewish, Hindu, Buddhist and spiritual families →
-            </a>
-          </p>
         </Section>
       </div>
 

@@ -269,7 +269,10 @@ export const LIFE: HelpArticle[] = [
     keywords: ["period", "cycle", "menstrual", "flow", "symptoms"],
     openIn: { label: "Open Period Tracker", href: "/health/period" },
     steps: ["Open **Personal Health → Period Tracker**.", "In **Set up your Period Tracker**, enter your typical cycle and period length.", "Tap a day on the calendar to log flow, symptoms and feelings, then **Save day**.", "See **Cycle history** for past cycles."],
-    sections: [{ heading: "Privacy", body: "Only you see it unless you share it in Privacy Center. You can choose to show period days on the calendar, only to you and the people you share with." }],
+    sections: [
+      { heading: "Privacy", body: "Only you see it unless you share it in Privacy Center. You can choose to show period days on the calendar, only to you and the people you share with." },
+      { heading: "Premium", body: "The Period Tracker is part of Premium. On the Free plan you can still see what you logged, but you can't add new days." },
+    ],
   },
   {
     slug: "food-journal",

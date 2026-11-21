@@ -111,6 +111,8 @@ function lockedAreas(premium: boolean): LockedArea[] {
   return [
     ...areas,
     { href: "/house/documents", label: "House" },
+    { href: "/health/period", label: "Period Tracker" },
+    { href: "/photos", label: "Photo albums" },
     { href: "/calendar/templates", label: "Event templates" },
     { href: "/calendar/sync", label: "Calendar sync" },
     { href: "/house/rewards", label: "Chore rewards" },
