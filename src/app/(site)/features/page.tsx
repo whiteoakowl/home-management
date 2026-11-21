@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Check, ChevronRight, Sparkles } from "lucide-react";
 import { Icon } from "@/components/icons";
-import { FaithShowcase } from "@/components/site/faith";
 import { CallToAction, Section, SectionTitle } from "@/components/site/parts";
 import { readSessionUser } from "@/lib/auth/session";
 import { getPlatformSettings } from "@/lib/billing";
@@ -54,7 +53,7 @@ export default async function FeaturesPage() {
                   </span>
                   <div>
                     <h3 className="flex flex-wrap items-center gap-2 text-lg leading-tight font-semibold">
-                      {s.name}
+                      {s.title ?? s.name}
                       {FREE_SECTION_NAMES.includes(s.name) ? (
                         <span className="rounded-full bg-olive-50 px-2 py-0.5 text-xs font-semibold text-olive-700">Free</span>
                       ) : (
@@ -83,8 +82,6 @@ export default async function FeaturesPage() {
           </ul>
         </Section>
       ))}
-
-      <FaithShowcase />
 
       <div className="border-b border-line bg-surface/60">
         <Section>

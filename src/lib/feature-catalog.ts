@@ -2,7 +2,7 @@
  * Every section of the app and its tabs, with what each does, for the public
  * Features page. Tab names match the app's own navigation.
  */
-export type CatalogSection = { name: string; icon: string; summary: string; tabs: { name: string; does: string }[] };
+export type CatalogSection = { name: string; /** Heading on the Features page, when different from the app name. */ title?: string; icon: string; summary: string; tabs: { name: string; does: string }[] };
 export type CatalogGroup = { title: string; intro: string; sections: CatalogSection[] };
 
 export const FEATURE_CATALOG: CatalogGroup[] = [
@@ -307,6 +307,7 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
       },
       {
         name: "Spiritual & faith",
+        title: "Your faith, your way",
         icon: "Moon",
         summary: "A tab for each religion your family uses: Christian, Catholic, Jewish, Hindu, Buddhist or Spiritual. Parents choose who gets each one.",
         tabs: [
