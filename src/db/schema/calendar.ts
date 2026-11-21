@@ -2,11 +2,13 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
@@ -84,3 +86,60 @@ export const eventAttachments = pgTable(
   },
   (t) => [primaryKey({ columns: [t.eventId, t.fileId] })],
 );
+
+/**
+ * Calendar sync, part 1: a member's private subscribe link (an .ics feed) for
+ * Google Calendar, Outlook or Apple Calendar. Whoever has the link can read
+ * what that member sees, so it's long and random and can be reset.
+ */
+export const calendarFeeds = pgTable(
+  "calendar_feeds",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    token: text("token").notNull(),
+    /** Calendar layers included (events, chores, sports…). */
+    layers: text("layers").array().notNull(),
+    /** Only things this member is part of (their events, their chores). */
+    onlyMine: boolean("only_mine").notNull().default(false),
+    lastFetchedAt: timestamp("last_fetched_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("calendar_feeds_token_uq").on(t.token), uniqueIndex("calendar_feeds_member_uq").on(t.memberId)],
+);
+
+/**
+ * Calendar sync, part 2: someone's own Google / Outlook / iCloud calendar,
+ * added by its private iCal link and shown on the family calendar.
+ */
+export const calendarImports = pgTable(
+  "calendar_imports",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    color: text("color").notNull().default("sky"),
+    /** family = everyone sees these events; private = only the person who added it. */
+    shared: boolean("shared").notNull().default(true),
+    /** Parsed events (kept so the calendar never waits on Google/Microsoft/Apple). */
+    events: jsonb("events").$type<ImportedEvent[]>().notNull().default([]),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (t) => [index("calendar_imports_family_idx").on(t.familyId)],
+);
+
+/** One occurrence from an imported calendar (recurring events are expanded). */
+export type ImportedEvent = { uid: string; title: string; start: string; end: string | null; allDay: boolean; location?: string | null; description?: string | null };

@@ -29,6 +29,7 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
           { name: "List", does: "Filter by person, category, type or colour, search, and pick any date range." },
           { name: "Categories & layers", does: "Show or hide chores, sports, dance, work shifts, meals, pets, trips, birthdays and more." },
           { name: "Print & PDF", does: "Print the month, week or a list, or save it as a PDF, with your family's name at the top." },
+          { name: "Sync", does: "See the family calendar in Google Calendar, Outlook or Apple Calendar, and bring your own Google, Outlook or iCloud calendars in." },
         ],
       },
       {

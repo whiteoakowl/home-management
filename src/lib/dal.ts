@@ -62,6 +62,14 @@ export const getViewer = cache(async (opts?: { allowOnboarding?: boolean }): Pro
   // No plan or trial: only onboarding and billing (allowOnboarding) work, on pages and in actions alike.
   if (!opts?.allowOnboarding && !(await familyAccess(family.id)).hasAccess) redirect("/billing");
 
+  return resolveViewer(user, member, family);
+});
+
+/**
+ * A member's viewer (permissions included) without a session: used by their
+ * private calendar subscribe link. Same rules as getViewer.
+ */
+export async function resolveViewer(user: Viewer["user"], member: Member, family: Family): Promise<Viewer> {
   const stored = await db
     .select()
     .from(memberPermissions)
@@ -96,7 +104,7 @@ export const getViewer = cache(async (opts?: { allowOnboarding?: boolean }): Pro
     access,
     can: (module, level = "view") => atLeast(access[module], level),
   };
-});
+}
 
 export class AuthorizationError extends Error {
   readonly userFacing = true;

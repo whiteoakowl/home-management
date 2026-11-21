@@ -13,6 +13,8 @@ import { pool } from "@/db";
 const PERSONAL = new Set([
   "journal_entries",
   "faith_practices",
+  "calendar_feeds",
+  "push_subscriptions",
   "faith_practice_logs",
   "faith_texts",
   "faith_reading_logs",
@@ -39,7 +41,7 @@ const PERSONAL = new Set([
 ]);
 /** Never exported: service tables and secrets. */
 const SKIP = new Set(["users", "sessions", "auth_tokens", "platform_settings", "rate_limits", "stripe_events", "families"]);
-const SECRET_COLUMNS = new Set(["password_hash", "token_hash"]);
+const SECRET_COLUMNS = new Set(["password_hash", "token_hash", "token", "endpoint", "p256dh", "auth"]);
 const AUTHOR_COLS = ["author_member_id", "created_by_member_id", "owner_member_id", "member_id"];
 
 type Row = Record<string, unknown>;
@@ -76,6 +78,8 @@ export async function exportFamily(familyId: string, holderMemberId: string) {
   const clean = (table: string, r: Row) => {
     const out: Row = {};
     for (const [k, v] of Object.entries(r)) if (!SECRET_COLUMNS.has(k)) out[k] = v;
+    // Private calendar links (someone's secret Google/Outlook/iCloud address) stay out of exports.
+    if (table === "calendar_imports") delete out.url;
     // Keep gift surprises: no "who's buying" on your own wishlist.
     if (table === "wishlist_items" && r.member_id === holderMemberId) {
       delete out.claimed_by_member_id;

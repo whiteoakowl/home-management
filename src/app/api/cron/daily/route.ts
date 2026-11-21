@@ -1,6 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 import { db } from "@/db";
-import { families } from "@/db/schema";
+import { isNull, lt, or } from "drizzle-orm";
+import { calendarImports, families } from "@/db/schema";
+import { refreshImport } from "@/lib/calendar-sync";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
 
@@ -36,5 +38,12 @@ export async function POST(req: Request) {
       console.error(`Daily run failed for family ${f.id}:`, e);
     }
   }
-  return Response.json({ ok: true, ran, waiting });
+  // Keep calendars brought in from Google / Outlook / iCloud fresh (a few per hour).
+  let synced = 0;
+  if (Date.now() - started < 20000) {
+    const stale = await db.select({ id: calendarImports.id }).from(calendarImports).where(or(isNull(calendarImports.fetchedAt), lt(calendarImports.fetchedAt, new Date(Date.now() - 3 * 3600000)))).limit(15);
+    await Promise.all(stale.map((s) => refreshImport(s.id)));
+    synced = stale.length;
+  }
+  return Response.json({ ok: true, ran, waiting, synced });
 }

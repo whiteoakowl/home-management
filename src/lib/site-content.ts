@@ -52,6 +52,7 @@ export const EXTRA_FEATURES = [
   "Search everything",
   "Quick add from anywhere",
   "Push notifications for reminders and chat",
+  "Syncs with Google, Outlook and Apple calendars",
   "Works on phones, tablets and computers",
   "Installs on the home screen like an app",
   "Private spaces for each person",

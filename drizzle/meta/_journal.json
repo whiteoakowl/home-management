@@ -393,6 +393,13 @@
       "when": 1795197835287,
       "tag": "0055_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1795219524283,
+      "tag": "0056_calendar_sync",
+      "breakpoints": true
     }
   ]
 }

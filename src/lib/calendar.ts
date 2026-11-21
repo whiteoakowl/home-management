@@ -55,9 +55,11 @@ import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
 import { wheelForYear } from "./sabbats";
 import { familyHolidays } from "./faith";
+import { refreshStaleImports, visibleImports } from "./calendar-sync";
+import { after } from "next/server";
 import { familyFaiths } from "./faith-config";
 
-export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "christian", "catholic", "jewish", "hindu", "buddhist", "cycle"] as const;
+export const LAYERS = ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", "meals", "garden", "farm", "pets", "home", "moon", "christian", "catholic", "jewish", "hindu", "buddhist", "synced", "cycle"] as const;
 export type Layer = (typeof LAYERS)[number];
 
 export type CalendarItem = {
@@ -447,6 +449,33 @@ export async function getCalendarItems(
       for (let d = h.date; d <= (h.endDate ?? h.date); d = addDays(d, 1))
         if (d >= from && d <= to)
           out.push({ key: `fh:${f}:${h.key}:${d}`, id: h.key, layer: f, title: `${h.emoji} ${h.name}${h.endDate ? ` (day ${daysBetween(h.date, d) + 1})` : ""}`, date: d, startMin: null, endMin: null, color: COLOR[f], href: `/spiritual/faith/${f}/holidays?year=${d.slice(0, 4)}`, people: [], type: "holiday", description: h.eve && d === h.date ? `${h.about} Begins at sundown the evening before.` : h.about });
+    }
+  }
+
+  // Calendars brought in from Google / Outlook / iCloud (Calendar → Sync). Refreshed in the background.
+  if (want("synced") && !subject) {
+    const imports = await visibleImports(viewer);
+    if (imports.length) {
+      try {
+        after(() => refreshStaleImports(imports));
+      } catch {
+        /* outside a request: skip the refresh */
+      }
+    }
+    for (const im of imports) {
+      for (const ev of im.events) {
+        if (ev.allDay) {
+          const last = ev.end ? addDays(ev.end, -1) : ev.start;
+          for (let d = ev.start; d <= last && d <= to; d = addDays(d, 1))
+            if (d >= from) out.push({ key: `im:${im.id}:${ev.uid}:${d}`, id: im.id, layer: "synced", title: ev.title, date: d, startMin: null, endMin: null, color: im.color, location: ev.location, href: "/calendar/sync", people: [], type: "synced", description: `${im.name}${ev.description ? `\n${ev.description}` : ""}` });
+        } else {
+          const s = utcToZoned(new Date(ev.start), tz);
+          if (s.date < from || s.date > to) continue;
+          const e = ev.end ? utcToZoned(new Date(ev.end), tz) : null;
+          const endMin = e ? (e.date === s.date ? e.minutes : 24 * 60) : s.minutes + 60;
+          out.push({ key: `im:${im.id}:${ev.uid}`, id: im.id, layer: "synced", title: ev.title, date: s.date, startMin: s.minutes, endMin, color: im.color, location: ev.location, href: "/calendar/sync", people: [], type: "synced", description: `${im.name}${ev.description ? `\n${ev.description}` : ""}` });
+        }
+      }
     }
   }
 

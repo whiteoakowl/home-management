@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { familyFaiths, faithPathsOf } from "@/lib/faith-config";
 import { notFound } from "next/navigation";
-import { CalendarDays, ChevronLeft, ChevronRight, FileDown, Printer, Search } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, FileDown, Printer, RefreshCw, Search } from "lucide-react";
 import { ListView, MonthView, TimeGridView, TYPE_LABEL, VIS_LABEL } from "@/components/calendar/views";
 import { EventFormModal } from "@/components/calendar/event-form";
 import { Card } from "@/components/ui/card";
@@ -33,7 +33,7 @@ const PRESETS = [
 type Preset = (typeof PRESETS)[number]["key"];
 const isoDate = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
-const LAYER_LABEL: Record<Layer, string> = { events: "Events", plans: "Plans", chores: "Chores", workouts: "Workouts", dance: "Dance", sports: "Sports", work: "Work", vehicles: "Vehicles", meals: "Meals", garden: "Garden", farm: "Farm", pets: "Pets", home: "Home projects", moon: "Moon & sabbats", christian: "✝️ Christian holidays", catholic: "⛪ Catholic feasts & saints", jewish: "✡️ Jewish holidays", hindu: "🕉️ Hindu holidays", buddhist: "☸️ Buddhist holidays", cycle: "My cycle (private)" };
+const LAYER_LABEL: Record<Layer, string> = { events: "Events", plans: "Plans", chores: "Chores", workouts: "Workouts", dance: "Dance", sports: "Sports", work: "Work", vehicles: "Vehicles", meals: "Meals", garden: "Garden", farm: "Farm", pets: "Pets", home: "Home projects", moon: "Moon & sabbats", christian: "✝️ Christian holidays", catholic: "⛪ Catholic feasts & saints", jewish: "✡️ Jewish holidays", hindu: "🕉️ Hindu holidays", buddhist: "☸️ Buddhist holidays", synced: "🔗 Synced calendars", cycle: "My cycle (private)" };
 
 export default async function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   const viewer = await getViewer();
@@ -46,7 +46,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   const member = typeof sp.member === "string" ? sp.member : "";
   // Categories shown: the link's choice, else what this member last picked (kept until they change it), else the default set.
   const saved = viewer.member.calendarLayers;
-  const layers = (typeof sp.layers === "string" ? sp.layers.split(",") : (saved ?? ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", ...faithPathsOf(viewer.member, viewer.family).filter((f) => f !== "spiritual")])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
+  const layers = (typeof sp.layers === "string" ? sp.layers.split(",") : (saved ?? ["events", "plans", "chores", "workouts", "dance", "sports", "work", "vehicles", "synced", ...faithPathsOf(viewer.member, viewer.family).filter((f) => f !== "spiritual")])).filter((l): l is Layer => (LAYERS as readonly string[]).includes(l));
   const savedHide = viewer.member.calendarHiddenCategories ?? [];
   const hidden = typeof sp.hide === "string" ? sp.hide.split(",").filter((x) => x === "none" || /^[0-9a-f-]{36}$/i.test(x)) : savedHide;
   const layersChanged = (typeof sp.layers === "string" && layers.join(",") !== (saved ?? []).join(",")) || (typeof sp.hide === "string" && hidden.join(",") !== savedHide.join(","));
@@ -133,7 +133,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
         ? new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })
         : `${new Date(`${range.from}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} – ${new Date(`${range.to}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
   const famFaiths = familyFaiths(viewer.family);
-  const availableLayers = LAYERS.filter((l) => ({ events: true, plans: viewer.can("plans"), chores: viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"), workouts: viewer.can("fitness"), dance: viewer.can("dance"), sports: viewer.can("sports"), work: viewer.can("work"), vehicles: viewer.can("vehicles") || (!viewer.isParent && viewer.member.privateVehicles), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft"), christian: famFaiths.includes("christian"), catholic: famFaiths.includes("catholic"), jewish: famFaiths.includes("jewish"), hindu: famFaiths.includes("hindu"), buddhist: famFaiths.includes("buddhist"), cycle: true })[l]);
+  const availableLayers = LAYERS.filter((l) => ({ events: true, plans: viewer.can("plans"), chores: viewer.can("chores") || viewer.can("cleaning") || viewer.can("maintenance"), workouts: viewer.can("fitness"), dance: viewer.can("dance"), sports: viewer.can("sports"), work: viewer.can("work"), vehicles: viewer.can("vehicles") || (!viewer.isParent && viewer.member.privateVehicles), meals: viewer.can("meals"), garden: viewer.can("garden"), farm: viewer.can("farm"), pets: viewer.can("pets"), home: viewer.can("maintenance"), moon: viewer.can("witchcraft"), christian: famFaiths.includes("christian"), catholic: famFaiths.includes("catholic"), jewish: famFaiths.includes("jewish"), hindu: famFaiths.includes("hindu"), buddhist: famFaiths.includes("buddhist"), synced: true, cycle: true })[l]);
   const canEdit = viewer.can("calendar", "use");
 
   return (
@@ -170,6 +170,9 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
         </div>
         <div className="flex items-center gap-2">
           <SegmentLinks active={view} items={VIEWS.map((v) => ({ key: v, href: q({ view: v }), label: v[0]!.toUpperCase() + v.slice(1) }))} />
+          <Link href="/calendar/sync" title="Sync with Google, Outlook or Apple Calendar" className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-medium text-ink-soft hover:bg-sunken">
+            <RefreshCw className="size-4" /> Sync
+          </Link>
           <Link href={printHref("print")} aria-label="Print calendar" title="Print" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-soft hover:bg-sunken">
             <Printer className="size-[18px]" />
           </Link>
