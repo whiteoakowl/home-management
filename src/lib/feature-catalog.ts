@@ -382,6 +382,16 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         ],
       },
       {
+        name: "Notifications",
+        icon: "Bell",
+        summary: "Reminders in the app and on your phone.",
+        tabs: [
+          { name: "Push notifications", does: "Reminders and new Family Chat messages on phones and computers, even when the app is closed (iPhone, Android, Mac, Windows)." },
+          { name: "Choose what you get", does: "Turn each kind of reminder on or off, in the app and as push, for each person." },
+          { name: "Quiet hours", does: "Phones stay silent from 9pm to 7am; reminders come in the morning." },
+        ],
+      },
+      {
         name: "Feedback & feature ideas",
         icon: "Sparkles",
         summary: "Tell us what you'd like next.",

@@ -8,7 +8,7 @@ import { destroySession, verifyPassword } from "@/lib/auth/session";
 import { fail, type ActionState } from "@/lib/action-state";
 import { getViewer } from "@/lib/dal";
 import { rateLimit, TOO_MANY } from "@/lib/rate-limit";
-import { storage } from "@/lib/storage";
+import { removeKeys } from "@/lib/housekeeping";
 import { stripe, stripeConfigured } from "@/lib/stripe";
 import { f } from "@/lib/records";
 
@@ -56,10 +56,7 @@ export async function deleteFamilyAccount(_: ActionState, fd: FormData): Promise
     if (onlyHere.length) await tx.delete(users).where(inArray(users.id, onlyHere));
   });
   // 3. Stored files (photos, documents): best effort, after the records are gone.
-  for (const file of stored) {
-    await storage().remove(file.key).catch(() => null);
-    if (file.thumb) await storage().remove(file.thumb).catch(() => null);
-  }
+  await removeKeys([...stored.flatMap((f) => [f.key, f.thumb].filter((k): k is string => !!k)), `${familyId}/exports/latest.json.gz`]).catch(() => null);
   await destroySession().catch(() => null);
   redirect("/welcome?deleted=1");
 }

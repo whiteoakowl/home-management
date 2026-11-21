@@ -111,8 +111,9 @@ npx supabase secrets set --project-ref YOUR_PROJECT_REF STRIPE_SECRET_KEY=sk_tes
 
 ## Step 6: Supabase safety (5 min)
 
-- [ ] **Supabase → Database → Backups:** for a paying business, use the **Pro plan** (daily backups;
-      consider Point-in-Time Recovery).
+- [ ] **Supabase → Billing:** move to the **Pro plan** (the free plan pauses after a quiet week and is small),
+      and **turn off the Spend Cap** so storage keeps growing with your customers. Details: `docs/STORAGE.md`.
+- [ ] **Supabase → Database → Backups:** confirm daily backups (consider Point-in-Time Recovery).
 - [ ] **Supabase → Advisors → Security Advisor:** should show no errors (the app locks every table).
 
 ## Step 7: Legal and business (your timing)
@@ -155,6 +156,7 @@ npx supabase secrets set --project-ref YOUR_PROJECT_REF STRIPE_SECRET_KEY=sk_tes
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Push keys (Step 2b) | for push |
 | `VAPID_SUBJECT` | `mailto:hello@your-address.com` | for push |
 | `CRON_SECRET` | any long random text (hourly reminders) | for push |
+| `FAMILY_STORAGE_GB` | photo/file allowance per family (default 10) | optional |
 | `HEALTH_CHECK_KEY` | any long random text, to open `/api/health?key=…` | optional |
 
 **Supabase Edge Function secrets** (set with `npx supabase secrets set`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.

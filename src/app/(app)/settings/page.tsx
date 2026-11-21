@@ -6,7 +6,8 @@ import { Bell, CreditCard, ShieldCheck } from "lucide-react";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
 import { Card, CardHeader } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/display";
+import { PageHeader, ProgressBar } from "@/components/ui/display";
+import { familyStorageBytes, familyStorageLimit } from "@/lib/housekeeping";
 import { AUTOMATIONS } from "@/lib/automation";
 import { listFamilyMembers, requireParent } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
@@ -30,10 +31,13 @@ const DOMAINS: { key: string; label: string }[] = [
   { key: "farm", label: "Farm categories" },
 ];
 
+const fmtSize = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : b >= 1024 ** 2 ? `${Math.round(b / 1024 ** 2)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+
 export default async function SettingsPage() {
   const viewer = await requireParent().catch(() => notFound());
   const f = viewer.family;
-  const everyone = await listFamilyMembers(f.id);
+  const [everyone, storageUsed] = await Promise.all([listFamilyMembers(f.id), familyStorageBytes(f.id)]);
+  const storageLimit = familyStorageLimit();
   const parents = everyone.filter((m) => m.role === "parent");
   const cats = await db.select().from(categories).where(and(eq(categories.familyId, f.id))).orderBy(asc(categories.sortOrder), asc(categories.name));
   const grouped = Map.groupBy(cats, (c) => c.domain);
@@ -122,6 +126,12 @@ export default async function SettingsPage() {
         <p className="mb-3 text-[15px] text-muted">Repetitive work happens automatically once a day. Switch off anything you&apos;d rather do by hand.</p>
         <AutomationsForm automations={AUTOMATIONS.map((a) => ({ ...a }))} settings={f.settings ?? {}} />
       </Card>
+      <Card>
+        <CardHeader title="Photo & file storage" />
+        <ProgressBar value={storageUsed} max={storageLimit} label={`${fmtSize(storageUsed)} of ${fmtSize(storageLimit)} used`} tone={storageUsed / storageLimit > 0.9 ? "wine" : "primary"} />
+        <p className="mt-2 text-sm text-muted">Photos are shrunk automatically when uploaded, so most families never come close. Deleting photos and files frees up space.</p>
+      </Card>
+
       {viewer.isOwner && (
         <Card>
           <CardHeader title="Your family's data" />

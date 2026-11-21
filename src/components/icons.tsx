@@ -1,4 +1,5 @@
 import {
+  Bell,
   BookOpen,
   CalendarDays,
   CalendarHeart,
@@ -43,6 +44,7 @@ import {
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
+  Bell,
   LibraryBig,
   PawPrint,
   Hammer,

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { isNull, lt, or } from "drizzle-orm";
 import { calendarImports, families } from "@/db/schema";
 import { refreshImport } from "@/lib/calendar-sync";
+import { cleanupOldRows, cleanupOrphanFiles } from "@/lib/housekeeping";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
 
@@ -45,5 +46,14 @@ export async function POST(req: Request) {
     await Promise.all(stale.map((s) => refreshImport(s.id)));
     synced = stale.length;
   }
-  return Response.json({ ok: true, ran, waiting, synced });
+  // Housekeeping: expired sign-ins, old notifications, unused files.
+  let cleaned: Record<string, number> = {};
+  if (Date.now() - started < 22000) {
+    try {
+      cleaned = { ...(await cleanupOldRows()), files: (await cleanupOrphanFiles()).removed };
+    } catch (e) {
+      console.error("Housekeeping failed:", e);
+    }
+  }
+  return Response.json({ ok: true, ran, waiting, synced, cleaned });
 }

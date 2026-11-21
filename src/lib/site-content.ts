@@ -1,11 +1,11 @@
 /** Copy for the public website (kept in one place so pages stay consistent). */
 
 export const HOME_HIGHLIGHTS = [
-  { icon: "CalendarDays", title: "One family calendar", body: "Everyone's events, practices, classes, work shifts and trips, color-coded by person. Choose who sees each event." },
+  { icon: "CalendarDays", title: "One family calendar", body: "Everyone's events, practices, classes, work shifts and trips, color-coded by person. Syncs with Google, Outlook and Apple calendars." },
   { icon: "ListChecks", title: "Chores that get done", body: "Assign chores to one person or several, repeat them on any schedule, and reward points everyone can cash in." },
   { icon: "UtensilsCrossed", title: "Meals without the stress", body: "Plan the week, keep your recipes, know what's in the pantry and build the shopping list automatically." },
   { icon: "Trophy", title: "Sports, dance & activities", body: "Teams, practices, games, recitals and stats for every kid, all on the calendar so nobody misses a pickup." },
-  { icon: "MessagesSquare", title: "Family chat & photo albums", body: "One group chat for the whole family, shared albums for every trip and holiday, and an address book everyone can use." },
+  { icon: "MessagesSquare", title: "Family chat & photo albums", body: "Family group chats with push notifications, shared albums for every trip and holiday, and an address book everyone can use." },
   { icon: "Gift", title: "Wishlists that keep the surprise", body: "Everyone keeps a gift wishlist. Family members quietly mark what they're buying, and the list owner never sees it." },
   { icon: "Wallet", title: "Budget & goals", body: "Bills, income, expenses and savings goals in one view, with private money spaces for each person." },
   { icon: "House", title: "Home, health & more", body: "Home maintenance, vehicles, pets, medical records, garden and farm. Turn on just the sections your family needs." },
@@ -65,6 +65,8 @@ export const FAQ = [
   { q: "Is the price per person?", a: "No. One subscription covers your whole family, with as many family members and logins as you need." },
   { q: "Can kids use it?", a: "Yes. Kids can have their own login (or none, for little ones). You choose exactly which sections each person can see and change." },
   { q: "Does it work on iPhone and Android?", a: "Yes. It works in any modern browser and can be installed on the home screen of phones and tablets, where it shows up with your family's name." },
+  { q: "Does it work with Google Calendar, Outlook or Apple Calendar?", a: "Yes. Each person can show the family calendar in Google Calendar, Outlook or Apple Calendar with one tap, and bring their own Google, Outlook or iCloud calendars into the family calendar. Everything stays in sync automatically." },
+  { q: "Will I get notifications on my phone?", a: "Yes. Turn on push notifications on each phone or computer to get reminders and new chat messages, even when the app is closed. You choose what you get, and phones stay quiet overnight." },
   { q: "Does it support our faith?", a: "Yes. The Spiritual section has a tab for Christian, Catholic, Jewish, Hindu, Buddhist and spiritual families, with holidays, reading, devotions, prayer lists and a journal. Parents choose the religions the family uses and which members get each one, and those holidays can be shown on the family calendar." },
   { q: "Can I cancel anytime?", a: "Yes. Cancel from Account settings → Subscription. You keep access until the end of the period you've paid for." },
   { q: "What happens to our information?", a: "Your family's information belongs to you. It's only visible to the people in your family you share it with, and we never sell it." },

@@ -1,6 +1,6 @@
 import { getMembership, getViewer } from "@/lib/dal";
 import { canReadMedicalFile } from "@/lib/medical";
-import { readFamilyFile } from "@/lib/files";
+import { bigFileLink, readFamilyFile } from "@/lib/files";
 
 /** Serves uploaded files to members of the owning family only. */
 export async function GET(request: Request, { params }: RouteContext<"/api/files/[id]">) {
@@ -10,6 +10,12 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   // Medical attachments are private to whoever may see the record.
   if (!(await canReadMedicalFile(await getViewer(), id))) return new Response("Not found", { status: 404 });
   const thumb = new URL(request.url).searchParams.has("thumb");
+  // Big files (large PDFs) go straight from storage with a 5-minute private link: the
+  // host can't send more than about 6 MB through the app itself.
+  if (!thumb) {
+    const big = await bigFileLink(family.id, id);
+    if (big) return new Response(null, { status: 302, headers: { Location: big, "Cache-Control": "private, no-store" } });
+  }
   const file = await readFamilyFile(family.id, id, thumb);
   if (!file) return new Response("Not found", { status: 404 });
   return new Response(new Uint8Array(file.data), {

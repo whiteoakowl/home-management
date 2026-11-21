@@ -82,7 +82,7 @@ export const authTokens = pgTable(
     usedAt: timestamp("used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("auth_tokens_user_idx").on(t.userId, t.kind)],
+  (t) => [index("auth_tokens_user_idx").on(t.userId, t.kind), index("auth_tokens_expires_idx").on(t.expiresAt)],
 );
 
 export const sessions = pgTable(
@@ -96,7 +96,7 @@ export const sessions = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     ...timestamps,
   },
-  (t) => [index("sessions_user_idx").on(t.userId)],
+  (t) => [index("sessions_user_idx").on(t.userId), index("sessions_expires_idx").on(t.expiresAt)],
 );
 
 // ─── Tenant ──────────────────────────────────────────────────────────────────
@@ -267,7 +267,7 @@ export const files = pgTable(
     height: integer("height"),
     ...timestamps,
   },
-  (t) => [index("files_family_idx").on(t.familyId)],
+  (t) => [index("files_family_idx").on(t.familyId), index("files_created_idx").on(t.createdAt)],
 );
 
 // ─── Dashboard, announcements, activity, notifications ───────────────────────
@@ -335,7 +335,7 @@ export const activityLog = pgTable(
     visibleToMemberIds: uuid("visible_to_member_ids").array(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("activity_family_idx").on(t.familyId, t.createdAt)],
+  (t) => [index("activity_family_idx").on(t.familyId, t.createdAt), index("activity_created_idx").on(t.createdAt)],
 );
 
 export const notifications = pgTable(
@@ -356,7 +356,7 @@ export const notifications = pgTable(
     dueAt: timestamp("due_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("notifications_member_idx").on(t.memberId, t.readAt)],
+  (t) => [index("notifications_member_idx").on(t.memberId, t.readAt), index("notifications_created_idx").on(t.createdAt)],
 );
 
 export const notificationPreferences = pgTable(
