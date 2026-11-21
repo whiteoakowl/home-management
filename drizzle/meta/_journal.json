@@ -407,6 +407,34 @@
       "when": 1795220999652,
       "tag": "0057_storage_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795236579328,
+      "tag": "0058_family_binder",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1795236758513,
+      "tag": "0059_event_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795237069713,
+      "tag": "0060_memories_photos_trips",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795237096116,
+      "tag": "0061_file_taken_at",
+      "breakpoints": true
     }
   ]
 }

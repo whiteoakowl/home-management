@@ -13,6 +13,7 @@ import {
   pets,
   projectStages,
   sabbatSettings,
+  familyDates,
   periodDays,
   animals,
   calendarEvents,
@@ -249,6 +250,27 @@ export async function getCalendarItems(
     }
   }
 
+  // Family members' birthdays and the family's anniversaries / yearly dates (Memories → Birthdays & anniversaries).
+  if (want("events") && !subject) {
+    const [kin, dates] = await Promise.all([
+      db.select({ id: familyMembers.id, name: familyMembers.displayName, birthday: familyMembers.birthday }).from(familyMembers).where(and(eq(familyMembers.familyId, fid), eq(familyMembers.isActive, true), isNotNull(familyMembers.birthday))),
+      db.select().from(familyDates).where(eq(familyDates.familyId, fid)),
+    ]);
+    for (let y = Number(from.slice(0, 4)); y <= Number(to.slice(0, 4)); y++) {
+      for (const k of kin) {
+        const date = nextBirthday(k.birthday!, `${y}-01-01`);
+        const age = y - Number(k.birthday!.slice(0, 4));
+        if (date >= from && date <= to && date.slice(0, 4) === String(y)) out.push({ key: `mb:${k.id}:${date}`, id: k.id, layer: "events", title: `🎂 ${k.name.split(" ")[0]}'s birthday${age > 0 && age < 120 ? ` (${age})` : ""}`, date, startMin: null, endMin: null, color: "rose", href: "/memories/dates", people: [k.id], type: "birthday" });
+      }
+      for (const d of dates) {
+        const day = d.month === 2 && d.day === 29 && !(y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 28 : d.day;
+        const date = `${y}-${String(d.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const n = d.year ? y - d.year : 0;
+        if (date >= from && date <= to) out.push({ key: `fd:${d.id}:${date}`, id: d.id, layer: "events", title: `${d.kind === "anniversary" ? "💍" : d.kind === "birthday" ? "🎂" : "📅"} ${d.title}${n > 0 ? ` (${n})` : ""}`, date, startMin: null, endMin: null, color: "rose", href: "/memories/dates", people: d.memberIds, type: d.kind === "birthday" ? "birthday" : "anniversary" });
+      }
+    }
+  }
+
   // Contacts' birthdays (shared contacts, plus your own private ones).
   if (want("events") && viewer.can("contacts") && !subject) {
     const people = await db
@@ -301,11 +323,14 @@ export async function getCalendarItems(
       }
     }
     if (rows.length) {
-      const flights = await db.select().from(planItems).where(and(inArray(planItems.planId, rows.map((r) => r.p.id)), eq(planItems.kind, "flight"), gte(planItems.date, from), lte(planItems.date, to)));
+      // Flights, reservations and itinerary stops with a date (Disney trip: park days, dinner reservations…).
+      const flights = await db.select().from(planItems).where(and(inArray(planItems.planId, rows.map((r) => r.p.id)), inArray(planItems.kind, ["flight", "reservation", "itinerary"]), gte(planItems.date, from), lte(planItems.date, to)));
       for (const fl of flights) {
         const plan = rows.find((r) => r.p.id === fl.planId)!.p;
         const start = minutesOf(fl.startTime);
-        out.push({ key: `pf:${fl.id}`, id: fl.id, layer: "plans", title: `🛫 ${fl.title}${fl.provider ? ` (${fl.provider})` : ""}`, date: fl.date!, startMin: start, endMin: start !== null ? start + 90 : null, color: colorOf.get(plan.createdByMemberId ?? "") ?? "cornflower", location: fl.location, href: `/plans/${plan.id}`, people: plan.memberIds, type: "plans" });
+        const end = minutesOf(fl.endTime);
+        const icon = fl.kind === "flight" ? "🛫" : fl.kind === "reservation" ? "🎟️" : "📍";
+        out.push({ key: `pf:${fl.id}`, id: fl.id, layer: "plans", title: `${icon} ${fl.title}${fl.provider && fl.kind === "flight" ? ` (${fl.provider})` : ""}`, date: fl.date!, startMin: start, endMin: start !== null ? (end !== null && end > start && (!fl.endDate || fl.endDate === fl.date) ? end : start + (fl.kind === "flight" ? 90 : 60)) : null, color: colorOf.get(plan.createdByMemberId ?? "") ?? "cornflower", location: fl.location, href: `/plans/${plan.id}`, people: plan.memberIds, type: "plans", description: fl.confirmation ? `Confirmation ${fl.confirmation}${fl.notes ? `\n${fl.notes}` : ""}` : fl.notes });
       }
     }
   }

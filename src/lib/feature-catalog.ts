@@ -29,6 +29,8 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
           { name: "List", does: "Filter by person, category, type or colour, search, and pick any date range." },
           { name: "Categories & layers", does: "Show or hide chores, sports, dance, work shifts, meals, pets, trips, birthdays and more." },
           { name: "Print & PDF", does: "Print the month, week or a list, or save it as a PDF, with your family's name at the top." },
+          { name: "Event templates", does: "Set up \"Soccer practice, Tuesdays 5:30, Field 3, Jack, remind me an hour before\" once, then add the whole season in one tap." },
+          { name: "Reminders", does: "Reminders at the time you choose (10 minutes to a week before), on your phone, for one-time and repeating events." },
           { name: "Sync", does: "See the family calendar in Google Calendar, Outlook or Apple Calendar, and bring your own Google, Outlook or iCloud calendars in." },
         ],
       },
@@ -73,11 +75,12 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
       {
         name: "Plans",
         icon: "Plane",
-        summary: "Vacations, trips and big events in one place.",
+        summary: "Everything about a trip in one place: \"Disney World, June 14–20\" with its itinerary, reservations, photos, expenses and notes.",
         tabs: [
-          { name: "Itinerary", does: "A day-by-day plan with a countdown." },
-          { name: "Travel", does: "Flights, hotels and rental cars with confirmation numbers." },
-          { name: "Budget", does: "Trip costs and a savings goal." },
+          { name: "Itinerary", does: "A day-by-day plan with a countdown; every stop and reservation also shows on the family calendar." },
+          { name: "Travel & reservations", does: "Flights, hotels, rental cars, dinner reservations and park tickets with confirmation numbers." },
+          { name: "Trip photos", does: "One shared album for the trip, so everyone's photos and videos end up together." },
+          { name: "Budget & expenses", does: "What you booked and what you spent, against the trip budget and a savings goal." },
         ],
       },
     ],
@@ -107,10 +110,16 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         ],
       },
       {
-        name: "Photo Albums",
+        name: "Memories & Photos",
         icon: "Images",
-        summary: "Shared albums everyone can add to.",
-        tabs: [{ name: "Albums", does: "Make an album for any trip or event and upload photos from any phone." }],
+        summary: "Your family's story: memories, milestones, photos and videos, year by year. Family-only and private.",
+        tabs: [
+          { name: "Timeline", does: "Every memory, milestone, album and trip on one year-by-year timeline, with search and an \"On this day\" look back." },
+          { name: "Memories & milestones", does: "Write what happened, when and who was there, with photos and videos; mark the big moments as milestones." },
+          { name: "Albums", does: "Shared family albums, someone's own album, or a private one; photos sorted by when they were taken; videos too." },
+          { name: "Comments, reactions & favorites", does: "React and comment on any photo or memory, keep favorites, and download originals." },
+          { name: "Birthdays & anniversaries", does: "Countdowns with ages and years together, on the calendar, with reminders (never spoiling the birthday person's surprise)." },
+        ],
       },
       {
         name: "House",
@@ -119,10 +128,10 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         tabs: [
           { name: "Overview", does: "Today's progress for chores, cleaning and tasks at a glance." },
           { name: "Tasks", does: "One-off to-dos with due dates and owners." },
-          { name: "Chores", does: "Repeating chores for one person, several people, or taking turns; everyone assigned earns the points." },
+          { name: "Chores", does: "Repeating chores for one person, several people, or taking turns; everyone assigned earns the points, with 🔥 streaks for chores done day after day." },
           { name: "Rewards", does: "Points earned for chores, rewards to cash them in for, and parent approval." },
           { name: "Cleaning", does: "Daily to annual cleaning, room by room, with cleanliness meters and checklists." },
-          { name: "Important info", does: "Wi-Fi, alarm codes, shut-offs and account details, shared or private." },
+          { name: "Family binder", does: "Emergency contacts, important numbers, school, doctors, insurance, babysitter notes, household instructions, addresses, memberships and Wi-Fi (with a scan-to-join QR code), plus a one-page printable babysitter sheet." },
         ],
       },
       {

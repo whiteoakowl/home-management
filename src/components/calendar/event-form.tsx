@@ -1,5 +1,6 @@
 "use client";
 
+import { REMINDER_OPTIONS } from "@/lib/reminders";
 import { useState, type ReactNode } from "react";
 import { saveEvent } from "@/app/actions/calendar";
 import { FormModal } from "@/components/forms/action-form";
@@ -101,12 +102,7 @@ export function EventFormModal({
           label="Reminder"
           defaultValue={defaults?.reminderMinutes?.toString() ?? ""}
           placeholder="None"
-          options={[
-            { value: "10", label: "10 minutes before" },
-            { value: "30", label: "30 minutes before" },
-            { value: "60", label: "1 hour before" },
-            { value: "1440", label: "1 day before" },
-          ]}
+          options={REMINDER_OPTIONS}
         />
         <Field label="Attachment" htmlFor="f-attachment">
           <input id="f-attachment" name="attachment" type="file" accept="application/pdf,image/*" className="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-primary-700" />
@@ -118,3 +114,4 @@ export function EventFormModal({
     </FormModal>
   );
 }
+

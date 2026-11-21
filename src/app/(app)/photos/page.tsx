@@ -10,15 +10,18 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { getViewer } from "@/lib/dal";
 import { formatShortDate } from "@/lib/dates";
+import { albumVisible } from "@/lib/memories";
+import { memberOptions } from "@/lib/queries";
+import { MemoriesTabs } from "@/components/memories/tabs";
 import { fileUrl } from "@/lib/files";
 
-export const metadata: Metadata = { title: "Photo Albums" };
+export const metadata: Metadata = { title: "Photo albums" };
 
 export default async function PhotosPage() {
   const viewer = await getViewer();
   if (!viewer.can("photos")) notFound();
   const canUse = viewer.can("photos", "use");
-  const albums = await db.select().from(photoAlbums).where(eq(photoAlbums.familyId, viewer.family.id)).orderBy(desc(photoAlbums.updatedAt));
+  const [albums, members] = await Promise.all([db.select().from(photoAlbums).where(albumVisible(viewer)).orderBy(desc(photoAlbums.updatedAt)), memberOptions(viewer)]);
   const ids = albums.map((a) => a.id);
   const [counts, covers] = ids.length
     ? await Promise.all([
@@ -29,10 +32,11 @@ export default async function PhotosPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Household" title="Photo Albums" description="Shared albums everyone in the family can add to: trips, holidays, recitals, game days and everyday moments." actions={canUse ? <AlbumModal /> : undefined} />
+      <PageHeader eyebrow="Memories" title="Photo albums" description="Family albums everyone can add to, plus private albums of your own: trips, holidays, recitals, game days and everyday moments." actions={canUse ? <AlbumModal members={members} /> : undefined} />
+      <MemoriesTabs active="albums" />
       {albums.length === 0 ? (
         <Card>
-          <EmptyState icon={<Images />} title="Make your first album" description="Create an album, then everyone can add photos from their phone." example="Beach trip 2026 · 48 photos" action={canUse ? <AlbumModal /> : undefined} />
+          <EmptyState icon={<Images />} title="Make your first album" description="Create an album, then everyone can add photos from their phone." example="Beach trip 2026 · 48 photos" action={canUse ? <AlbumModal members={members} /> : undefined} />
         </Card>
       ) : (
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

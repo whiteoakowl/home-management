@@ -1,5 +1,8 @@
 "use server";
 
+import { BINDER, binderBody, isBinderKind } from "@/lib/binder";
+import { parseFields } from "@/lib/record-fields";
+
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
@@ -28,13 +31,20 @@ const infoOwnerIs = (owner: string | null) => (owner ? eq(householdInfo.privateO
 export async function saveInfo(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     const { viewer, privateOwner } = await infoActor(fd);
-    const title = f.str(fd, "title");
-    const body = f.str(fd, "body");
-    if (!title) return fail("Please add a title.", "title");
-    if (!body) return fail("Please add the details.", "body");
+    // Family Binder: each section has its own fields (src/lib/binder.ts).
+    const rawKind = f.str(fd, "kind");
+    const kind = isBinderKind(rawKind) ? rawKind : "note";
+    const meta = BINDER[kind];
+    const parsed = parseFields(fd, meta.fields);
+    if (Object.keys(parsed.errors).length) return { ok: false, errors: parsed.errors };
+    const fields: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed.values)) if (v !== null && v !== "" && !Array.isArray(v)) fields[k] = String(v);
+    const title = fields[meta.titleField]?.slice(0, 200);
+    if (!title) return fail(`Please add the ${meta.fields.find((x) => x.name === meta.titleField)?.label.toLowerCase() ?? "title"}.`, meta.titleField);
+    const body = (kind === "note" ? fields.body : binderBody(kind, fields)) || title;
     const id = f.str(fd, "id");
     const { visibility, memberIds } = privateOwner ? { visibility: "private" as const, memberIds: [] } : visibilityFromForm(fd);
-    const values = { familyId: viewer.family.id, title, body, visibility, privateOwnerId: privateOwner, categoryId: privateOwner ? null : await ownedCategoryId(viewer, "household", f.str(fd, "categoryId")) };
+    const values = { familyId: viewer.family.id, title, body, kind, fields, visibility, privateOwnerId: privateOwner, categoryId: privateOwner ? null : await ownedCategoryId(viewer, "household", f.str(fd, "categoryId")) };
     if (id) {
       const [old] = await db.select().from(householdInfo).where(and(eq(householdInfo.id, id), eq(householdInfo.familyId, viewer.family.id), infoOwnerIs(privateOwner)));
       if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) throw new AuthorizationError("Not found.");

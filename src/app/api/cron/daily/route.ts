@@ -4,13 +4,15 @@ import { isNull, lt, or } from "drizzle-orm";
 import { calendarImports, families } from "@/db/schema";
 import { refreshImport } from "@/lib/calendar-sync";
 import { cleanupOldRows, cleanupOrphanFiles } from "@/lib/housekeeping";
+import { sendEventReminders } from "@/lib/event-reminders";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Hourly (netlify/functions/daily-reminders.mts): runs each family's daily
+ * Every 15 minutes (netlify/functions/daily-reminders.mts): timed event
+ * reminders; then each family's daily
  * reminders once their local morning starts (7am–8pm), so reminders reach
  * phones even if nobody opened the app that day. Protected by CRON_SECRET.
  */
@@ -20,6 +22,13 @@ export async function POST(req: Request) {
   if (!secret || given.length !== secret.length || !timingSafeEqual(Buffer.from(given), Buffer.from(secret))) return new Response("Not allowed", { status: 401 });
 
   const started = Date.now();
+  // Timed event reminders first ("1 hour before"): they're the time-sensitive part.
+  let reminders = 0;
+  try {
+    reminders = (await sendEventReminders()).sent;
+  } catch (e) {
+    console.error("Event reminders failed:", e);
+  }
   const all = await db.select().from(families);
   let ran = 0,
     waiting = 0;
@@ -55,5 +64,5 @@ export async function POST(req: Request) {
       console.error("Housekeeping failed:", e);
     }
   }
-  return Response.json({ ok: true, ran, waiting, synced, cleaned });
+  return Response.json({ ok: true, reminders, ran, waiting, synced, cleaned });
 }

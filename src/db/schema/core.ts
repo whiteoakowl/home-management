@@ -265,6 +265,8 @@ export const files = pgTable(
     sizeBytes: integer("size_bytes").notNull(),
     width: integer("width"),
     height: integer("height"),
+    /** When a photo was taken (from the camera's data), if known. */
+    takenAt: timestamp("taken_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [index("files_family_idx").on(t.familyId), index("files_created_idx").on(t.createdAt)],
@@ -392,10 +394,16 @@ export const entityPhotos = pgTable(
       .notNull()
       .references(() => files.id, { onDelete: "cascade" }),
     caption: text("caption"),
+    /** photo | video */
+    mediaType: text("media_type").notNull().default("photo"),
+    /** When it was taken (from the photo itself when available), for the timeline. */
+    takenAt: timestamp("taken_at", { withTimezone: true }),
+    /** A milestone moment ("First steps!"): shown on the family timeline. */
+    milestone: text("milestone"),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("entity_photos_entity_idx").on(t.entityType, t.entityId)],
+  (t) => [index("entity_photos_entity_idx").on(t.entityType, t.entityId), index("entity_photos_family_taken_idx").on(t.familyId, t.takenAt)],
 );
 
 /** Push notification subscriptions: one per device/browser a member turned push on for. */

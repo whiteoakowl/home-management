@@ -31,6 +31,8 @@ export type OccurrenceView = {
   priority: "low" | "normal" | "high";
   estimatedMinutes: number | null;
   points?: number | null;
+  /** "12-day streak" when this chore has been done several times in a row. */
+  streak?: string | null;
   roomName: string | null;
   dueDate: string;
   status: "pending" | "done" | "skipped" | "missed";
@@ -216,6 +218,11 @@ function Row({
               {o.points ? (
                 <span className="font-medium text-olive-700">★ {o.points}</span>
               ) : null}
+              {o.streak && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#fff1e6] px-2 py-0.5 text-xs font-semibold text-[#b4480d]" title="Done in a row">
+                  🔥 {o.streak}
+                </span>
+              )}
               {o.estimatedMinutes ? (
                 <span className="inline-flex items-center gap-1">
                   <Clock className="size-3.5" aria-hidden />

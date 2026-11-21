@@ -1,4 +1,5 @@
 import {
+  jsonb,
   boolean,
   date,
   index,
@@ -278,6 +279,10 @@ export const householdInfo = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     body: text("body").notNull(),
+    /** Family Binder section (src/lib/binder.ts): emergency, school, doctor, wifi… "note" = free text. */
+    kind: text("kind").notNull().default("note"),
+    /** The section's fields (phone, address, policy number…). */
+    fields: jsonb("fields").$type<Record<string, string>>().notNull().default({}),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     visibility: visibility("visibility").notNull().default("family"),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, {

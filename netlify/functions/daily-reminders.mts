@@ -1,7 +1,7 @@
 /**
- * Netlify scheduled function: every hour, ask the app to run the families'
- * daily reminders (chores, events, medical, pets…) so they reach phones as
- * push notifications in the morning. Needs CRON_SECRET set on the site.
+ * Netlify scheduled function: every 15 minutes, ask the app to send timed
+ * event reminders ("1 hour before") and run the families' daily reminders
+ * (chores, events, medical, pets…) in their morning. Needs CRON_SECRET.
  */
 async function dailyReminders() {
   const base = process.env.URL;
@@ -13,4 +13,4 @@ async function dailyReminders() {
 
 export default dailyReminders;
 
-export const config = { schedule: "@hourly" };
+export const config = { schedule: "*/15 * * * *" };

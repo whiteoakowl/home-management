@@ -58,7 +58,7 @@ export const calendarEvents = pgTable(
     }),
     ...timestamps,
   },
-  (t) => [index("events_family_start_idx").on(t.familyId, t.startsAt)],
+  (t) => [index("events_family_start_idx").on(t.familyId, t.startsAt), index("events_starts_idx").on(t.startsAt)],
 );
 
 export const eventAttendees = pgTable(
@@ -143,3 +143,48 @@ export const calendarImports = pgTable(
 
 /** One occurrence from an imported calendar (recurring events are expanded). */
 export type ImportedEvent = { uid: string; title: string; start: string; end: string | null; allDay: boolean; location?: string | null; description?: string | null };
+
+/**
+ * Event templates: "Soccer practice, every Tuesday 5:30, the park, Jack,
+ * remind 1 hour before". Using one creates a repeating calendar event.
+ */
+export const eventTemplates = pgTable(
+  "event_templates",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    /** What the template is called in the list. */
+    name: text("name").notNull(),
+    /** Event title (defaults to the name). */
+    title: text("title").notNull(),
+    location: text("location"),
+    description: text("description"),
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+    color: text("color"),
+    /** "HH:MM" local time; null = all day. */
+    startTime: text("start_time"),
+    durationMin: integer("duration_min").notNull().default(60),
+    /** Repeats weekly on these days (0 = Sunday); empty = a one-time event. */
+    weekdays: integer("weekdays").array().notNull().default([]),
+    memberIds: uuid("member_ids").array().notNull().default([]),
+    reminderMinutes: integer("reminder_minutes"),
+    createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (t) => [index("event_templates_family_idx").on(t.familyId)],
+);
+
+/** Timed reminders already sent (one per event occurrence). */
+export const eventRemindersSent = pgTable(
+  "event_reminders_sent",
+  {
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => calendarEvents.id, { onDelete: "cascade" }),
+    occursAt: timestamp("occurs_at", { withTimezone: true }).notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.eventId, t.occursAt] }), index("event_reminders_sent_at_idx").on(t.sentAt)],
+);

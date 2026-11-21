@@ -3,7 +3,8 @@
 import { ImagePlus, ImageUp, Pencil, UserPlus } from "lucide-react";
 import { addPhotosToAlbum, saveAlbum, saveContact } from "@/app/actions/hub";
 import { FormModal } from "@/components/forms/action-form";
-import { CheckboxField, DateField, FormRow, PhotosField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { CheckboxField, DateField, FormRow, PhotosField, SelectField, TextAreaField, TextField, type MemberOption } from "@/components/forms/fields";
+import { VideoField } from "@/components/photos/video-field";
 import { CONTACT_CATEGORIES, CONTACT_LABEL } from "@/lib/hub-shared";
 
 const editIcon = <Pencil className="mx-auto size-4" />;
@@ -62,7 +63,9 @@ export function ContactModal({ item, defaultCategory }: { item?: ContactDefaults
 
 // ─── Photo albums ────────────────────────────────────────────────────────────
 
-export function AlbumModal({ item }: { item?: { id: string; title: string; description: string | null; eventDate: string | null } }) {
+export type AlbumDefaults = { id: string; title: string; description: string | null; eventDate: string | null; ownerMemberId?: string | null; private?: boolean };
+
+export function AlbumModal({ item, members }: { item?: AlbumDefaults; members?: MemberOption[] }) {
   return (
     <FormModal
       title={item ? "Edit album" : "New album"}
@@ -78,16 +81,22 @@ export function AlbumModal({ item }: { item?: { id: string; title: string; descr
       <TextField name="title" label="Album name" required defaultValue={item?.title} placeholder="Beach trip 2026" />
       <DateField name="eventDate" label="Date (optional)" defaultValue={item?.eventDate ?? ""} />
       <TextAreaField name="description" label="Description" rows={2} defaultValue={item?.description ?? ""} />
+      {members && members.length > 0 && (
+        <SelectField name="ownerMemberId" label="Whose album" defaultValue={item?.ownerMemberId ?? ""} placeholder="The whole family's" options={members.map((m) => ({ value: m.id, label: `${m.displayName.split(" ")[0]}'s album` }))} />
+      )}
+      <CheckboxField name="private" label="Only me" description="A private album only you can see." defaultChecked={item?.private} />
     </FormModal>
   );
 }
 
 export function AddPhotosModal({ albumId }: { albumId: string }) {
   return (
-    <FormModal title="Add photos" triggerLabel="Add photos" triggerIcon={<ImageUp className="size-4" />} action={addPhotosToAlbum} submitLabel="Upload" size="sm">
+    <FormModal title="Add photos & videos" triggerLabel="Add photos" triggerIcon={<ImageUp className="size-4" />} action={addPhotosToAlbum} submitLabel="Upload" size="sm" refreshOnSuccess>
       <input type="hidden" name="albumId" value={albumId} />
-      <PhotosField name="photos" label="Photos" required max={20} />
+      <PhotosField name="photos" label="Photos" max={20} />
+      <VideoField />
       <TextField name="caption" label="Caption (optional)" maxLength={200} />
+      <TextField name="milestone" label="Milestone (optional)" maxLength={120} placeholder="First day of kindergarten" hint="Shows on the family timeline with a ⭐." />
     </FormModal>
   );
 }

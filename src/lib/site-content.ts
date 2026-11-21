@@ -5,10 +5,10 @@ export const HOME_HIGHLIGHTS = [
   { icon: "ListChecks", title: "Chores that get done", body: "Assign chores to one person or several, repeat them on any schedule, and reward points everyone can cash in." },
   { icon: "UtensilsCrossed", title: "Meals without the stress", body: "Plan the week, keep your recipes, know what's in the pantry and build the shopping list automatically." },
   { icon: "Trophy", title: "Sports, dance & activities", body: "Teams, practices, games, recitals and stats for every kid, all on the calendar so nobody misses a pickup." },
-  { icon: "MessagesSquare", title: "Family chat & photo albums", body: "Family group chats with push notifications, shared albums for every trip and holiday, and an address book everyone can use." },
+  { icon: "MessagesSquare", title: "Family chat & memories", body: "Family group chats with push notifications, plus a year-by-year timeline of memories, milestones, photos and videos." },
   { icon: "Gift", title: "Wishlists that keep the surprise", body: "Everyone keeps a gift wishlist. Family members quietly mark what they're buying, and the list owner never sees it." },
   { icon: "Wallet", title: "Budget & goals", body: "Bills, income, expenses and savings goals in one view, with private money spaces for each person." },
-  { icon: "House", title: "Home, health & more", body: "Home maintenance, vehicles, pets, medical records, garden and farm. Turn on just the sections your family needs." },
+  { icon: "House", title: "Family binder & more", body: "Emergency contacts, doctors, school, insurance and Wi-Fi in one binder with a printable babysitter sheet, plus home, pets, health and more." },
 ] as const;
 
 /** The Spiritual section's religion tabs, for the public website. */
@@ -53,6 +53,9 @@ export const EXTRA_FEATURES = [
   "Quick add from anywhere",
   "Push notifications for reminders and chat",
   "Syncs with Google, Outlook and Apple calendars",
+  "Event templates and reminders at the time you choose",
+  "Chore streaks that keep kids going",
+  "Birthday and anniversary countdowns",
   "Works on phones, tablets and computers",
   "Installs on the home screen like an app",
   "Private spaces for each person",

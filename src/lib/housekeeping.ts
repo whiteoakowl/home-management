@@ -24,6 +24,13 @@ export async function cleanupOldRows() {
     ),
     // The "what's been happening" feed: 13 months is plenty.
     activity: await run(`delete from activity_log where id in (select id from activity_log where created_at < now() - interval '395 days' limit 10000)`),
+    // Record of timed event reminders already sent.
+    eventReminders: await run(`delete from event_reminders_sent where sent_at < now() - interval '30 days'`),
+    // Comments, reactions and favorites on photos or memories that were deleted.
+    mediaSocial:
+      (await run(`delete from media_comments c where (c.entity_type = 'photo' and not exists (select 1 from entity_photos p where p.id = c.entity_id)) or (c.entity_type = 'memory' and not exists (select 1 from memories m where m.id = c.entity_id))`)) +
+      (await run(`delete from media_reactions c where (c.entity_type = 'photo' and not exists (select 1 from entity_photos p where p.id = c.entity_id)) or (c.entity_type = 'memory' and not exists (select 1 from memories m where m.id = c.entity_id))`)) +
+      (await run(`delete from media_favorites c where (c.entity_type = 'photo' and not exists (select 1 from entity_photos p where p.id = c.entity_id)) or (c.entity_type = 'memory' and not exists (select 1 from memories m where m.id = c.entity_id))`)),
     // Abuse-protection counters.
     rateLimits: await run(`delete from rate_limits where window_start < now() - interval '2 days'`),
   };

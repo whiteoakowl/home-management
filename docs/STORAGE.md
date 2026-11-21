@@ -11,6 +11,9 @@ Everything families add lives in two places, both on **Supabase**:
 
 - **Photos are shrunk on upload** to at most 2048 px (WebP, quality 82) plus a small thumbnail.
   A 10 MB phone photo usually becomes 300–600 KB. Uploads over 10 MB are refused.
+- **Videos** upload straight from the phone to Supabase Storage (the app server never carries them), up to
+  300 MB each (`MAX_VIDEO_MB`), and play straight from storage. They count toward the family's allowance.
+  In Supabase, raise **Storage → Settings → Upload file size limit** to at least 300 MB, or long videos will fail.
 - **Fair-use allowance per family:** 10 GB of photos and files (change with the `FAMILY_STORAGE_GB`
   setting in Netlify). Parents see their usage in **Account settings → Photo & file storage**.
 - **Indexes on every family/person/file link** (added automatically on each deploy by
@@ -36,6 +39,8 @@ Everything families add lives in two places, both on **Supabase**:
 Most families add far fewer photos; these are generous estimates.
 
 ## What you need to do on Supabase (before launch)
+
+0. **Storage → Settings → Upload file size limit:** set it to **300 MB** so family videos upload (the default is 50 MB).
 
 1. **Upgrade to the Pro plan** (Supabase → Organization → Billing). The free plan has a small
    database and storage, and **pauses projects after a week without visits**: not OK for a business.

@@ -1,3 +1,4 @@
+import { streakLabel, streakOf } from "./streaks";
 import "server-only";
 import { memberNameRaw, memberNameSql } from "./names";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
@@ -14,7 +15,7 @@ import {
   rooms,
 } from "@/db/schema";
 import type { Viewer } from "./dal";
-import { addDays } from "./dates";
+import { addDays, todayIn } from "./dates";
 import { nextOccurrence, type Rule } from "./recurrence";
 
 export type ChoreKind = (typeof chores.$inferSelect)["kind"];
@@ -166,8 +167,21 @@ export async function listOccurrences(viewer: Viewer, opts: OccurrenceQuery) {
         .orderBy(asc(choreOccurrenceItems.position))
     : [];
   const byOcc = Map.groupBy(items, (i) => i.occurrenceId);
+  // Streaks (🔥 12-day streak): each chore's recent history for the same person.
+  const today = todayIn(viewer.family.timezone);
+  const recurring = [...new Set(rows.filter((r) => r.kind === "chore" || r.kind === "cleaning" || r.kind === "farm").map((r) => r.choreId))];
+  const history = recurring.length
+    ? await db
+        .select({ choreId: choreOccurrences.choreId, assigneeId: choreOccurrences.assigneeId, date: choreOccurrences.dueDate, status: choreOccurrences.status })
+        .from(choreOccurrences)
+        .where(and(inArray(choreOccurrences.choreId, recurring), gte(choreOccurrences.dueDate, addDays(today, -400)), lte(choreOccurrences.dueDate, today)))
+    : [];
+  const streakFor = (choreId: string, assigneeId: string | null) => {
+    const s = streakOf(history.filter((h) => h.choreId === choreId && h.assigneeId === assigneeId), today);
+    return s.count >= 2 ? streakLabel(s) : null;
+  };
   // canUse: "Use" access or better lets someone tick it off and earn the points.
-  return rows.map((r) => ({ ...r, canUse: viewer.can(kindModule(r.kind), "use"), items: byOcc.get(r.id) ?? [] }));
+  return rows.map((r) => ({ ...r, canUse: viewer.can(kindModule(r.kind), "use"), items: byOcc.get(r.id) ?? [], streak: recurring.includes(r.choreId) ? streakFor(r.choreId, r.assigneeId) : null }));
 }
 
 export type Occurrence = Awaited<ReturnType<typeof listOccurrences>>[number];

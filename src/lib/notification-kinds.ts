@@ -2,7 +2,8 @@
 export const NOTIFICATION_KINDS = [
   { key: "chat", label: "Family Chat", description: "New messages in your chats (phone & computer only)", pushOnly: true },
   { key: "chore_due", label: "Chores due", description: "Your chores for the day" },
-  { key: "event_reminder", label: "Event reminders", description: "Events you're attending today" },
+  { key: "event_reminder", label: "Event reminders", description: "Events you're attending, and the reminder times you set" },
+  { key: "special_dates", label: "Birthdays & anniversaries", description: "Coming up soon, and on the day" },
   { key: "food_expiring", label: "Food expiring", description: "Kitchen items expiring soon" },
   { key: "garden_task", label: "Garden", description: "Upcoming harvests" },
   { key: "farm_task", label: "Farm", description: "Animal care that's due" },

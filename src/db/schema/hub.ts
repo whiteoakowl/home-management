@@ -120,6 +120,12 @@ export const photoAlbums = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     eventDate: date("event_date"),
+    /** Someone's own album (e.g. "Jack's album"); null = a family album. */
+    ownerMemberId: uuid("owner_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    /** Only the person who made it can see it. */
+    private: boolean("private").notNull().default(false),
+    /** The trip this album belongs to (Plans). */
+    planId: uuid("plan_id"),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     ...timestamps,
   },

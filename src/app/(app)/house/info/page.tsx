@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
-import { KeyRound, Lock, Pencil } from "lucide-react";
+import { KeyRound, Lock, Printer } from "lucide-react";
 import { db } from "@/db";
 import { householdInfo } from "@/db/schema";
 import { deleteInfo, saveInfo } from "@/app/actions/house";
-import { FormModal } from "@/components/forms/action-form";
-import { TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
+import { RecordModal } from "@/components/forms/config-form";
+import { BinderFields } from "@/components/binder/binder-item";
+import { ButtonLink } from "@/components/ui/button";
+import { BINDER, BINDER_KINDS, isBinderKind, type BinderKind } from "@/lib/binder";
 import { DeleteButton } from "@/components/forms/inline";
 import { Card } from "@/components/ui/card";
 import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
@@ -19,17 +21,8 @@ import { SegmentLinks } from "@/components/ui/tabs";
 export const metadata: Metadata = { title: "Important info" };
 
 type I = typeof householdInfo.$inferSelect;
-function InfoFields({ i, members, shared, mine }: { i?: I; members: MemberOption[]; shared?: string[]; mine?: boolean }) {
-  return (
-    <>
-      {i && <input type="hidden" name="id" value={i.id} />}
-      {mine && <input type="hidden" name="space" value="mine" />}
-      <TextField name="title" label="Title" required defaultValue={i?.title} placeholder="Wi-Fi password" />
-      <TextAreaField name="body" label="Details" rows={4} required defaultValue={i?.body} placeholder="Network: Vanderbilt-Home · Password: …" />
-      {mine ? <p className="text-sm text-muted">Only you can see this. Parents can&apos;t.</p> : <VisibilityField members={members} defaultValue={i?.visibility} defaultSelected={shared} />}
-    </>
-  );
-}
+const kindOf = (i: I): BinderKind => (isBinderKind(i.kind) ? i.kind : "note");
+const defaultsOf = (i: I): Record<string, string> => (kindOf(i) === "note" && !Object.keys(i.fields).length ? { title: i.title, body: i.body } : i.fields);
 
 export default async function InfoPage({ searchParams }: PageProps<"/house/info">) {
   const viewer = await getViewer();
@@ -52,18 +45,30 @@ export default async function InfoPage({ searchParams }: PageProps<"/house/info"
       .orderBy(asc(householdInfo.title)),
   ]);
   const access = await getRecordAccess("household_info", rows.map((r) => r.id));
-  const add = (
-    <FormModal title={mine ? "Add to my info" : "Add important info"} triggerLabel="Add info" action={saveInfo}>
-      <InfoFields members={members} mine={mine} />
-    </FormModal>
+  const hidden = (k: BinderKind, i?: I): Record<string, string> => ({ kind: k, ...(i ? { id: i.id } : {}), ...(mine ? { space: "mine" } : {}) });
+  const vis = (i?: I) => (mine ? undefined : { defaultValue: i?.visibility ?? (k0(i) === "insurance" ? "parents" : "family"), selected: i ? access.get(i.id) : undefined, privateLabel: "Only me" });
+  const k0 = (i?: I) => (i ? kindOf(i) : null);
+  const addFor = (k: BinderKind, variant: "primary" | "secondary" | "soft" | "ghost" = "soft", label?: string) => (
+    <RecordModal title={`Add ${BINDER[k].one}`} triggerLabel={label ?? "Add"} triggerVariant={variant} action={saveInfo} fields={BINDER[k].fields} hidden={hidden(k)} members={members} visibility={vis()} size="md" />
   );
+  const byKind = new Map<BinderKind, I[]>();
+  for (const r of rows) byKind.set(kindOf(r), [...(byKind.get(kindOf(r)) ?? []), r]);
+  const used = BINDER_KINDS.filter((k) => byKind.has(k));
+  const empty = BINDER_KINDS.filter((k) => !byKind.has(k));
+
   return (
     <>
       <PageHeader
         eyebrow={mine ? "My private" : "House"}
-        title={mine ? "My important info" : "Important info"}
-        description={mine ? "Your own codes, accounts, contacts and notes. Only you can see these, not even parents." : "Wi-Fi, alarm codes, utility accounts, emergency contacts: the things everyone asks about."}
-        actions={canManage ? add : undefined}
+        title={mine ? "My important info" : "Family binder"}
+        description={mine ? "Your own codes, accounts, contacts and notes. Only you can see these, not even parents." : "Your family binder: emergency contacts, doctors, school, insurance, Wi-Fi and everything a sitter needs."}
+        actions={
+          !mine && rows.some((r) => BINDER[kindOf(r)].sitter) ? (
+            <ButtonLink href="/house/info/sitter" variant="secondary" icon={<Printer className="size-4" />}>
+              Babysitter sheet
+            </ButtonLink>
+          ) : undefined
+        }
       />
       {viewer.can("house") && <HouseTabs active="info" viewer={viewer} />}
       {hasMine && viewer.can("info") && (
@@ -71,44 +76,76 @@ export default async function InfoPage({ searchParams }: PageProps<"/house/info"
           <SegmentLinks fit active={mine ? "mine" : "family"} items={[{ key: "family", href: "/house/info", label: "Family info" }, { key: "mine", href: "/house/info?space=mine", label: "My info (private)" }]} />
         </div>
       )}
-      {rows.length === 0 ? (
-        <Card>
-          <EmptyState icon={<KeyRound />} title="Nothing saved yet" description="Keep key household details in one place, private or shared." example="Wi-Fi password · Plumber: 555-0134 · Water shut-off: basement, left of furnace" action={canManage ? add : undefined} />
-        </Card>
-      ) : (
-        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {rows.map((i) => (
-            <li key={i.id}>
-              <Card className="flex h-full flex-col gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h2 className="font-sans text-[15px] font-semibold">{i.title}</h2>
-                  <div className="-mt-2 -mr-2 flex items-center">
-                    {!mine && i.visibility !== "family" && (
-                      <Badge tone="mist">
-                        <Lock className="size-3" /> {i.visibility === "private" ? "Only me" : i.visibility === "parents" ? "Parents & me" : "Shared"}
-                      </Badge>
-                    )}
-                    {canManage && (mine || canChangeItem(viewer, i.createdByMemberId)) && (
-                      <>
-                        <FormModal
-                          title="Edit info"
-                          action={saveInfo}
-                          triggerAriaLabel="Edit"
-                            triggerClassName="size-9 rounded-full text-muted hover:bg-sunken"
-                            triggerContent={<Pencil className="mx-auto size-4" />}
-                        >
-                          <InfoFields i={i} members={members} shared={access.get(i.id)} mine={mine} />
-                        </FormModal>
-                        <DeleteButton action={deleteInfo} fields={{ id: i.id, ...(mine ? { space: "mine" } : {}) }} what={`"${i.title}"`} />
-                      </>
-                    )}
-                  </div>
-                </div>
-                <p className="text-[15px] whitespace-pre-line text-ink-soft">{i.body}</p>
-              </Card>
-            </li>
+      {used.length > 1 && (
+        <nav aria-label="Binder sections" className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1">
+          {used.map((k) => (
+            <a key={k} href={`#${k}`} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-medium hover:border-primary-300">
+              <span aria-hidden>{BINDER[k].emoji}</span> {BINDER[k].label} <span className="text-muted">{byKind.get(k)!.length}</span>
+            </a>
           ))}
-        </ul>
+        </nav>
+      )}
+      <div className="flex flex-col gap-8">
+        {used.map((k) => (
+          <section key={k} id={k} className="scroll-mt-24">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <span aria-hidden>{BINDER[k].emoji}</span> {BINDER[k].label}
+              </h2>
+              {canManage && addFor(k)}
+            </div>
+            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {byKind.get(k)!.map((i) => (
+                <li key={i.id}>
+                  <Card className="flex h-full flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-sans text-[15px] font-semibold">{i.title}</h3>
+                      <div className="-mt-2 -mr-2 flex items-center">
+                        {!mine && i.visibility !== "family" && (
+                          <Badge tone="mist">
+                            <Lock className="size-3" /> {i.visibility === "private" ? "Only me" : i.visibility === "parents" ? "Parents" : "Shared"}
+                          </Badge>
+                        )}
+                        {canManage && (mine || canChangeItem(viewer, i.createdByMemberId)) && (
+                          <>
+                            <RecordModal title={`Edit ${BINDER[k].one}`} edit action={saveInfo} fields={BINDER[k].fields} defaults={defaultsOf(i)} hidden={hidden(k, i)} members={members} visibility={vis(i)} size="md" />
+                            <DeleteButton action={deleteInfo} fields={{ id: i.id, ...(mine ? { space: "mine" } : {}) }} what={`"${i.title}"`} />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <BinderFields kind={k} fields={i.fields} title={i.title} body={i.body} />
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+      {canManage && empty.length > 0 && (
+        <section className={used.length ? "mt-10" : ""}>
+          <h2 className="mb-1 text-lg font-semibold">{used.length ? "Add more to your binder" : "Start your family binder"}</h2>
+          <p className="mb-4 text-sm text-muted">Everything a grandparent, babysitter or the family needs, in one place.</p>
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {empty.map((k) => (
+              <li key={k} className="flex items-start gap-3 rounded-2xl border border-dashed border-line-strong bg-surface/60 p-4">
+                <span className="text-2xl" aria-hidden>
+                  {BINDER[k].emoji}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{BINDER[k].label}</p>
+                  <p className="mb-2 text-sm text-muted">{BINDER[k].blurb}</p>
+                  {addFor(k, "secondary", `Add ${BINDER[k].one}`)}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {!canManage && rows.length === 0 && (
+        <Card>
+          <EmptyState icon={<KeyRound />} title="Nothing saved yet" description="Parents can add emergency contacts, doctors, Wi-Fi and more here." />
+        </Card>
       )}
     </>
   );

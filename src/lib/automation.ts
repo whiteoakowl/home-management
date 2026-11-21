@@ -1,9 +1,10 @@
 import { after } from "next/server";
 import { sendPush } from "./push";
 import "server-only";
-import { and, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  familyDates,
   homeDocuments,
   homeProjects,
   homeRepairs,
@@ -58,6 +59,7 @@ export const AUTOMATIONS = [
   { key: "missedChores", label: "Mark missed chores", description: "Chores left undone for 7 days are marked missed (kept in history)." },
   { key: "choreReminders", label: "Chore reminders", description: "Notify people about chores due today." },
   { key: "eventReminders", label: "Event reminders", description: "Notify attendees about today's events." },
+  { key: "specialDateReminders", label: "Birthday & anniversary reminders", description: "Remind the family before birthdays and anniversaries (never the birthday person)." },
   { key: "expirationAlerts", label: "Expiration alerts", description: "Notify about food expiring today or this week." },
   { key: "lowStockShopping", label: "Low stock → shopping list", description: "Add items below their low-stock level to the shopping list." },
   { key: "gardenReminders", label: "Garden reminders", description: "Notify about harvests coming up this week." },
@@ -138,6 +140,8 @@ export async function notify(
   memberIds: string[],
   n: { kind: string; title: string; body?: string; href?: string },
   today: string,
+  /** urgent: a reminder time the person chose (e.g. 1 hour before), so it goes out even in quiet hours. */
+  opts: { urgent?: boolean } = {},
 ) {
   if (!memberIds.length) return;
   const muted = await db
@@ -161,7 +165,7 @@ export async function notify(
   if (rows.length) {
     await db.insert(notifications).values(rows);
     // Also to their phones (skips anyone who switched push off for this kind, and quiet hours).
-    later(() => sendPush(rows.map((r) => r.memberId), n.kind, { title: n.title, body: n.body, href: n.href ?? "/notifications", tag: `${n.kind}:${n.title}`.slice(0, 80) }));
+    later(() => sendPush(rows.map((r) => r.memberId), n.kind, { title: n.title, body: n.body, href: n.href ?? "/notifications", tag: `${n.kind}:${n.title}`.slice(0, 80) }, { ignoreQuietHours: opts.urgent }));
   }
 }
 
@@ -259,6 +263,29 @@ export async function runDailyAutomation(family: Family, force = false) {
     for (const e of todays) {
       const att = await db.select({ id: eventAttendees.memberId }).from(eventAttendees).where(eq(eventAttendees.eventId, e.id));
       await notify(fid, att.map((a) => a.id), { kind: "event_reminder", title: `Today: ${e.title}`, href: `/calendar/event/${e.id}` }, today);
+    }
+  }
+
+  if (on("specialDateReminders")) {
+    const everyone = (await db.select({ id: familyMembers.id }).from(familyMembers).where(and(eq(familyMembers.familyId, fid), eq(familyMembers.isActive, true)))).map((m) => m.id);
+    const kin = await db.select({ id: familyMembers.id, name: familyMembers.displayName, birthday: familyMembers.birthday }).from(familyMembers).where(and(eq(familyMembers.familyId, fid), eq(familyMembers.isActive, true), isNotNull(familyMembers.birthday)));
+    const dates = await db.select().from(familyDates).where(eq(familyDates.familyId, fid));
+    const md = (d: string) => d.slice(5);
+    const soon = (target: string, days: number) => md(addDays(today, days)) === target;
+    for (const k of kin) {
+      const target = md(k.birthday!);
+      const first = k.name.split(" ")[0];
+      const others = everyone.filter((id) => id !== k.id); // keep the surprise
+      if (soon(target, 0)) {
+        await notify(fid, others, { kind: "special_dates", title: `🎂 It's ${first}'s birthday today!`, href: "/memories/dates" }, today);
+        await notify(fid, [k.id], { kind: "special_dates", title: `🎉 Happy birthday, ${first}!`, href: "/memories" }, today);
+      } else if (soon(target, 7)) await notify(fid, others, { kind: "special_dates", title: `🎂 ${first}'s birthday is in a week`, href: "/memories/dates" }, today);
+    }
+    for (const d of dates) {
+      const target = `${String(d.month).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`;
+      const icon = d.kind === "anniversary" ? "💍" : d.kind === "birthday" ? "🎂" : "📅";
+      if (soon(target, 0)) await notify(fid, everyone, { kind: "special_dates", title: `${icon} Today: ${d.title}`, href: "/memories/dates" }, today);
+      else if (d.remindDays > 0 && soon(target, d.remindDays)) await notify(fid, everyone, { kind: "special_dates", title: `${icon} ${d.title} in ${d.remindDays} day${d.remindDays === 1 ? "" : "s"}`, href: "/memories/dates" }, today);
     }
   }
 
