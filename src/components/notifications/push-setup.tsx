@@ -121,7 +121,7 @@ export function PushSetup({ publicKey }: { publicKey: string | null }) {
           {msg}
         </p>
       )}
-      <p className="text-xs text-muted">Reminders wait until morning between 9pm and 7am.</p>
+      <p className="text-xs text-muted">Quiet hours: from 9pm to 7am phones stay silent. Daily reminders come after 7am, and chat messages sent overnight are waiting in the app. The Send a test button always works right away.</p>
     </div>
   );
 }

@@ -86,6 +86,7 @@ export default async function NotificationsPage() {
         </Card>
         <Card>
           <CardHeader title="What to notify me about" />
+          <p className="mb-3 text-sm text-muted">Quiet hours: from 9pm to 7am phones stay silent. Daily reminders come after 7am, and anything sent overnight is waiting in the app.</p>
           <ActionForm action={savePreferences} submitLabel="Save preferences" resetOnSuccess={false} showSuccess>
             <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 text-sm">
               <span />
