@@ -22,7 +22,7 @@ export const BASICS: HelpArticle[] = [
         heading: "What to do next",
         bullets: [
           "Add a few events to the **Calendar**.",
-          "Set up chores in **House → Chores** so kids can check them off and earn points.",
+          "Set up chores in **Chores** (under Cleaning & Chores) so kids can check them off and earn points.",
           "Turn off the sections your family won't use in **Account settings → Sections**, so the menu stays simple.",
           "Install the app on everyone's phone (see *Installing the app on your phone*).",
         ],

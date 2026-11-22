@@ -13,7 +13,7 @@ import type { Viewer } from "@/lib/dal";
 import { addDays, formatShortDate, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
 import { describeRule } from "@/lib/recurrence";
-import { HouseTabs } from "@/app/(app)/house/house-tabs";
+import { ChoreTabs } from "@/app/(app)/house/house-tabs";
 import { FarmTabs } from "@/app/(app)/farm/farm-tabs";
 
 const TABS = ["today", "upcoming", "overdue", "done", "all"] as const;
@@ -134,7 +134,7 @@ export async function ChoreBoard({ viewer, kind, basePath, sp }: { viewer: Viewe
           ) : undefined
         }
       />
-      {kind === "farm" ? <FarmTabs active="chores" /> : <HouseTabs active={kind === "task" ? "tasks" : "chores"} viewer={viewer} />}
+      {kind === "farm" ? <FarmTabs active="chores" /> : <ChoreTabs active={kind === "task" ? "tasks" : "chores"} viewer={viewer} />}
 
       {tab === "archived" ? (
         templates.length ? (

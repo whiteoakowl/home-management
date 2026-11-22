@@ -161,7 +161,7 @@ export const EVERYDAY: HelpArticle[] = [
     modules: ["chores"],
     openIn: { label: "Open Chores", href: "/house/chores" },
     steps: [
-      "Open **House → Chores** (or use **+ Add → Chore**).",
+      "Open **Chores** (under Cleaning & Chores in the menu) (or use **+ Add → Chore**).",
       "Select **Add chore** and enter the chore's **Name** (for example \"Make bed\").",
       "Choose a **Room**, **Category** and **Priority** if you'd like.",
       "In **How often**, choose the schedule and the **Starting** date.",
@@ -179,7 +179,7 @@ export const EVERYDAY: HelpArticle[] = [
     summary: "Tap the circle to mark it done; More actions to skip or reassign.",
     keywords: ["done", "complete", "check off", "skip", "reassign", "mark not done", "undo"],
     modules: ["chores"],
-    steps: ["Open **House → Chores** (or your Home dashboard).", "Tap the **circle** next to the chore to mark it done. Tap again to **Mark not done**.", "For a checklist, select **Show checklist** and tick each step.", "Select **More actions** to **Skip this time** or reassign it."],
+    steps: ["Open **Chores** (under Cleaning & Chores in the menu) (or your Home dashboard).", "Tap the **circle** next to the chore to mark it done. Tap again to **Mark not done**.", "For a checklist, select **Show checklist** and tick each step.", "Select **More actions** to **Skip this time** or reassign it."],
     sections: [
       { heading: "Tabs", body: "Switch between **Today**, **Upcoming**, **Overdue**, **Done** and **All chores**, and between **Mine** and **Everyone**." },
       { heading: "View only", body: "People with View only access can see chores but can't check them off." },
@@ -205,8 +205,8 @@ export const EVERYDAY: HelpArticle[] = [
     modules: ["chores"],
     openIn: { label: "Open Rewards", href: "/house/rewards" },
     sections: [
-      { heading: "Set up rewards (parents)", steps: ["Open **House → Rewards**.", "Select **New reward** and enter the **Reward**, **Points**, an **Emoji** and an optional **Cash value**.", "Save."] },
-      { heading: "Redeem a reward", steps: ["Open **House → Rewards**.", "Under **Available to redeem**, select **Redeem** and confirm.", "A parent approves or declines it under **Waiting for approval**. You can **Cancel** a request before then."] },
+      { heading: "Set up rewards (parents)", steps: ["Open **Rewards**.", "Select **New reward** and enter the **Reward**, **Points**, an **Emoji** and an optional **Cash value**.", "Save."] },
+      { heading: "Redeem a reward", steps: ["Open **Rewards**.", "Under **Available to redeem**, select **Redeem** and confirm.", "A parent approves or declines it under **Waiting for approval**. You can **Cancel** a request before then."] },
       { heading: "Bonus or deduction (parents)", body: "Use **Adjust points** to give a bonus or take points away, with a reason." },
       { heading: "Leaderboard", body: "**This week's leaderboard** and **Sharing the load · last 30 days** show who's been helping." },
     ],
@@ -220,7 +220,7 @@ export const EVERYDAY: HelpArticle[] = [
     keywords: ["task", "to do", "todo", "one time"],
     modules: ["chores"],
     openIn: { label: "Open Tasks", href: "/house/tasks" },
-    steps: ["Open **House → Tasks** (or **+ Add → Task**).", "Select **Add task** and enter the task, its due date and who it's for.", "Tick it off when it's done."],
+    steps: ["Open **Tasks** (or **+ Add → Task**).", "Select **Add task** and enter the task, its due date and who it's for.", "Tick it off when it's done."],
   },
   {
     slug: "cleaning",
@@ -230,7 +230,7 @@ export const EVERYDAY: HelpArticle[] = [
     keywords: ["cleaning", "clean", "deep clean", "rooms", "cleanliness", "spring cleaning"],
     modules: ["cleaning"],
     openIn: { label: "Open Cleaning", href: "/house/cleaning" },
-    steps: ["Open **House → Cleaning**.", "Choose a schedule tab: **Daily**, **Weekly**, **Monthly**, **Seasonal**, **Bi-annual**, **Annual** or **Custom**.", "Select **Add cleaning task** and fill it in the same way as a chore: room, who does it and how often.", "Check jobs off as they're done; each room's meter shows how clean it is."],
+    steps: ["Open **Cleaning**.", "Choose a schedule tab: **Daily**, **Weekly**, **Monthly**, **Seasonal**, **Bi-annual**, **Annual** or **Custom**.", "Select **Add cleaning task** and fill it in the same way as a chore: room, who does it and how often.", "Check jobs off as they're done; each room's meter shows how clean it is."],
     sections: [{ heading: "Rooms", body: "Add rooms on the **House** overview with **Add a room**." }],
     related: ["create-chore"],
   },

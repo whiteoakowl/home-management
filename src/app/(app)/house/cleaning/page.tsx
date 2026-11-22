@@ -12,7 +12,7 @@ import { listChoreTemplates, listOccurrences, overdueQuery } from "@/lib/chores"
 import { getViewer } from "@/lib/dal";
 import { addDays, todayIn } from "@/lib/dates";
 import { categoryOptions, memberOptions, roomOptions } from "@/lib/queries";
-import { HouseTabs } from "../house-tabs";
+import { ChoreTabs } from "../house-tabs";
 
 export const metadata: Metadata = { title: "Cleaning" };
 
@@ -50,7 +50,7 @@ export default async function CleaningPage({ searchParams }: PageProps<"/house/c
   return (
     <>
       <PageHeader help="cleaning" eyebrow="House" title="Cleaning" description="Daily tidy-ups to annual deep cleans, with checklists anyone can follow." actions={canAdd ? form : undefined} />
-      <HouseTabs active="cleaning" viewer={viewer} />
+      <ChoreTabs active="cleaning" viewer={viewer} />
       <CleanlinessBoard templates={templates} today={today} canLog={viewer.can("cleaning", "use")} />
       {overdue.length > 0 && (
         <section id="overdue" className="mb-8 scroll-mt-20">
