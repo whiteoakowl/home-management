@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LibraryBig, Plus, ScanBarcode, Search } from "lucide-react";
+import { LibraryBig, Search } from "lucide-react";
 import { BookGrid, BookRow } from "@/components/library/book-card";
-import { LibraryTabs } from "@/components/library/library-tabs";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { LibraryAddButtons, LibraryTabs } from "@/components/library/library-tabs";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader } from "@/components/ui/display";
 import { Input, Select } from "@/components/ui/form";
@@ -147,23 +147,7 @@ export default async function BooksPage({
         title="All books"
         description={`${all.length} book${all.length === 1 ? "" : "s"} in your library.`}
         actions={
-          canEdit && (
-            <>
-              <ButtonLink
-                href="/library/scan"
-                variant="secondary"
-                icon={<ScanBarcode className="size-4" />}
-              >
-                Scan Barcode
-              </ButtonLink>
-              <ButtonLink
-                href="/library/add"
-                icon={<Plus className="size-4" />}
-              >
-                Add Book
-              </ButtonLink>
-            </>
-          )
+          canEdit && <LibraryAddButtons />
         }
       />
       <LibraryTabs
@@ -324,19 +308,7 @@ export default async function BooksPage({
               canEdit &&
               !all.length && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  <ButtonLink
-                    href="/library/add"
-                    icon={<Plus className="size-4" />}
-                  >
-                    Add Book
-                  </ButtonLink>
-                  <ButtonLink
-                    href="/library/scan"
-                    variant="secondary"
-                    icon={<ScanBarcode className="size-4" />}
-                  >
-                    Scan Barcode
-                  </ButtonLink>
+                  <LibraryAddButtons />
                 </div>
               )
             }

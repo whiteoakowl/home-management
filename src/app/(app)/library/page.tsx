@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { and, eq } from "drizzle-orm";
-import { BookMarked, BookOpen, CheckCircle2, Clock, Heart, LibraryBig, PenLine, Plus, ScanBarcode, Tags, TrendingUp } from "lucide-react";
+import { BookMarked, BookOpen, CheckCircle2, Clock, Heart, LibraryBig, PenLine, Tags, TrendingUp } from "lucide-react";
 import { db } from "@/db";
 import { sectionLayouts } from "@/db/schema";
 import { DashboardCustomizer } from "@/components/dashboard/customizer";
 import { BookGrid } from "@/components/library/book-card";
 import { BookCover } from "@/components/library/book-cover";
-import { LibraryTabs } from "@/components/library/library-tabs";
-import { ButtonLink } from "@/components/ui/button";
+import { LibraryAddButtons, LibraryTabs } from "@/components/library/library-tabs";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState, PageHeader, ProgressBar } from "@/components/ui/display";
 import { todayIn } from "@/lib/dates";
@@ -51,16 +50,7 @@ export default async function LibraryDashboard() {
       actions={
         <>
           {list.length > 0 && <DashboardCustomizer layout={layout} titles={sectionTitles("library")} section="library" label="library dashboard" />}
-          {canEdit && (
-            <>
-              <ButtonLink href="/library/scan" variant="secondary" icon={<ScanBarcode className="size-4" />}>
-                Scan Barcode
-              </ButtonLink>
-              <ButtonLink href="/library/add" icon={<Plus className="size-4" />}>
-                Add Book
-              </ButtonLink>
-            </>
-          )}
+          {canEdit && <LibraryAddButtons />}
         </>
       }
     />
@@ -79,12 +69,7 @@ export default async function LibraryDashboard() {
             action={
               canEdit && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  <ButtonLink href="/library/add" icon={<Plus className="size-4" />}>
-                    Add Book
-                  </ButtonLink>
-                  <ButtonLink href="/library/scan" variant="secondary" icon={<ScanBarcode className="size-4" />}>
-                    Scan Barcode
-                  </ButtonLink>
+                  <LibraryAddButtons />
                 </div>
               )
             }

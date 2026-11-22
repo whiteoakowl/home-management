@@ -14,6 +14,7 @@ import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { mergeLookups, normalizeIsbn, parseGoogleBooks, parseOpenLibrary, type BookLookup } from "@/lib/isbn";
 import { bookVisible, canAddBooks, canChangeBook, canChangeEntry, currentLibrarySpace, getBook, LIBRARY_SPACE_COOKIE, type LibrarySpace } from "@/lib/library";
 import { BOOK_FORMATS, STATUS_VALUES } from "@/lib/library-config";
+import { bookKey, booksFromCsv, isbnsFromText, type ImportedBook } from "@/lib/book-import";
 import { f, familyMemberIdOrNull, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 import { safeFetch } from "@/lib/safe-fetch";
 
@@ -433,4 +434,130 @@ export async function setLibrarySpace(fd: FormData) {
   (await cookies()).set(LIBRARY_SPACE_COOKIE, space, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: true });
   revalidateLibrary();
   redirect("/library");
+}
+
+// ─── Import ──────────────────────────────────────────────────────────────────
+
+/**
+ * Import books into the library that's open (Family Library or My Library):
+ * a CSV from Goodreads, StoryGraph, LibraryThing or the family's own sheet,
+ * or a pasted list of ISBNs (looked up online, up to 10 at a time).
+ * Books already in that library (same ISBN, or same title and author) are skipped.
+ * Shelves ("read", "currently reading", "to read") go into the importer's own
+ * reading log only if they tick that box: adding a book never sets a reading status.
+ */
+export async function importBooks(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("library", "view");
+    requirePremium(viewer);
+    const space = await currentLibrarySpace();
+    if (!canAddBooks(viewer, space)) throw new AuthorizationError("You can't add books to the Family Library.");
+    const personal = space === "mine";
+    const toLog = f.bool(fd, "addToLog");
+
+    let incoming: ImportedBook[] = [];
+    let note = "";
+    const file = fd.get("file");
+    const pasted = f.str(fd, "isbns");
+    if (file instanceof File && file.size > 0) {
+      if (file.size > 5_000_000) return fail("That file is too big. Spreadsheets up to 5 MB can be imported.", "file");
+      if (!/\.(csv|txt)$/i.test(file.name) && !/csv|text\/plain/.test(file.type)) return fail("Choose a CSV file. In Excel, Numbers or Google Sheets use File → Download / Export → CSV.", "file");
+      const parsed = booksFromCsv(await file.text());
+      if (parsed.error) return fail(parsed.error, "file");
+      incoming = parsed.books;
+      if (parsed.skipped) note = ` ${parsed.skipped} row${parsed.skipped === 1 ? "" : "s"} without a title ${parsed.skipped === 1 ? "was" : "were"} skipped.`;
+    } else if (pasted) {
+      const { isbns, invalid, extra } = isbnsFromText(pasted, 10);
+      if (!isbns.length) return fail("Those don't look like ISBNs. Book barcodes start with 978 or 979.", "isbns");
+      const found = await Promise.all(
+        isbns.map(async (isbn) => {
+          const [ol, gb] = await Promise.allSettled([
+            getJson(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`).then((j) => parseOpenLibrary(j, isbn)),
+            getJson(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}${process.env.GOOGLE_BOOKS_API_KEY ? `&key=${encodeURIComponent(process.env.GOOGLE_BOOKS_API_KEY)}` : ""}`).then((j) => parseGoogleBooks(j, isbn)),
+          ]);
+          return { isbn, book: mergeLookups(isbn, ol.status === "fulfilled" ? ol.value : null, gb.status === "fulfilled" ? gb.value : null) };
+        }),
+      );
+      const missing = found.filter((x) => !x.book).map((x) => x.isbn);
+      incoming = found
+        .filter((x) => x.book?.title)
+        .map(({ isbn, book: b }) => ({ title: b!.title!, author: b!.author ?? null, isbn, pageCount: b!.pageCount ?? null, publisher: b!.publisher ?? null, publishedDate: b!.publishedDate ?? null, format: null, rating: null, readingStatus: null, finishedOn: null, coverUrl: b!.coverUrl ?? null, description: b!.description ?? null, subtitle: b!.subtitle ?? null }));
+      if (missing.length) note += ` We couldn't find ${missing.join(", ")}; add ${missing.length === 1 ? "it" : "them"} with Add Book.`;
+      if (invalid) note += ` ${invalid} entr${invalid === 1 ? "y wasn't an ISBN" : "ies weren't ISBNs"}.`;
+      if (extra) note += ` Only the first 10 were imported; paste the rest next.`;
+    } else return fail("Choose a spreadsheet file or paste some ISBNs.", "file");
+
+    // Skip books this library already has.
+    const have = await db
+      .select({ title: books.title, author: books.author, isbn: books.isbn })
+      .from(books)
+      .where(and(eq(books.familyId, viewer.family.id), personal ? eq(books.ownerMemberId, viewer.member.id) : isNull(books.ownerMemberId)));
+    const seen = new Set(have.flatMap((b) => [bookKey(b), bookKey({ ...b, isbn: null })]));
+    const fresh = incoming.filter((b) => {
+      const keys = [bookKey(b), bookKey({ ...b, isbn: null })];
+      if (keys.some((k) => seen.has(k))) return false;
+      keys.forEach((k) => seen.add(k));
+      return true;
+    });
+    const dupes = incoming.length - fresh.length;
+    if (!fresh.length) return ok(`Nothing new to add: ${dupes ? `all ${dupes} book${dupes === 1 ? " is" : "s are"} already in ${personal ? "My Library" : "the library"}.` : "no books found."}${note}`);
+
+    // Covers for looked-up ISBNs (a few at a time, so it stays quick).
+    const covers = await Promise.all(fresh.map((b) => (b.coverUrl ? saveCoverFromUrl(viewer, b.coverUrl) : Promise.resolve(null))));
+    const today = todayIn(viewer.family.timezone);
+    let logged = 0;
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < fresh.length; i += 200) {
+        const chunk = fresh.slice(i, i + 200);
+        const rows = await tx
+          .insert(books)
+          .values(
+            chunk.map((b, j) => ({
+              familyId: viewer.family.id,
+              title: b.title,
+              subtitle: b.subtitle ?? null,
+              author: b.author,
+              isbn: b.isbn,
+              publisher: b.publisher,
+              publishedDate: b.publishedDate,
+              description: b.description ?? null,
+              pageCount: b.pageCount,
+              format: b.format,
+              rating: b.rating,
+              coverFileId: covers[i + j] ?? null,
+              visibility: personal ? ("private" as const) : ("family" as const),
+              createdByMemberId: viewer.member.id,
+              ownerMemberId: personal ? viewer.member.id : null,
+            })),
+          )
+          .returning({ id: books.id });
+        if (toLog) {
+          const entries = chunk
+            .map((b, j) => ({ b, id: rows[j]!.id }))
+            .filter(({ b }) => b.readingStatus)
+            .map(({ b, id }) => ({
+              familyId: viewer.family.id,
+              bookId: id,
+              memberId: viewer.member.id,
+              status: b.readingStatus!,
+              startedOn: b.readingStatus === "reading" ? today : null,
+              finishedOn: b.readingStatus === "completed" ? b.finishedOn : null,
+              currentPage: b.readingStatus === "completed" ? b.pageCount : null,
+              shared: !personal,
+              createdByMemberId: viewer.member.id,
+            }));
+          if (entries.length) await tx.insert(readingEntries).values(entries);
+          logged += entries.length;
+        }
+      }
+      if (!personal) await logActivity(tx, viewer.family.id, viewer.member.id, "book.added", `added ${fresh.length} book${fresh.length === 1 ? "" : "s"} to the library`, { module: "library" });
+    });
+    revalidateLibrary();
+    return ok(
+      `Added ${fresh.length} book${fresh.length === 1 ? "" : "s"} to ${personal ? "My Library" : "the library"}.` +
+        (dupes ? ` ${dupes} ${dupes === 1 ? "was" : "were"} already there.` : "") +
+        (logged ? ` ${logged} added to your reading log.` : "") +
+        note,
+    );
+  });
 }

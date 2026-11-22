@@ -15,7 +15,7 @@ import { Badge, EmptyState, PageHeader } from "@/components/ui/display";
 import { canChangeItem, getViewer, visibleTo } from "@/lib/dal";
 import { memberOptions } from "@/lib/queries";
 import { getRecordAccess } from "@/lib/records";
-import { HouseTabs } from "../house-tabs";
+import { LinkTabs } from "@/components/ui/tabs";
 
 export const metadata: Metadata = { title: "Important Info" };
 
@@ -23,8 +23,11 @@ type I = typeof householdInfo.$inferSelect;
 const kindOf = (i: I): BinderKind => (isBinderKind(i.kind) ? i.kind : "note");
 const defaultsOf = (i: I): Record<string, string> => (kindOf(i) === "note" && !Object.keys(i.fields).length ? { title: i.title, body: i.body } : i.fields);
 
-export default async function InfoPage() {
+export default async function InfoPage({ searchParams }: PageProps<"/house/info">) {
   const viewer = await getViewer();
+  const sp = await searchParams;
+  // Tabs: All, or one category of the binder.
+  const tab: BinderKind | "all" = typeof sp.tab === "string" && isBinderKind(sp.tab) ? sp.tab : "all";
   // Everyone in the family can open Important Info; each entry decides who sees it.
   if (!viewer.family.enabledModules.includes("info")) notFound();
   const canManage = true;
@@ -54,8 +57,9 @@ export default async function InfoPage() {
   );
   const byKind = new Map<BinderKind, I[]>();
   for (const r of rows) byKind.set(kindOf(r), [...(byKind.get(kindOf(r)) ?? []), r]);
-  const used = BINDER_KINDS.filter((k) => byKind.has(k));
-  const empty = BINDER_KINDS.filter((k) => !byKind.has(k));
+  // On a category tab, that category shows even when it's empty (with its Add button).
+  const used = tab === "all" ? BINDER_KINDS.filter((k) => byKind.has(k)) : [tab];
+  const empty = tab === "all" ? BINDER_KINDS.filter((k) => !byKind.has(k)) : [];
 
   return (
     <>
@@ -71,16 +75,14 @@ export default async function InfoPage() {
           ) : undefined
         }
       />
-      {viewer.can("house") && <HouseTabs active="info" viewer={viewer} />}
-      {used.length > 1 && (
-        <nav aria-label="Binder sections" className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1">
-          {used.map((k) => (
-            <a key={k} href={`#${k}`} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-medium hover:border-primary-300">
-              <span aria-hidden>{BINDER[k].emoji}</span> {BINDER[k].label} <span className="text-muted">{byKind.get(k)!.length}</span>
-            </a>
-          ))}
-        </nav>
-      )}
+      <LinkTabs
+        active={tab}
+        className="mb-6"
+        tabs={[
+          { key: "all", href: "/house/info", label: "All", count: rows.length },
+          ...BINDER_KINDS.map((k) => ({ key: k, href: `/house/info?tab=${k}`, label: `${BINDER[k].emoji} ${BINDER[k].label}`, count: byKind.get(k)?.length ?? 0 })),
+        ]}
+      />
       <div className="flex flex-col gap-8">
         {used.map((k) => (
           <section key={k} id={k} className="scroll-mt-24">
@@ -88,10 +90,16 @@ export default async function InfoPage() {
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <span aria-hidden>{BINDER[k].emoji}</span> {BINDER[k].label}
               </h2>
-              {canManage && addFor(k)}
+              {canManage && byKind.has(k) && addFor(k)}
             </div>
+            {!byKind.has(k) && (
+              <Card>
+                <p className="text-sm text-muted">{BINDER[k].blurb}</p>
+                {canManage && <div className="mt-3">{addFor(k, "primary", `Add ${BINDER[k].one}`)}</div>}
+              </Card>
+            )}
             <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {byKind.get(k)!.map((i) => (
+              {(byKind.get(k) ?? []).map((i) => (
                 <li key={i.id}>
                   <Card className="flex h-full flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">

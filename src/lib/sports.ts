@@ -20,6 +20,7 @@ export const SPORTS: SportDef[] = [
   { key: "track", label: "Track & field / Cross country", emoji: "🏃", scoring: "place", stats: [s("time", "Time (seconds)", "TIME", "time"), s("dist", "Distance / height", "DIST", "decimal"), s("place", "Place", "PL")] },
   { key: "gymnastics", label: "Gymnastics / Cheer", emoji: "🤸", scoring: "place", stats: [s("score", "Score", "SCORE", "decimal"), s("place", "Place", "PL")] },
   { key: "wrestling", label: "Wrestling / Martial arts", emoji: "🤼", scoring: "place", stats: [s("w", "Wins", "W"), s("l", "Losses", "L"), s("pin", "Pins / submissions", "PIN")] },
+  { key: "karate", label: "Karate", emoji: "🥋", scoring: "place", stats: [s("w", "Wins", "W"), s("l", "Losses", "L"), s("pts", "Points", "PTS"), s("place", "Place", "PL")] },
   { key: "golf", label: "Golf", emoji: "⛳", scoring: "place", stats: [s("strokes", "Strokes", "STR"), s("putts", "Putts", "PUTT")] },
   { key: "other", label: "Other sport", emoji: "🏅", scoring: "score", stats: [] },
 ];
