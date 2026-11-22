@@ -1,4 +1,5 @@
 import { cloneElement } from "react";
+import { PlanningTabs } from "@/components/planning/planning-tabs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -45,6 +46,7 @@ export default async function ListsPage({ searchParams }: PageProps<"/lists">) {
         }
         actions={canEdit ? add : undefined}
       />
+      <PlanningTabs active="lists" viewer={viewer} />
       <div className="mb-5 flex flex-wrap gap-2">
         <SegmentLinks active="lists" items={[{ key: "lists", href: "/lists", label: "Lists" }, { key: "wishlists", href: "/lists/wishlists", label: "Wishlists" }]} />
         <SegmentLinks active={archived ? "archived" : "active"} items={[{ key: "active", href: "/lists", label: "Active" }, { key: "archived", href: "/lists?show=archived", label: "Archived" }]} />

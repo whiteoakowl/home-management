@@ -241,7 +241,7 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
         href="/plans"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
       >
-        <ArrowLeft className="size-4" /> Plans
+        <ArrowLeft className="size-4" /> Travel
       </Link>
       {photo && (
         // eslint-disable-next-line @next/next/no-img-element

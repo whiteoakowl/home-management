@@ -24,7 +24,7 @@ export const CATEGORIES: HelpCategory[] = [
   { key: "health", title: "Health & wellness", description: "Medical records, fitness, and your private health areas.", icon: "HeartPulse" },
   { key: "personal", title: "Journal & personal", description: "Journal, goals and the book library.", icon: "BookOpen" },
   { key: "spiritual", title: "Spiritual & faith", description: "Religion tabs, holidays, reading and devotions.", icon: "Moon" },
-  { key: "trips", title: "Trips & plans", description: "Itineraries, reservations, trip photos and expenses.", icon: "Plane" },
+  { key: "trips", title: "Travel, parties & baby", description: "Trips, party plans and the baby tracker.", icon: "Plane" },
   { key: "money", title: "Budget & reports", description: "Expenses, income, savings and reports.", icon: "Wallet" },
   { key: "notifications", title: "Notifications, privacy & sharing", description: "Notifications, phone alerts, privacy and printing.", icon: "Bell" },
   { key: "billing", title: "Subscription & billing", description: "Your plan, payment card and cancelling.", icon: "CreditCard" },

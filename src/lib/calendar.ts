@@ -51,6 +51,7 @@ import { pointeSummary } from "./pointe";
 import { nextBirthday } from "./hub";
 import { visibleWorkers } from "./work";
 import { listPlans } from "./trips";
+import { listParties } from "./parties";
 import { addMonths as vAddMonths, loanStatus } from "./vehicles";
 import { vehicleOwnerIs, vehicleScope, vehicleSummary } from "./vehicle-data";
 import { phasesBetween } from "./astro";
@@ -332,6 +333,17 @@ export async function getCalendarItems(
         const icon = fl.kind === "flight" ? "🛫" : fl.kind === "reservation" ? "🎟️" : "📍";
         out.push({ key: `pf:${fl.id}`, id: fl.id, layer: "plans", title: `${icon} ${fl.title}${fl.provider && fl.kind === "flight" ? ` (${fl.provider})` : ""}`, date: fl.date!, startMin: start, endMin: start !== null ? (end !== null && end > start && (!fl.endDate || fl.endDate === fl.date) ? end : start + (fl.kind === "flight" ? 90 : 60)) : null, color: colorOf.get(plan.createdByMemberId ?? "") ?? "cornflower", location: fl.location, href: `/plans/${plan.id}`, people: plan.memberIds, type: "plans", description: fl.confirmation ? `Confirmation ${fl.confirmation}${fl.notes ? `\n${fl.notes}` : ""}` : fl.notes });
       }
+    }
+  }
+
+  // Parties (shown with trips).
+  if (want("plans") && viewer.can("parties")) {
+    const rows = (await listParties(viewer)).filter((r) => r.p.date && r.p.date >= from && r.p.date <= to && (!subject || r.p.honoreeMemberId === subject || r.p.createdByMemberId === subject));
+    const colorOf = rows.length ? await memberColorMap(fid) : new Map<string, string>();
+    for (const { p } of rows) {
+      const start = minutesOf(p.startTime);
+      const end = minutesOf(p.endTime);
+      out.push({ key: `pa:${p.id}`, id: p.id, layer: "plans", title: `🎉 ${p.title}`, date: p.date!, startMin: start, endMin: start !== null ? (end !== null && end > start ? end : start + 120) : null, color: colorOf.get(p.honoreeMemberId ?? p.createdByMemberId ?? "") ?? "rose", location: [p.venue, p.address].filter(Boolean).join(", ") || null, href: `/parties/${p.id}`, people: p.honoreeMemberId ? [p.honoreeMemberId] : [], type: "plans", description: p.description });
     }
   }
 

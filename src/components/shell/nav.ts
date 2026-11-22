@@ -135,6 +135,13 @@ export function buildNav(viewer: Viewer): NavSection[] {
       { href: "/house/tasks", label: "Tasks", icon: "ListTodo" },
       { href: "/house/rewards", label: "Rewards", icon: "Trophy" },
     );
+  // Planning & Lists: Goals, Lists, Travel, Party plans.
+  const planning = sections.find((s) => s.group === "Planning & Lists");
+  if (planning) {
+    const ORDER = ["/goals", "/lists", "/plans", "/parties"];
+    const rank = (h: string) => (ORDER.indexOf(h.split("?")[0]!) + 1 || 99);
+    planning.items.sort((a, b) => rank(a.href) - rank(b.href));
+  }
   // Personal spaces belong to each person (private unless shared), so everyone has them.
   const personal = sections.find((s) => s.group === "Personal");
   const hidden = viewer.member.hiddenAreas;

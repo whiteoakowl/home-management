@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PlanningTabs } from "@/components/planning/planning-tabs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Lock, MapPin, PiggyBank, Plane, Users } from "lucide-react";
@@ -12,7 +13,7 @@ import { listGoals } from "@/lib/goals";
 import { memberOptions } from "@/lib/queries";
 import { countdownText, daysUntil, listPlans } from "@/lib/trips";
 
-export const metadata: Metadata = { title: "Plans" };
+export const metadata: Metadata = { title: "Travel" };
 
 const VIS: Record<string, string> = { private: "Only me", parents: "Parents & me", selected: "Selected people" };
 
@@ -82,7 +83,8 @@ export default async function PlansPage({ searchParams }: PageProps<"/plans">) {
 
   return (
     <>
-      <PageHeader help="trips" title="Plans" description="Vacations, trips and big events: itinerary, flights, hotels, cars and a countdown. Each planner chooses who sees their plan." actions={canAdd ? <PlanModal members={members} goals={goalOpts} defaultOpen={sp.new === "1"} /> : undefined} />
+      <PageHeader help="trips" title="Travel" description="Vacations, trips and getaways: itinerary, flights, hotels, cars and a countdown. Each planner chooses who sees their trip." actions={canAdd ? <PlanModal members={members} goals={goalOpts} defaultOpen={sp.new === "1"} /> : undefined} />
+      <PlanningTabs active="travel" viewer={viewer} />
       {rows.length === 0 ? (
         <Card>
           <EmptyState icon={<Plane />} title="Nothing planned yet" description="Start a plan for a vacation, trip or event. Add the itinerary, flights, hotel and car, link a savings goal, and watch the countdown." example="Beach week · Jun 14–21 · Outer Banks · 211 days to go" />
@@ -92,7 +94,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/plans">) {
           {upcoming.length > 0 && <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{upcoming.map(card)}</ul>}
           {past.length > 0 && (
             <section className="mt-8">
-              <h2 className="mb-3 text-lg font-semibold">Past plans</h2>
+              <h2 className="mb-3 text-lg font-semibold">Past trips</h2>
               <ul className="grid gap-4 opacity-80 sm:grid-cols-2 xl:grid-cols-3">{past.map(card)}</ul>
             </section>
           )}

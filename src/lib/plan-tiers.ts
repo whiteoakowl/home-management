@@ -57,7 +57,7 @@ export const PREMIUM_FEATURES = [
   "Medical records, pets, vehicles, home maintenance and pool",
   "Garden and farm",
   "Sports, dance and work schedules",
-  "Trips and plans",
+  "Travel, party plans and the baby tracker",
   "Calendar sync, event templates and timed reminders",
   "Automations",
   "Spiritual & faith tabs",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PlanningTabs } from "@/components/planning/planning-tabs";
 import { familyMembersFor } from "@/lib/names";
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
@@ -55,6 +56,7 @@ export default async function WishlistsPage({ searchParams }: PageProps<"/lists/
         description="Everyone keeps their own gift wishlist and can change it anytime. Mark what you're getting for someone else; they'll never see it, so it stays a surprise."
         actions={<WishModal occasion={occasion || undefined} />}
       />
+      <PlanningTabs active="lists" viewer={viewer} />
       <div className="mb-5 flex flex-wrap gap-2">
         <SegmentLinks active="wishlists" items={[{ key: "lists", href: "/lists", label: "Lists" }, { key: "wishlists", href: "/lists/wishlists", label: "Wishlists" }]} />
         {occasions.length > 1 && <SegmentLinks active={occasion || "all"} items={[{ key: "all", href: "/lists/wishlists", label: "All occasions" }, ...occasions.map((o) => ({ key: o, href: `/lists/wishlists?occasion=${encodeURIComponent(o)}`, label: o }))]} />}

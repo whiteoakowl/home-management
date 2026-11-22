@@ -29,12 +29,12 @@ export type PlanDefaults = {
 export function PlanModal({ members, goals, item, defaultOpen, triggerContent, triggerClassName }: { members: MemberOption[]; goals: { id: string; name: string }[]; item?: PlanDefaults; defaultOpen?: boolean; triggerContent?: ReactNode; triggerClassName?: string }) {
   return (
     <FormModal
-      title={item ? "Edit plan" : "Start a plan"}
-      triggerLabel="New plan"
+      title={item ? "Edit trip" : "Plan a trip"}
+      triggerLabel="New trip"
       triggerContent={triggerContent}
       triggerClassName={triggerClassName}
       action={savePlan}
-      submitLabel={item ? "Save" : "Create plan"}
+      submitLabel={item ? "Save" : "Create trip"}
       defaultOpen={defaultOpen}
     >
       {item && <input type="hidden" name="id" value={item.id} />}

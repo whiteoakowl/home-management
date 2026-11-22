@@ -1,6 +1,6 @@
 import type { AccessLevel, Module } from "@/db/schema/_shared";
 
-export type NavGroup = "Today" | "Household" | "Cleaning & Chores" | "Family Pantry" | "Land" | "Personal" | "Money";
+export type NavGroup = "Today" | "Household" | "Cleaning & Chores" | "Planning & Lists" | "Family Pantry" | "Land" | "Personal" | "Money";
 
 export type ModuleMeta = {
   id: Module;
@@ -169,7 +169,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     label: "Lists",
     href: "/lists",
     icon: "ClipboardList",
-    group: "Household",
+    group: "Planning & Lists",
     phase: 2,
     inNav: true,
     defaultMemberAccess: "edit",
@@ -277,7 +277,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     label: "Goals",
     href: "/goals",
     icon: "Target",
-    group: "Personal",
+    group: "Planning & Lists",
     phase: 5,
     inNav: true,
     defaultMemberAccess: "edit",
@@ -358,15 +358,39 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
   plans: {
     id: "plans",
-    label: "Plans",
+    label: "Travel",
     href: "/plans",
     icon: "Plane",
-    group: "Today",
+    group: "Planning & Lists",
     phase: 5,
     inNav: true,
     defaultMemberAccess: "use",
     tagline: "Vacations, trips and big events: itinerary, flights, hotels, cars and a countdown.",
     highlights: ["Day-by-day itinerary", "Flights, hotels & rental cars", "Countdown and savings goal"],
+  },
+  parties: {
+    id: "parties",
+    label: "Party Plans",
+    href: "/parties",
+    icon: "PartyPopper",
+    group: "Planning & Lists",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "use",
+    tagline: "Birthday parties and celebrations: guest list and RSVPs, to-dos, food, decorations, budget and the day's schedule.",
+    highlights: ["Guest list & RSVPs", "Checklist with due dates", "Budget, gifts & thank-you notes"],
+  },
+  baby: {
+    id: "baby",
+    label: "Baby Tracker",
+    href: "/baby",
+    icon: "Baby",
+    group: "Today",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "use",
+    tagline: "Feeds, diapers, sleep, growth, health, milestones and the baby's daily schedule, shared by everyone who helps.",
+    highlights: ["Nursing, bottle & sleep timers", "Diapers, growth & health", "Milestones and a daily schedule"],
   },
   medical: {
     id: "medical",
@@ -406,7 +430,7 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
   },
 };
 
-export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Cleaning & Chores", "Family Pantry", "Land", "Personal", "Money"];
+export const NAV_GROUPS: NavGroup[] = ["Today", "Household", "Cleaning & Chores", "Planning & Lists", "Family Pantry", "Land", "Personal", "Money"];
 
 export function moduleByHref(href: string): ModuleMeta | undefined {
   return Object.values(MODULE_META).find((m) => m.href === href);

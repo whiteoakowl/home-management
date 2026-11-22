@@ -49,6 +49,7 @@ export const entityType = pgEnum("entity_type", [
   "garden_plan",
   "work_schedule",
   "plan",
+  "party",
 ]);
 
 // ─── Identity ────────────────────────────────────────────────────────────────

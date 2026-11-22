@@ -33,7 +33,7 @@ const PRESETS = [
 type Preset = (typeof PRESETS)[number]["key"];
 const isoDate = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
-const LAYER_LABEL: Record<Layer, string> = { events: "Events", plans: "Plans", chores: "Chores", workouts: "Workouts", dance: "Dance", sports: "Sports", work: "Work", vehicles: "Vehicles", meals: "Meals", garden: "Garden", farm: "Farm", pets: "Pets", home: "Home projects", moon: "Moon & sabbats", christian: "✝️ Christian holidays", catholic: "⛪ Catholic feasts & saints", jewish: "✡️ Jewish holidays", hindu: "🕉️ Hindu holidays", buddhist: "☸️ Buddhist holidays", synced: "🔗 Synced calendars", cycle: "My cycle (private)" };
+const LAYER_LABEL: Record<Layer, string> = { events: "Events", plans: "Travel & parties", chores: "Chores", workouts: "Workouts", dance: "Dance", sports: "Sports", work: "Work", vehicles: "Vehicles", meals: "Meals", garden: "Garden", farm: "Farm", pets: "Pets", home: "Home projects", moon: "Moon & sabbats", christian: "✝️ Christian holidays", catholic: "⛪ Catholic feasts & saints", jewish: "✡️ Jewish holidays", hindu: "🕉️ Hindu holidays", buddhist: "☸️ Buddhist holidays", synced: "🔗 Synced calendars", cycle: "My cycle (private)" };
 
 export default async function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   const viewer = await getViewer();
