@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import { Pencil } from "lucide-react";
 import { clearBabySchedule, deleteBabyScheduleItem } from "@/app/actions/baby";
-import { SchedulePresetModal, ScheduleItemModal } from "@/components/baby/forms";
+import { BabyReminderModal, SchedulePresetModal, ScheduleItemModal } from "@/components/baby/forms";
+import { deleteBabyReminder, toggleBabyReminder } from "@/app/actions/baby";
+import { canChangeItem } from "@/lib/dal";
+import { utcToZoned } from "@/lib/dates";
+import { memberOptions } from "@/lib/queries";
 import { ActionButton, DeleteButton } from "@/components/forms/inline";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Badge, EmptyState } from "@/components/ui/display";
-import { scheduleFor } from "@/lib/baby";
-import { duration, monthsOld, nextScheduled, SCHEDULE_KINDS } from "@/lib/baby-kinds";
+import { remindersFor, scheduleFor } from "@/lib/baby";
+import { duration, monthsOld, nextScheduled, SCHEDULE_KINDS, wakeWindowFor } from "@/lib/baby-kinds";
 import { fmtTime } from "@/lib/dance";
 import { weekday } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -22,8 +26,9 @@ export default async function BabySchedulePage({ params, searchParams }: { param
   const { id } = await params;
   const sp = await searchParams;
   const ctx = await babyContext(id);
-  const { baby, today, nowMin, canUse } = ctx;
-  const items = await scheduleFor(baby.id);
+  const { viewer, baby, today, nowMin, canUse, tz } = ctx;
+  const [items, reminders, members] = await Promise.all([scheduleFor(baby.id), remindersFor(baby.id), memberOptions(viewer)]);
+  const wake = wakeWindowFor(monthsOld(baby.birthDate, today));
   const wd = weekday(today);
   const day = sp.day && /^[0-6]$/.test(sp.day) ? Number(sp.day) : wd;
   const shown = items.filter((i) => !i.days.length || i.days.includes(day));
@@ -35,6 +40,51 @@ export default async function BabySchedulePage({ params, searchParams }: { param
   return (
     <>
       <BabyHeader ctx={ctx} active="schedule" />
+      {wake && (
+        <Card className="mb-4 bg-primary-50/50">
+          <p className="text-[15px]">
+            😴 <strong>Sleep guide for {baby.name.split(" ")[0]}&apos;s age:</strong> usually awake {duration(wake.min)}–{duration(wake.max)} between sleeps, with about {wake.naps} naps a day. Every baby is different; use it as a starting point.
+          </p>
+        </Card>
+      )}
+      <Card className="mb-4">
+        <CardHeader title="Reminders" action={canUse ? <BabyReminderModal babyId={baby.id} members={members} /> : undefined} />
+        {reminders.length ? (
+          <ul className="divide-y divide-line">
+            {reminders.map((r) => {
+              const mine = viewer.can("baby", "edit") || canChangeItem(viewer, r.createdByMemberId);
+              const z = r.at ? utcToZoned(r.at, tz) : null;
+              return (
+                <li key={r.id} className={cn("flex items-center gap-3 py-2.5", !r.enabled && "opacity-55")}>
+                  <span className="text-xl" aria-hidden>
+                    ⏰
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">
+                      {r.title} {!r.enabled && <Badge>Off</Badge>}
+                    </p>
+                    <p className="text-sm text-muted">
+                      {r.mode === "interval" ? `${duration(r.intervalMinutes ?? 0)} after the last one` : r.mode === "time" ? `${fmtTime(r.time)}${r.days.length ? ` · ${r.days.map((d) => DAYS[d]).join(", ")}` : " every day"}` : r.mode === "wake" ? "When the nap window opens" : z ? `${z.date} ${fmtTime(z.time)}` : ""}
+                      {r.memberIds.length ? ` · to ${r.memberIds.map((m) => members.find((x) => x.id === m)?.displayName.split(" ")[0]).filter(Boolean).join(", ")}` : " · to everyone helping"}
+                    </p>
+                  </div>
+                  {mine && (
+                    <span className="flex shrink-0 items-center">
+                      <ActionButton action={toggleBabyReminder} fields={{ id: r.id }} className="h-9 rounded-full px-3 text-sm ring-1 ring-line hover:bg-sunken">
+                        {r.enabled ? "Pause" : "Turn on"}
+                      </ActionButton>
+                      <BabyReminderModal babyId={baby.id} members={members} item={{ id: r.id, kind: r.kind, title: r.title, mode: r.mode, intervalMinutes: r.intervalMinutes, time: r.time, days: r.days, atDate: z?.date ?? null, memberIds: r.memberIds }} triggerContent={<Pencil className="size-4" aria-label="Edit reminder" />} triggerClassName={editBtn} />
+                      <DeleteButton action={deleteBabyReminder} fields={{ id: r.id }} what={r.title} className="size-8" />
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted">Feeding every 3 hours, vitamin D at 9 am, a nap-window nudge, appointments… reminders go to everyone helping, or just the people you pick.</p>
+        )}
+      </Card>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {canUse && <ScheduleItemModal babyId={baby.id} />}
         {canUse && <SchedulePresetModal babyId={baby.id} hasItems={items.length > 0} suggested={suggested} />}

@@ -1,7 +1,8 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db";
-import { babies, babyLogs, babySchedule } from "@/db/schema";
+import { babies, babyLogs, babyReminders, babySchedule, babySupplies, familyMembers, memberPermissions } from "@/db/schema";
+import { MODULE_META } from "./modules";
 import type { BabyLogKind } from "./baby-kinds";
 import { canChangeItem, type Viewer } from "./dal";
 import { addDays, todayIn, zonedToUtc } from "./dates";
@@ -61,7 +62,7 @@ export async function lastOfEach(babyId: string, kinds: BabyLogKind[]) {
 
 /** Timers still running (nursing, sleep, tummy time). */
 export function runningTimers(babyId: string) {
-  return db.select().from(babyLogs).where(and(eq(babyLogs.babyId, babyId), isNull(babyLogs.endedAt), inArray(babyLogs.kind, ["nursing", "sleep", "tummy"]))).orderBy(asc(babyLogs.startedAt));
+  return db.select().from(babyLogs).where(and(eq(babyLogs.babyId, babyId), isNull(babyLogs.endedAt), inArray(babyLogs.kind, ["nursing", "sleep", "tummy", "pump"]))).orderBy(asc(babyLogs.startedAt));
 }
 
 export function scheduleFor(babyId: string) {
@@ -69,3 +70,56 @@ export function scheduleFor(babyId: string) {
 }
 
 export const familyToday = (viewer: Viewer) => todayIn(viewer.family.timezone);
+
+// ─── Caregivers, supplies, reminders, memories ──────────────────────────────
+
+/** Household members who can open the Baby tracker, with their access level. */
+export async function caregivers(viewer: Viewer) {
+  const rows = await db
+    .select({ id: familyMembers.id, name: familyMembers.displayName, role: familyMembers.role, color: familyMembers.color, level: memberPermissions.level })
+    .from(familyMembers)
+    .leftJoin(memberPermissions, and(eq(memberPermissions.memberId, familyMembers.id), eq(memberPermissions.module, "baby")))
+    .where(and(eq(familyMembers.familyId, viewer.family.id), eq(familyMembers.isActive, true)));
+  const def = MODULE_META.baby.defaultMemberAccess;
+  return rows
+    .map((r) => ({ ...r, level: r.role === "parent" ? ("edit" as const) : (r.level ?? def) }))
+    .filter((r) => r.level !== "none")
+    .sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === "parent" ? -1 : 1));
+}
+
+/** Supplies for this baby (and the shared ones). Breast milk that's been used is left out. */
+export function suppliesFor(viewer: Viewer, babyId: string) {
+  return db
+    .select()
+    .from(babySupplies)
+    .where(and(eq(babySupplies.familyId, viewer.family.id), isNull(babySupplies.usedAt), or(eq(babySupplies.babyId, babyId), isNull(babySupplies.babyId))))
+    .orderBy(asc(babySupplies.kind), asc(babySupplies.expiresOn), asc(babySupplies.name));
+}
+
+export function remindersFor(babyId: string) {
+  return db.select().from(babyReminders).where(eq(babyReminders.babyId, babyId)).orderBy(desc(babyReminders.enabled), asc(babyReminders.createdAt));
+}
+
+/** Appointments, check-ups and vaccine visits still to come. */
+export function upcomingAppointments(babyId: string, now = new Date()) {
+  return db
+    .select()
+    .from(babyLogs)
+    .where(and(eq(babyLogs.babyId, babyId), inArray(babyLogs.kind, ["appointment", "doctor", "vaccine"]), gte(babyLogs.startedAt, now)))
+    .orderBy(asc(babyLogs.startedAt))
+    .limit(10);
+}
+
+/** Every log with a photo (for Memories and growth photos). */
+export function photoLogs(babyId: string, limit = 200) {
+  return db.select().from(babyLogs).where(and(eq(babyLogs.babyId, babyId), isNotNull(babyLogs.imageFileId))).orderBy(desc(babyLogs.startedAt)).limit(limit);
+}
+
+/** All logs between two instants, oldest first (reports and exports). */
+export function logsInRange(babyId: string, from: Date, to: Date) {
+  return db
+    .select()
+    .from(babyLogs)
+    .where(and(eq(babyLogs.babyId, babyId), gte(babyLogs.startedAt, from), lt(babyLogs.startedAt, to)))
+    .orderBy(asc(babyLogs.startedAt));
+}

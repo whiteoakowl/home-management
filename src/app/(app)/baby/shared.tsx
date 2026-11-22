@@ -36,6 +36,8 @@ export async function babyContext(id: string) {
     nowMin: local.minutes,
     units: { volume: baby.volumeUnit, weight: baby.weightUnit },
     canUse: viewer.can("baby", "use"),
+    /** Other babies in the family (twins…), for "Also log for". */
+    others: (await listBabies(viewer)).filter((b) => b.id !== baby.id).map((b) => ({ id: b.id, name: b.name })),
   };
 }
 
@@ -93,12 +95,16 @@ export async function BabyHeader({ ctx, active }: { ctx: BabyCtx; active: string
       <LinkTabs
         active={active}
         tabs={[
-          { key: "today", href: `/baby/${baby.id}`, label: "Today" },
-          { key: "history", href: `/baby/${baby.id}/history`, label: "History" },
-          { key: "schedule", href: `/baby/${baby.id}/schedule`, label: "Schedule" },
-          { key: "growth", href: `/baby/${baby.id}/growth`, label: "Growth" },
+          { key: "today", href: `/baby/${baby.id}`, label: "Dashboard" },
+          { key: "track", href: `/baby/${baby.id}/track`, label: "Track" },
+          { key: "schedule", href: `/baby/${baby.id}/schedule`, label: "Schedule & reminders" },
+          { key: "development", href: `/baby/${baby.id}/development`, label: "Development" },
           { key: "health", href: `/baby/${baby.id}/health`, label: "Health" },
-          { key: "milestones", href: `/baby/${baby.id}/milestones`, label: "Milestones" },
+          { key: "growth", href: `/baby/${baby.id}/growth`, label: "Growth" },
+          { key: "memories", href: `/baby/${baby.id}/memories`, label: "Memories" },
+          { key: "supplies", href: `/baby/${baby.id}/supplies`, label: "Supplies" },
+          { key: "family", href: `/baby/${baby.id}/family`, label: "Family" },
+          { key: "reports", href: `/baby/${baby.id}/reports`, label: "Reports" },
         ]}
       />
     </>
@@ -161,7 +167,7 @@ export function LogList({ ctx, logs, names, showDate = false, empty }: { ctx: Ba
             )}
             {changeable && (
               <span className="flex shrink-0 items-center">
-                <BabyLogModal babyId={baby.id} kind={l.kind as BabyLogKind} units={units} now={now} item={logDefaults(l, tz)} triggerContent={<Pencil className="size-4" />} triggerClassName="inline-flex size-8 items-center justify-center rounded-lg text-muted hover:bg-sunken hover:text-ink" />
+                <BabyLogModal babyId={baby.id} kind={(l.kind in BABY_KINDS ? l.kind : "note") as BabyLogKind} units={units} now={now} item={logDefaults(l, tz)} triggerContent={<Pencil className="size-4" />} triggerClassName="inline-flex size-8 items-center justify-center rounded-lg text-muted hover:bg-sunken hover:text-ink" />
                 <DeleteButton action={deleteBabyLog} fields={{ id: l.id }} what={`this ${meta.label.toLowerCase()}`} className="size-8" />
               </span>
             )}

@@ -470,7 +470,8 @@ export const LIFE: HelpArticle[] = [
       "On **Today**, tap **Nurse left** or **Nurse right** to start a timer (it remembers which side is next), **Start sleep** for naps, or **Wet**, **Dirty** or **Both** to log a diaper in one tap.",
       "Use **Add details** for bottles, meals, pumping, growth, temperature, medicine, milestones and notes.",
       "Open **Schedule** and choose **Use a sample routine** for the baby's age, then adjust the times. Today shows what's next.",
-      "Check **History** for each day and a week at a glance, **Growth** for charts, and **Health** for temperatures, medicine and vaccines.",
+      "Use **Track** for everything else (pumping, potty, bath, grooming, health), **Development** for milestones and activities, **Supplies** for diapers, formula and the milk stash, and **Reports** for summaries, a CSV export and a pediatrician summary.",
+      "Add reminders under **Schedule & reminders**: every few hours since the last feed, at set times, for appointments, or when the nap window opens.",
     ],
     sections: [
       { heading: "Everyone who helps", body: "Anyone with Baby tracker access can log, so parents, grandparents and sitters stay in sync. With Use, people change only what they logged." },

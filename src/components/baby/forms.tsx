@@ -1,12 +1,26 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { applySchedulePreset, saveBaby, saveBabyLog, saveBabyScheduleItem } from "@/app/actions/baby";
+import { applySchedulePreset, saveBaby, saveBabyLog, saveBabyReminder, saveBabyScheduleItem, saveBabySupply } from "@/app/actions/baby";
 import { FormModal } from "@/components/forms/action-form";
 import { CheckboxField, ChipSelect, DateField, FormRow, ImageField, NumberField, SelectField, TextAreaField, TextField, type MemberOption } from "@/components/forms/fields";
 import { BABY_KINDS, SCHEDULE_KINDS, SCHEDULE_PRESETS, type BabyLogKind } from "@/lib/baby-kinds";
 
-export type BabyDefaults = { id: string; name: string; memberId: string | null; birthDate: string | null; volumeUnit: string; weightUnit: string; notes: string | null; imageUrl: string | null };
+export type BabyDefaults = {
+  id: string;
+  name: string;
+  memberId: string | null;
+  birthDate: string | null;
+  volumeUnit: string;
+  weightUnit: string;
+  notes: string | null;
+  imageUrl: string | null;
+  allergies?: string | null;
+  conditions?: string | null;
+  doctorName?: string | null;
+  doctorPhone?: string | null;
+  clinic?: string | null;
+};
 
 export function BabyModal({ members, item, defaultOpen, triggerContent, triggerClassName }: { members: MemberOption[]; item?: BabyDefaults; defaultOpen?: boolean; triggerContent?: ReactNode; triggerClassName?: string }) {
   return (
@@ -21,7 +35,16 @@ export function BabyModal({ members, item, defaultOpen, triggerContent, triggerC
         <SelectField name="volumeUnit" label="Bottles in" defaultValue={item?.volumeUnit ?? "oz"} options={[{ value: "oz", label: "Ounces (oz)" }, { value: "ml", label: "Millilitres (ml)" }]} />
         <SelectField name="weightUnit" label="Weight in" defaultValue={item?.weightUnit ?? "lb"} options={[{ value: "lb", label: "Pounds (lb)" }, { value: "kg", label: "Kilograms (kg)" }]} />
       </FormRow>
-      <TextAreaField name="notes" label="Notes" rows={2} defaultValue={item?.notes ?? ""} placeholder="Pediatrician, allergies, formula brand…" />
+      <TextAreaField name="notes" label="Notes" rows={2} defaultValue={item?.notes ?? ""} placeholder="Formula brand, comfort items, anything helpers should know" />
+      <FormRow>
+        <TextField name="allergies" label="Allergies" defaultValue={item?.allergies ?? ""} placeholder="None known" />
+        <TextField name="conditions" label="Medical conditions" defaultValue={item?.conditions ?? ""} />
+      </FormRow>
+      <FormRow cols={3}>
+        <TextField name="doctorName" label="Pediatrician" defaultValue={item?.doctorName ?? ""} />
+        <TextField name="doctorPhone" label="Doctor's phone" type="tel" defaultValue={item?.doctorPhone ?? ""} />
+        <TextField name="clinic" label="Clinic / address" defaultValue={item?.clinic ?? ""} />
+      </FormRow>
       <ImageField currentUrl={item?.imageUrl} />
     </FormModal>
   );
@@ -54,6 +77,7 @@ export function BabyLogModal({
   triggerLabel,
   suggestedSide,
   defaultTitle,
+  others = [],
 }: {
   babyId: string;
   kind: BabyLogKind;
@@ -66,6 +90,8 @@ export function BabyLogModal({
   triggerLabel?: string;
   suggestedSide?: string | null;
   defaultTitle?: string;
+  /** Other babies (twins…) the same thing can be logged for. */
+  others?: { id: string; name: string }[];
 }) {
   const meta = BABY_KINDS[kind];
   const d = item?.data ?? {};
@@ -96,10 +122,41 @@ export function BabyLogModal({
         </FormRow>
       )}
       {kind === "tummy" && <NumberField name="minutes" label="Minutes" min={0} defaultValue={item?.minutes ?? ""} />}
+      {kind === "potty" && (
+        <>
+          <ChipSelectSingle name="result" defaultValue={str(d.result) || "pee"} options={[{ value: "pee", label: "💧 Pee" }, { value: "poop", label: "💩 Poop" }, { value: "both", label: "Both" }, { value: "tried", label: "Tried, nothing" }, { value: "accident", label: "Accident" }]} />
+          <FormRow>
+            <SelectField name="where" label="Where" defaultValue={str(d.where) || "potty"} options={[{ value: "potty", label: "Potty chair" }, { value: "toilet", label: "Toilet" }, { value: "diaper", label: "Diaper / pull-up" }, { value: "other", label: "Other" }]} />
+            <CheckboxField name="prompted" label="We reminded them" defaultChecked={!!d.prompted} />
+          </FormRow>
+        </>
+      )}
+      {kind === "vitamin" && (
+        <FormRow>
+          <TextField name="title" label="Vitamin or supplement" required defaultValue={str(d.title)} placeholder="Vitamin D drops, iron" />
+          <TextField name="dose" label="Dose" defaultValue={str(d.dose)} placeholder="1 ml" />
+        </FormRow>
+      )}
+      {kind === "appointment" && (
+        <FormRow>
+          <TextField name="title" label="Appointment" required defaultValue={str(d.title)} placeholder="6-month checkup" />
+          <TextField name="where" label="Where" defaultValue={str(d.where)} placeholder="Sunny Pediatrics" />
+        </FormRow>
+      )}
+      {(kind === "nails" || kind === "hair" || kind === "brush" || kind === "skin") && <TextField name="title" label="Details (optional)" defaultValue={str(d.title)} placeholder={kind === "skin" ? "Lotion for dry patches" : kind === "hair" ? "First haircut!" : ""} />}
+      {kind === "journal" && <TextField name="title" label="Title (optional)" defaultValue={str(d.title)} placeholder="A rainy Sunday" />}
+      {kind === "photo" && <TextField name="title" label="Caption" defaultValue={str(d.title) || defaultTitle} placeholder="3 months old!" />}
+      {kind === "development" && <TextField name="title" label="Topic (optional)" defaultValue={str(d.title)} placeholder="Language, movement…" />}
       {kind === "sleep" && (
         <FormRow>
           <TextField name="endTime" type="time" label="Woke up" defaultValue={item?.endTime ?? ""} hint="Overnight is fine." />
           <SelectField name="where" label="Where" defaultValue={str(d.where)} placeholder="—" options={["crib", "bassinet", "bed", "arms", "car", "stroller", "other"].map((v) => ({ value: v, label: v[0]!.toUpperCase() + v.slice(1) }))} />
+        </FormRow>
+      )}
+      {kind === "sleep" && (
+        <FormRow>
+          <SelectField name="sleepType" label="Nap or overnight" defaultValue={str(d.type)} placeholder="Work it out" options={[{ value: "nap", label: "Nap" }, { value: "night", label: "Overnight" }]} />
+          <SelectField name="quality" label="How it went" defaultValue={str(d.quality)} placeholder="—" options={[{ value: "well", label: "Slept well" }, { value: "okay", label: "Okay" }, { value: "restless", label: "Restless" }]} />
         </FormRow>
       )}
       {kind === "bottle" && (
@@ -109,10 +166,14 @@ export function BabyLogModal({
         </FormRow>
       )}
       {kind === "pump" && (
-        <FormRow>
-          <NumberField name="amount" label={`Total (${units.volume})`} min={0} step="0.5" defaultValue={item?.amount ?? ""} />
-          <SelectField name="side" label="Side" defaultValue={str(d.side) || "both"} options={[{ value: "left", label: "Left" }, { value: "right", label: "Right" }, { value: "both", label: "Both" }]} />
-        </FormRow>
+        <>
+          <FormRow cols={3}>
+            <NumberField name="amount" label={`Total (${units.volume})`} min={0} step="0.5" defaultValue={item?.amount ?? ""} />
+            <SelectField name="side" label="Side" defaultValue={str(d.side) || "both"} options={[{ value: "left", label: "Left" }, { value: "right", label: "Right" }, { value: "both", label: "Both" }]} />
+            <NumberField name="minutes" label="Minutes" min={0} defaultValue={item?.minutes ?? ""} />
+          </FormRow>
+          {!item && <SelectField name="stored" label="Store it in the milk stash?" defaultValue="" placeholder="No, used it now" options={[{ value: "fridge", label: "Yes, in the fridge (keeps 4 days)" }, { value: "freezer", label: "Yes, in the freezer (best within 6 months)" }]} />}
+        </>
       )}
       {kind === "solids" && (
         <>
@@ -129,6 +190,7 @@ export function BabyLogModal({
         <>
           <ChipSelectSingle name="type" defaultValue={str(d.type) || "wet"} options={[{ value: "wet", label: "💧 Wet" }, { value: "dirty", label: "💩 Dirty" }, { value: "both", label: "Both" }, { value: "dry", label: "Dry" }]} />
           <SelectField name="color" label="Color (dirty)" defaultValue={str(d.color)} placeholder="—" options={["yellow", "green", "brown", "black", "red", "white", "other"].map((v) => ({ value: v, label: v[0]!.toUpperCase() + v.slice(1) }))} hint="Call the doctor about red, black (after the first days) or white stools." />
+          <SelectField name="consistency" label="Stool (dirty)" defaultValue={str(d.consistency)} placeholder="—" options={["runny", "seedy", "soft", "formed", "hard"].map((v) => ({ value: v, label: v[0]!.toUpperCase() + v.slice(1) }))} />
           <CheckboxField name="rash" label="Diaper rash" defaultChecked={!!d.rash} />
         </>
       )}
@@ -165,10 +227,20 @@ export function BabyLogModal({
       {kind === "doctor" && <TextField name="title" label="Visit" defaultValue={str(d.title)} placeholder="4-month well visit, Dr. Patel" />}
       {kind === "teeth" && <TextField name="title" label="Which tooth" required defaultValue={str(d.title) || defaultTitle} placeholder="Bottom front (left)" />}
       {kind === "milestone" && <TextField name="title" label="Milestone" required defaultValue={str(d.title) || defaultTitle} placeholder="First smile" />}
-      {kind === "activity" && <TextField name="title" label="Activity" required defaultValue={str(d.title)} placeholder="Story time, walk, baby class" />}
+      {kind === "activity" && <TextField name="title" label="Activity" required defaultValue={str(d.title) || defaultTitle} placeholder="Story time, walk, baby class" />}
 
-      <TextAreaField name="notes" label="Notes" rows={2} defaultValue={item?.notes ?? ""} required={kind === "note"} />
-      {(kind === "milestone" || kind === "teeth" || kind === "note" || kind === "symptom" || kind === "solids") && <ImageField currentUrl={item?.imageUrl} />}
+      <TextAreaField name="notes" label={kind === "journal" ? "Write about today" : kind === "caregiver" ? "Note for the next caregiver" : "Notes"} rows={kind === "journal" ? 5 : 2} defaultValue={item?.notes ?? ""} placeholder={kind === "caregiver" ? "Last bottle at 2, he's teething, Tylenol at 1:30" : undefined} />
+      {["milestone", "teeth", "note", "symptom", "solids", "journal", "photo", "development", "growth", "activity", "hair"].includes(kind) && <ImageField currentUrl={item?.imageUrl} label={kind === "photo" ? "Photo" : "Photo (optional)"} />}
+      {!item && others.length > 0 && (
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className="mb-1 text-sm font-medium text-ink-soft">Also log for</legend>
+          {others.map((o) => (
+            <label key={o.id} className="flex min-h-9 items-center gap-2 text-sm">
+              <input type="checkbox" name="alsoFor" value={o.id} className="size-5 accent-[var(--color-primary-600)]" /> {o.name}
+            </label>
+          ))}
+        </fieldset>
+      )}
     </FormModal>
   );
 }
@@ -244,3 +316,90 @@ export function TimerClock({ startedAt }: { startedAt: string }) {
 }
 
 export type { MemberOption };
+
+export type ReminderDefaults = { id: string; kind: string; title: string; mode: string; intervalMinutes: number | null; time: string | null; days: number[]; atDate: string | null; memberIds: string[] };
+
+/** Feeding, nap, medicine, diaper, pumping, potty, appointment or custom reminders. */
+export function BabyReminderModal({ babyId, members, item, triggerContent, triggerClassName }: { babyId: string; members: MemberOption[]; item?: ReminderDefaults; triggerContent?: ReactNode; triggerClassName?: string }) {
+  const [mode, setMode] = useState(item?.mode ?? "interval");
+  return (
+    <FormModal title={item ? "Edit reminder" : "Add a reminder"} triggerLabel="Add reminder" triggerVariant="secondary" triggerContent={triggerContent} triggerClassName={triggerClassName} action={saveBabyReminder} submitLabel="Save" size="sm">
+      <input type="hidden" name="babyId" value={babyId} />
+      {item && <input type="hidden" name="id" value={item.id} />}
+      <FormRow>
+        <SelectField
+          name="kind"
+          label="For"
+          defaultValue={item?.kind ?? "feed"}
+          options={[
+            { value: "feed", label: "🍼 Feeding" },
+            { value: "nap", label: "😴 Nap" },
+            { value: "medicine", label: "💊 Medicine / vitamins" },
+            { value: "diaper", label: "🧷 Diaper" },
+            { value: "pumping", label: "🍶 Pumping" },
+            { value: "potty", label: "🚽 Potty" },
+            { value: "appointment", label: "📅 Appointment" },
+            { value: "custom", label: "📌 Something else" },
+          ]}
+        />
+        <TextField name="title" label="Name (optional)" defaultValue={item?.title ?? ""} placeholder="Vitamin D drops" />
+      </FormRow>
+      <label className="flex flex-col gap-1 text-sm font-medium text-ink-soft">
+        When
+        <select name="mode" value={mode} onChange={(e) => setMode(e.target.value)} className="h-11 rounded-[var(--radius-control)] border border-line-strong bg-surface px-3 text-[15px] font-normal">
+          <option value="interval">Every few hours since the last one (feeds, diapers, pumping, potty, medicine)</option>
+          <option value="time">At set times</option>
+          <option value="once">Once (an appointment)</option>
+          <option value="wake">When the nap window opens (from wake windows for their age)</option>
+        </select>
+      </label>
+      {mode === "interval" && <NumberField name="intervalHours" label="Hours since the last one" min={0.25} max={24} step="0.25" defaultValue={item?.intervalMinutes ? item.intervalMinutes / 60 : 3} />}
+      {(mode === "time" || mode === "once") && (
+        <FormRow>
+          {mode === "once" && <DateField name="date" label="Date" defaultValue={item?.atDate ?? ""} />}
+          <TextField name="time" type="time" label="Time" required defaultValue={item?.time?.slice(0, 5) ?? ""} />
+        </FormRow>
+      )}
+      {mode === "time" && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-ink-soft">Days (none = every day)</span>
+          <ChipSelect name="days" options={DAY_OPTS} defaultValue={(item?.days ?? []).map(String)} />
+        </div>
+      )}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-ink-soft">Who gets it (none = everyone who helps with the baby)</span>
+        <ChipSelect name="memberIds" options={members.map((m) => ({ value: m.id, label: m.displayName }))} defaultValue={item?.memberIds ?? []} />
+      </div>
+    </FormModal>
+  );
+}
+
+export type SupplyDefaults = { id?: string; kind: string; name: string; quantity: string; unit: string | null; lowAt: string | null; location: string | null; pumpedOn: string | null; expiresOn: string | null; notes: string | null; babyId: string | null };
+
+/** Diapers, wipes, formula, baby food, bottles, or a bag/bottle of breast milk. */
+export function BabySupplyModal({ kind, babies, item, triggerLabel, triggerContent, triggerClassName, today }: { kind: string; babies: { id: string; name: string }[]; item?: SupplyDefaults; triggerLabel?: string; triggerContent?: ReactNode; triggerClassName?: string; today: string }) {
+  const milk = kind === "milk";
+  return (
+    <FormModal title={item?.id ? "Edit" : milk ? "Add breast milk" : "Add a supply"} triggerLabel={triggerLabel ?? (milk ? "Add milk" : "Add supply")} triggerVariant="secondary" triggerSize="sm" triggerContent={triggerContent} triggerClassName={triggerClassName} action={saveBabySupply} submitLabel="Save" size="sm">
+      {item?.id && <input type="hidden" name="id" value={item.id} />}
+      <input type="hidden" name="kind" value={kind} />
+      {!milk && <TextField name="name" label="Item" required defaultValue={item?.name ?? ""} placeholder={kind === "diapers" ? "Size 2 diapers" : kind === "formula" ? "Formula (powder)" : kind === "food" ? "Pouches" : "Item"} />}
+      <FormRow cols={3}>
+        <NumberField name="quantity" label={milk ? "Amount" : "On hand"} min={0} step="0.5" required defaultValue={item?.quantity ?? ""} />
+        <TextField name="unit" label="Unit" defaultValue={item?.unit ?? (milk ? "oz" : kind === "diapers" ? "diapers" : "")} placeholder={milk ? "oz" : "cans, packs…"} />
+        {!milk && <NumberField name="lowAt" label="Low-stock alert at" min={0} defaultValue={item?.lowAt ?? ""} />}
+      </FormRow>
+      {milk && (
+        <FormRow cols={3}>
+          <DateField name="pumpedOn" label="Pumped on" defaultValue={item?.pumpedOn ?? today} />
+          <TextField name="pumpedTime" type="time" label="At" />
+          <SelectField name="location" label="Kept in" defaultValue={item?.location ?? "fridge"} options={[{ value: "fridge", label: "Fridge" }, { value: "freezer", label: "Freezer" }, { value: "room", label: "Room temperature" }, { value: "thawed", label: "Thawed (fridge)" }]} />
+        </FormRow>
+      )}
+      {!milk && kind !== "diapers" && kind !== "wipes" && <DateField name="expiresOn" label="Use by (optional)" defaultValue={item?.expiresOn ?? ""} />}
+      {babies.length > 1 && <SelectField name="babyId" label="For" defaultValue={item?.babyId ?? ""} placeholder="Shared" options={babies.map((b) => ({ value: b.id, label: b.name }))} />}
+      {babies.length === 1 && <input type="hidden" name="babyId" value={milk ? babies[0]!.id : ""} />}
+      <TextField name="notes" label="Notes" defaultValue={item?.notes ?? ""} />
+    </FormModal>
+  );
+}

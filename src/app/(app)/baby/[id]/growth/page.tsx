@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { BabyLogModal } from "@/components/baby/forms";
 import { Card, CardHeader } from "@/components/ui/card";
-import { logsOfKinds } from "@/lib/baby";
-import { babyAge } from "@/lib/baby-kinds";
+import { logsOfKinds, photoLogs } from "@/lib/baby";
+import { babyAge, monthsOld } from "@/lib/baby-kinds";
+import { fileUrl } from "@/lib/files";
 import { formatShortDate, utcToZoned } from "@/lib/dates";
 import { BabyHeader, babyContext, LogList, memberNames } from "../../shared";
 
@@ -41,7 +42,9 @@ export default async function BabyGrowthPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const ctx = await babyContext(id);
   const { viewer, baby, tz, units, now, canUse } = ctx;
-  const [logs, names] = await Promise.all([logsOfKinds(baby.id, ["growth"]), memberNames(viewer)]);
+  const [logs, names, photos] = await Promise.all([logsOfKinds(baby.id, ["growth"]), memberNames(viewer), photoLogs(baby.id, 120)]);
+  const growthPhotos = photos.filter((p) => p.kind === "photo" || p.kind === "growth");
+  const months = monthsOld(baby.birthDate, ctx.today);
   const asc = [...logs].reverse();
   const dated = (pick: (l: (typeof logs)[number]) => unknown) =>
     asc.map((l) => ({ date: utcToZoned(l.startedAt, tz).date, v: Number(pick(l)) })).filter((p) => Number.isFinite(p.v) && p.v > 0);
@@ -70,6 +73,24 @@ export default async function BabyGrowthPage({ params }: { params: Promise<{ id:
           </p>
         </Card>
       )}
+      <Card className="mb-4">
+        <CardHeader title="Growth photos" action={canUse ? <BabyLogModal babyId={baby.id} kind="photo" units={units} now={now} defaultTitle={months !== null ? `${months} month${months === 1 ? "" : "s"} old` : undefined} triggerLabel="📸 Add photo" /> : undefined} />
+        {growthPhotos.length ? (
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+            {growthPhotos.map((p) => (
+              <li key={p.id} className="flex flex-col gap-1">
+                <a href={fileUrl(p.imageFileId)!} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={fileUrl(p.imageFileId, true)!} alt={String(p.data.title ?? "Growth photo")} className="aspect-square w-full rounded-xl object-cover" />
+                </a>
+                <span className="truncate text-xs text-muted">{String(p.data.title ?? formatShortDate(utcToZoned(p.startedAt, tz).date))}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted">A photo each month (same spot, same teddy) makes a lovely growth timeline.</p>
+        )}
+      </Card>
       <Card>
         <CardHeader title="Measurements" />
         <LogList ctx={ctx} logs={logs} names={names} showDate empty="Log weight, length and head size after each checkup to see them grow." />

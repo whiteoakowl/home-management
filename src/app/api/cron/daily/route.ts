@@ -7,6 +7,7 @@ import { cleanupOldRows, cleanupOrphanFiles } from "@/lib/housekeeping";
 import { sendEventReminders } from "@/lib/event-reminders";
 import { sendSoundReminders } from "@/lib/sounds/reminders";
 import { sendWellnessTimedReminders } from "@/lib/wellness-reminders";
+import { sendBabyReminders } from "@/lib/baby-reminders";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
 import { familyAccess } from "@/lib/billing";
@@ -42,6 +43,11 @@ export async function POST(req: Request) {
     await sendWellnessTimedReminders();
   } catch (e) {
     console.error("Wellness reminders failed:", e);
+  }
+  try {
+    await sendBabyReminders();
+  } catch (e) {
+    console.error("Baby reminders failed:", e);
   }
   const all = await db.select().from(families);
   let ran = 0,
