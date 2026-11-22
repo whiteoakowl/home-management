@@ -51,7 +51,7 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="fitness"
         eyebrow="Personal"
         title={subject.id === viewer.member.id ? "My fitness" : `${first}'s fitness`}
         description="Plans, workouts, progress and personal records."

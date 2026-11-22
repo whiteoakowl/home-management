@@ -9,6 +9,8 @@ import { Badge, EmptyState, PageHeader, ProgressBar } from "@/components/ui/disp
 import { SegmentLinks } from "@/components/ui/tabs";
 import { getViewer } from "@/lib/dal";
 import { listIndex } from "@/lib/lists";
+import { usage } from "@/lib/plan-limits";
+import { FREE_LIMITS } from "@/lib/plan-tiers";
 import { categoryOptions, memberOptions } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Lists" };
@@ -17,6 +19,7 @@ const ICON = { checklist: CheckSquare, todo: ListTodo, bullet: List, numbered: L
 
 export default async function ListsPage({ searchParams }: PageProps<"/lists">) {
   const viewer = await getViewer();
+  const listsUsed = viewer.premium ? 0 : await usage(viewer.family.id, "lists");
   if (!viewer.can("lists")) notFound();
   const sp = await searchParams;
   const archived = sp.show === "archived";
@@ -32,8 +35,18 @@ export default async function ListsPage({ searchParams }: PageProps<"/lists">) {
 
   return (
     <>
-      <PageHeader title="Lists" description="Checklists, to-dos, packing lists, ideas: anything worth writing down." actions={canEdit ? add : undefined} />
+      <PageHeader
+        help="lists"
+        title="Lists"
+        description={
+          viewer.premium
+            ? "Checklists, to-dos, packing lists, ideas: anything worth writing down."
+            : `Checklists, to-dos, packing lists, ideas: anything worth writing down. Free plan: ${listsUsed} of ${FREE_LIMITS.lists} lists used (the grocery list doesn't count).`
+        }
+        actions={canEdit ? add : undefined}
+      />
       <div className="mb-5 flex flex-wrap gap-2">
+        <SegmentLinks active="lists" items={[{ key: "lists", href: "/lists", label: "Lists" }, { key: "wishlists", href: "/lists/wishlists", label: "Wishlists" }]} />
         <SegmentLinks active={archived ? "archived" : "active"} items={[{ key: "active", href: "/lists", label: "Active" }, { key: "archived", href: "/lists?show=archived", label: "Archived" }]} />
         {cats.length > 0 && (
           <SegmentLinks

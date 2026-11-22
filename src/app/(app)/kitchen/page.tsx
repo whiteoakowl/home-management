@@ -110,7 +110,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="pantry"
         eyebrow={isPrivate ? "My private food" : "Family Pantry"}
         title={title}
         description={isPrivate ? "Your own food: pantry, fridge and freezer, private to you." : "What's in the family's pantry, fridge and freezer, and what needs using up."}

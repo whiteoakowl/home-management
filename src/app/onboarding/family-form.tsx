@@ -13,7 +13,7 @@ export function FamilyForm() {
     <form action={action} className="flex flex-col gap-4" noValidate>
       <FormMessage message={state?.message} />
       <Field label="Family name" htmlFor="familyName" error={state?.errors?.familyName}>
-        <Input id="familyName" name="familyName" defaultValue="Vanderbilt" required autoFocus />
+        <Input id="familyName" name="familyName" placeholder="Smith" required autoFocus />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Time zone" htmlFor="timezone" error={state?.errors?.timezone}>

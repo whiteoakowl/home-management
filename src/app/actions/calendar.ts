@@ -55,7 +55,8 @@ export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionSta
       allDay,
       categoryId: await ownedCategoryId(viewer, "calendar", f.str(fd, "categoryId")),
       color: cleanColor(color),
-      reminderMinutes: f.int(fd, "reminderMinutes"),
+      // Timed reminders are Premium; on Free an existing reminder is left as it was.
+      ...(viewer.premium ? { reminderMinutes: f.int(fd, "reminderMinutes") } : {}),
       notes: f.str(fd, "notes"),
       visibility,
     };

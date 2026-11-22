@@ -1,4 +1,6 @@
+import { streakLabel, streakOf } from "./streaks";
 import "server-only";
+import { memberNameRaw, memberNameSql } from "./names";
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
@@ -13,12 +15,16 @@ import {
   rooms,
 } from "@/db/schema";
 import type { Viewer } from "./dal";
+import { addDays, todayIn } from "./dates";
 import { nextOccurrence, type Rule } from "./recurrence";
 
 export type ChoreKind = (typeof chores.$inferSelect)["kind"];
 
 /** Module that governs a chore kind. */
 export const kindModule = (kind: ChoreKind) => (kind === "cleaning" ? "cleaning" : kind === "maintenance" ? "maintenance" : kind === "farm" ? "farm" : "chores");
+
+/** Occurrences this member is on the team for. */
+export const onTeam = (memberId: string) => sql`${memberId}::uuid = any(${choreOccurrences.assigneeIds})`;
 
 /**
  * Members without module access still see work assigned to them
@@ -30,6 +36,7 @@ function accessFilter(viewer: Viewer, kinds: ChoreKind[]): SQL | undefined {
   if (canAll) return undefined;
   return or(
     eq(choreOccurrences.assigneeId, viewer.member.id),
+    onTeam(viewer.member.id),
     inArray(
       choreOccurrences.id,
       db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, viewer.member.id)),
@@ -37,22 +44,68 @@ function accessFilter(viewer: Viewer, kinds: ChoreKind[]): SQL | undefined {
   );
 }
 
-export async function listOccurrences(
-  viewer: Viewer,
-  opts: {
-    kinds: ChoreKind[];
-    from?: string;
-    to?: string;
-    statuses?: ("pending" | "done" | "skipped" | "missed")[];
-    assigneeId?: string;
-    choreId?: string;
-    petIds?: string[];
-    projectId?: string;
-    poolId?: string;
-    order?: "asc" | "desc";
-    limit?: number;
-  },
-) {
+type OccurrenceQuery = {
+  kinds: ChoreKind[];
+  from?: string;
+  to?: string;
+  statuses?: ("pending" | "done" | "skipped" | "missed")[];
+  assigneeId?: string;
+  choreId?: string;
+  petIds?: string[];
+  projectId?: string;
+  poolId?: string;
+  order?: "asc" | "desc";
+  limit?: number;
+};
+
+/** The one filter behind every occurrence list and count, so lists and counts always agree. */
+function occurrenceWhere(viewer: Viewer, opts: OccurrenceQuery) {
+  return and(
+    eq(choreOccurrences.familyId, viewer.family.id),
+    inArray(chores.kind, opts.kinds),
+    // Deleted chores keep their history on their own page, but leave every list and count.
+    opts.choreId ? undefined : isNull(chores.deletedAt),
+    opts.from ? gte(choreOccurrences.dueDate, opts.from) : undefined,
+    opts.to ? lte(choreOccurrences.dueDate, opts.to) : undefined,
+    opts.statuses ? inArray(choreOccurrences.status, opts.statuses) : undefined,
+    opts.choreId ? eq(choreOccurrences.choreId, opts.choreId) : undefined,
+    opts.petIds ? (opts.petIds.length ? inArray(chores.petId, opts.petIds) : sql`false`) : undefined,
+    opts.projectId ? eq(chores.projectId, opts.projectId) : undefined,
+    opts.poolId ? eq(chores.poolId, opts.poolId) : undefined,
+    opts.assigneeId
+      ? or(
+          eq(choreOccurrences.assigneeId, opts.assigneeId),
+          onTeam(opts.assigneeId),
+          // Open to anyone (nobody assigned): it's on everyone's list.
+          and(isNull(choreOccurrences.assigneeId), sql`cardinality(${choreOccurrences.assigneeIds}) = 0`),
+          inArray(
+            choreOccurrences.id,
+            db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, opts.assigneeId)),
+          ),
+        )
+      : undefined,
+    accessFilter(viewer, opts.kinds),
+  );
+}
+
+/** How many occurrences match (no cap), using exactly the same rules as listOccurrences. */
+export async function countOccurrences(viewer: Viewer, opts: Omit<OccurrenceQuery, "order" | "limit">) {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(choreOccurrences)
+    .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
+    .where(occurrenceWhere(viewer, opts));
+  return r?.n ?? 0;
+}
+
+/**
+ * Overdue = still to do (pending) and due before today. After a week the
+ * "Mark missed chores" automation files them as missed (history), so they
+ * stop counting as overdue.
+ */
+export const overdueQuery = (today: string, kinds: ChoreKind[], assigneeId?: string) => ({ kinds, to: addDays(today, -1), statuses: ["pending" as const], assigneeId });
+
+export async function listOccurrences(viewer: Viewer, opts: OccurrenceQuery) {
   const assignee = alias(familyMembers, "assignee");
   const completer = alias(familyMembers, "completer");
   const rows = await db
@@ -73,9 +126,13 @@ export async function listOccurrences(
       estimatedCostCents: chores.estimatedCostCents,
       points: chores.points,
       assigneeId: choreOccurrences.assigneeId,
-      assigneeName: assignee.displayName,
+      assigneeName: memberNameSql(viewer, assignee),
       assigneeColor: assignee.color,
-      completedByName: completer.displayName,
+      assigneeIds: choreOccurrences.assigneeIds,
+      /** Everyone on the team, in the order they were picked. */
+      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', ${memberNameRaw(viewer, "fm")}, 'color', fm.color) order by array_position(${choreOccurrences.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${choreOccurrences.assigneeIds})), '[]'::json)`,
+      awardedMemberIds: choreOccurrences.awardedMemberIds,
+      completedByName: memberNameSql(viewer, completer),
       pointsAwarded: choreOccurrences.pointsAwarded,
     })
     .from(choreOccurrences)
@@ -84,31 +141,7 @@ export async function listOccurrences(
     .leftJoin(categories, eq(categories.id, chores.categoryId))
     .leftJoin(assignee, eq(assignee.id, choreOccurrences.assigneeId))
     .leftJoin(completer, eq(completer.id, choreOccurrences.completedByMemberId))
-    .where(
-      and(
-        eq(choreOccurrences.familyId, viewer.family.id),
-        inArray(chores.kind, opts.kinds),
-        opts.from ? gte(choreOccurrences.dueDate, opts.from) : undefined,
-        opts.to ? lte(choreOccurrences.dueDate, opts.to) : undefined,
-        opts.statuses ? inArray(choreOccurrences.status, opts.statuses) : undefined,
-        opts.choreId ? eq(choreOccurrences.choreId, opts.choreId) : undefined,
-        opts.petIds ? (opts.petIds.length ? inArray(chores.petId, opts.petIds) : sql`false`) : undefined,
-        opts.projectId ? eq(chores.projectId, opts.projectId) : undefined,
-        opts.poolId ? eq(chores.poolId, opts.poolId) : undefined,
-        opts.assigneeId
-          ? or(
-              eq(choreOccurrences.assigneeId, opts.assigneeId),
-              // Open to anyone (nobody assigned): it's on everyone's list.
-              isNull(choreOccurrences.assigneeId),
-              inArray(
-                choreOccurrences.id,
-                db.select({ id: choreOccurrenceItems.occurrenceId }).from(choreOccurrenceItems).where(eq(choreOccurrenceItems.assigneeId, opts.assigneeId)),
-              ),
-            )
-          : undefined,
-        accessFilter(viewer, opts.kinds),
-      ),
-    )
+    .where(occurrenceWhere(viewer, opts))
     .orderBy(
       opts.order === "desc" ? desc(choreOccurrences.dueDate) : asc(choreOccurrences.dueDate),
       sql`case ${chores.priority} when 'high' then 0 when 'normal' then 1 else 2 end`,
@@ -125,7 +158,7 @@ export async function listOccurrences(
           text: choreOccurrenceItems.text,
           completedAt: choreOccurrenceItems.completedAt,
           assigneeId: choreOccurrenceItems.assigneeId,
-          assigneeName: itemAssignee.displayName,
+          assigneeName: memberNameSql(viewer, itemAssignee),
           assigneeColor: itemAssignee.color,
         })
         .from(choreOccurrenceItems)
@@ -134,8 +167,21 @@ export async function listOccurrences(
         .orderBy(asc(choreOccurrenceItems.position))
     : [];
   const byOcc = Map.groupBy(items, (i) => i.occurrenceId);
+  // Streaks (🔥 12-day streak): each chore's recent history for the same person.
+  const today = todayIn(viewer.family.timezone);
+  const recurring = [...new Set(rows.filter((r) => r.kind === "chore" || r.kind === "cleaning" || r.kind === "farm").map((r) => r.choreId))];
+  const history = recurring.length
+    ? await db
+        .select({ choreId: choreOccurrences.choreId, assigneeId: choreOccurrences.assigneeId, date: choreOccurrences.dueDate, status: choreOccurrences.status })
+        .from(choreOccurrences)
+        .where(and(inArray(choreOccurrences.choreId, recurring), gte(choreOccurrences.dueDate, addDays(today, -400)), lte(choreOccurrences.dueDate, today)))
+    : [];
+  const streakFor = (choreId: string, assigneeId: string | null) => {
+    const s = streakOf(history.filter((h) => h.choreId === choreId && h.assigneeId === assigneeId), today);
+    return s.count >= 2 ? streakLabel(s) : null;
+  };
   // canUse: "Use" access or better lets someone tick it off and earn the points.
-  return rows.map((r) => ({ ...r, canUse: viewer.can(kindModule(r.kind), "use"), items: byOcc.get(r.id) ?? [] }));
+  return rows.map((r) => ({ ...r, canUse: viewer.can(kindModule(r.kind), "use"), items: byOcc.get(r.id) ?? [], streak: recurring.includes(r.choreId) ? streakFor(r.choreId, r.assigneeId) : null }));
 }
 
 export type Occurrence = Awaited<ReturnType<typeof listOccurrences>>[number];
@@ -151,8 +197,9 @@ export async function listChoreTemplates(viewer: Viewer, kinds: ChoreKind[], tod
       rule: recurrenceRules,
       roomName: rooms.name,
       categoryName: categories.name,
-      assigneeName: assignee.displayName,
+      assigneeName: memberNameSql(viewer, assignee),
       assigneeColor: assignee.color,
+      team: sql<{ id: string; name: string; color: string }[]>`coalesce((select json_agg(json_build_object('id', fm.id, 'name', ${memberNameRaw(viewer, "fm")}, 'color', fm.color) order by array_position(${chores.assigneeIds}, fm.id)) from family_members fm where fm.id = any(${chores.assigneeIds})), '[]'::json)`,
       nextDue: sql<string | null>`(select min(o.due_date) from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'pending' and o.due_date >= ${today})`,
       lastDone: sql<string | null>`(select max(o.completed_at)::text from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'done')`,
       doneCount: sql<number>`(select count(*)::int from chore_occurrences o where o.chore_id = ${chores.id} and o.status = 'done')`,

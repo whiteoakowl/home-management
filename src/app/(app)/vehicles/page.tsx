@@ -31,7 +31,7 @@ export default async function VehiclesPage({ searchParams }: PageProps<"/vehicle
 
   return (
     <>
-      <PageHeader eyebrow={mine ? "My private" : "Household"} title={mine ? "My Vehicles" : "Vehicles"} description={mine ? "Your own car: profile, mileage, maintenance due, repairs, parts and loan payoff. Only you can see this, not even parents." : "Every family car's profile, mileage, maintenance due, repairs, parts and loan payoff. Shared by parents."} actions={add} />
+      <PageHeader help="vehicles" eyebrow={mine ? "My private" : "Household"} title={mine ? "My Vehicles" : "Vehicles"} description={mine ? "Your own car: profile, mileage, maintenance due, repairs, parts and loan payoff. Only you can see this, not even parents." : "Every family car's profile, mileage, maintenance due, repairs, parts and loan payoff. Shared by parents."} actions={add} />
       {list.length === 0 ? (
         <Card>
           <EmptyState icon={<Car />} title="Add your first vehicle" description="We'll set up a standard maintenance plan (oil, tires, filters, brakes…) that you can adjust, and track what's due by miles or date." example="Mom's SUV · 2021 Toyota Highlander · 38,420 mi" action={canEdit ? <VehicleModal members={members} /> : undefined} />

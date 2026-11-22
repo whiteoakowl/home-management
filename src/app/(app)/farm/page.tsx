@@ -64,7 +64,7 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="farm"
         eyebrow="Land"
         title="Farm"
         description="Animals, care, production and your farm map."

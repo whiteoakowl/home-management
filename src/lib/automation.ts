@@ -1,7 +1,10 @@
+import { after } from "next/server";
+import { sendPush } from "./push";
 import "server-only";
-import { and, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  familyDates,
   homeDocuments,
   homeProjects,
   homeRepairs,
@@ -48,14 +51,16 @@ import { moonForDate } from "./astro";
 import { upcomingSabbats } from "./sabbats";
 import { occurrencesBetween, type Rule } from "./recurrence";
 import { MODULE_META } from "./modules";
+import { familyAccess } from "./billing";
 import { rebalanceRotations } from "./rotation-db";
 
-/** Every automation can be switched off per family (Settings → Automations). */
+/** Every automation can be switched off per family (Account settings → Automations). */
 export const AUTOMATIONS = [
   { key: "recurringChores", label: "Generate recurring chores", description: "Create upcoming chore & cleaning occurrences from their schedules." },
   { key: "missedChores", label: "Mark missed chores", description: "Chores left undone for 7 days are marked missed (kept in history)." },
   { key: "choreReminders", label: "Chore reminders", description: "Notify people about chores due today." },
   { key: "eventReminders", label: "Event reminders", description: "Notify attendees about today's events." },
+  { key: "specialDateReminders", label: "Birthday & anniversary reminders", description: "Remind the family before birthdays and anniversaries (never the birthday person)." },
   { key: "expirationAlerts", label: "Expiration alerts", description: "Notify about food expiring today or this week." },
   { key: "lowStockShopping", label: "Low stock → shopping list", description: "Add items below their low-stock level to the shopping list." },
   { key: "gardenReminders", label: "Garden reminders", description: "Notify about harvests coming up this week." },
@@ -70,6 +75,8 @@ export const AUTOMATIONS = [
   { key: "recurringTransactions", label: "Recurring bills & income", description: "Record repeating expenses and income automatically when they come due." },
 ] as const;
 export type AutomationKey = (typeof AUTOMATIONS)[number]["key"];
+/** Automations that run on the Free plan (the rest belong to Premium sections). */
+export const FREE_AUTOMATIONS: readonly AutomationKey[] = ["recurringChores", "missedChores", "choreReminders", "eventReminders", "specialDateReminders"];
 
 export const automationOn = (family: Pick<Family, "settings">, key: AutomationKey) => family.settings?.automations?.[key] !== false;
 
@@ -101,7 +108,13 @@ export async function materializeChore(choreId: string, today: string) {
   }
   const inserted = await db
     .insert(choreOccurrences)
-    .values(dates.map((dueDate) => ({ familyId: chore.familyId, choreId: chore.id, dueDate, assigneeId: assigneeFor(dueDate) })))
+    .values(
+      dates.map((dueDate) => {
+        // Rotation: one person per day. Otherwise the whole team (everyone assigned) gets the day.
+        const team = rotation.length > 1 ? [assigneeFor(dueDate)].filter((x): x is string => !!x) : chore.assigneeIds?.length ? chore.assigneeIds : [chore.defaultAssigneeId].filter((x): x is string => !!x);
+        return { familyId: chore.familyId, choreId: chore.id, dueDate, assigneeId: team[0] ?? null, assigneeIds: team };
+      }),
+    )
     .onConflictDoNothing()
     .returning({ id: choreOccurrences.id });
   if (items.length && inserted.length) {
@@ -130,6 +143,8 @@ export async function notify(
   memberIds: string[],
   n: { kind: string; title: string; body?: string; href?: string },
   today: string,
+  /** urgent: a reminder time the person chose (e.g. 1 hour before), so it goes out even in quiet hours. */
+  opts: { urgent?: boolean } = {},
 ) {
   if (!memberIds.length) return;
   const muted = await db
@@ -150,11 +165,24 @@ export async function notify(
     );
   const done = new Set(existing.map((e) => e.memberId));
   const rows = memberIds.filter((m) => !mutedSet.has(m) && !done.has(m)).map((memberId) => ({ familyId, memberId, ...n }));
-  if (rows.length) await db.insert(notifications).values(rows);
+  if (rows.length) {
+    await db.insert(notifications).values(rows);
+    // Also to their phones (skips anyone who switched push off for this kind, and quiet hours).
+    later(() => sendPush(rows.map((r) => r.memberId), n.kind, { title: n.title, body: n.body, href: n.href ?? "/notifications", tag: `${n.kind}:${n.title}`.slice(0, 80) }, { ignoreQuietHours: opts.urgent }));
+  }
+}
+
+/** Run after the response when inside a request (so pages never wait on phones); otherwise right away. */
+function later(fn: () => Promise<unknown>) {
+  try {
+    after(fn);
+  } catch {
+    void fn();
+  }
 }
 
 /** Members who can view a module (parents + members granted view/edit). */
-async function viewersOf(familyId: string, module: keyof typeof MODULE_META) {
+export async function viewersOf(familyId: string, module: keyof typeof MODULE_META) {
   const members = await db
     .select({ id: familyMembers.id, role: familyMembers.role, level: memberPermissions.level })
     .from(familyMembers)
@@ -191,7 +219,9 @@ export async function runDailyAutomation(family: Family, force = false) {
   if (!claimed.length) return;
 
   const fid = family.id;
-  const on = (k: AutomationKey) => automationOn(family, k);
+  // Free plan: the everyday automations run; those for Premium sections wait for an upgrade.
+  const { premium } = await familyAccess(fid);
+  const on = (k: AutomationKey) => automationOn(family, k) && (premium || FREE_AUTOMATIONS.includes(k));
   const enabled = (m: string) => family.enabledModules.includes(m);
 
   if (on("recurringChores") && enabled("chores")) {
@@ -212,10 +242,11 @@ export async function runDailyAutomation(family: Family, force = false) {
 
   if (on("choreReminders") && enabled("chores")) {
     const due = await db
-      .select({ assigneeId: choreOccurrences.assigneeId, n: sql<number>`count(*)::int` })
-      .from(choreOccurrences)
+      // Everyone on a shared chore gets the reminder.
+      .select({ assigneeId: sql<string | null>`who.id`, n: sql<number>`count(*)::int` })
+      .from(sql`${choreOccurrences} cross join lateral unnest(case when cardinality(${choreOccurrences.assigneeIds}) > 0 then ${choreOccurrences.assigneeIds} else array[${choreOccurrences.assigneeId}] end) as who(id)`)
       .where(and(eq(choreOccurrences.familyId, fid), eq(choreOccurrences.dueDate, today), eq(choreOccurrences.status, "pending")))
-      .groupBy(choreOccurrences.assigneeId);
+      .groupBy(sql`who.id`);
     for (const d of due) {
       if (!d.assigneeId) continue;
       await notify(fid, [d.assigneeId], { kind: "chore_due", title: `${d.n} chore${d.n === 1 ? "" : "s"} due today`, href: "/house/chores" }, today);
@@ -237,6 +268,29 @@ export async function runDailyAutomation(family: Family, force = false) {
     for (const e of todays) {
       const att = await db.select({ id: eventAttendees.memberId }).from(eventAttendees).where(eq(eventAttendees.eventId, e.id));
       await notify(fid, att.map((a) => a.id), { kind: "event_reminder", title: `Today: ${e.title}`, href: `/calendar/event/${e.id}` }, today);
+    }
+  }
+
+  if (on("specialDateReminders")) {
+    const everyone = (await db.select({ id: familyMembers.id }).from(familyMembers).where(and(eq(familyMembers.familyId, fid), eq(familyMembers.isActive, true)))).map((m) => m.id);
+    const kin = await db.select({ id: familyMembers.id, name: familyMembers.displayName, birthday: familyMembers.birthday }).from(familyMembers).where(and(eq(familyMembers.familyId, fid), eq(familyMembers.isActive, true), isNotNull(familyMembers.birthday)));
+    const dates = await db.select().from(familyDates).where(eq(familyDates.familyId, fid));
+    const md = (d: string) => d.slice(5);
+    const soon = (target: string, days: number) => md(addDays(today, days)) === target;
+    for (const k of kin) {
+      const target = md(k.birthday!);
+      const first = k.name.split(" ")[0];
+      const others = everyone.filter((id) => id !== k.id); // keep the surprise
+      if (soon(target, 0)) {
+        await notify(fid, others, { kind: "special_dates", title: `🎂 It's ${first}'s birthday today!`, href: "/memories/dates" }, today);
+        await notify(fid, [k.id], { kind: "special_dates", title: `🎉 Happy birthday, ${first}!`, href: "/memories" }, today);
+      } else if (soon(target, 7)) await notify(fid, others, { kind: "special_dates", title: `🎂 ${first}'s birthday is in a week`, href: "/memories/dates" }, today);
+    }
+    for (const d of dates) {
+      const target = `${String(d.month).padStart(2, "0")}-${String(d.day).padStart(2, "0")}`;
+      const icon = d.kind === "anniversary" ? "💍" : d.kind === "birthday" ? "🎂" : "📅";
+      if (soon(target, 0)) await notify(fid, everyone, { kind: "special_dates", title: `${icon} Today: ${d.title}`, href: "/memories/dates" }, today);
+      else if (d.remindDays > 0 && soon(target, d.remindDays)) await notify(fid, everyone, { kind: "special_dates", title: `${icon} ${d.title} in ${d.remindDays} day${d.remindDays === 1 ? "" : "s"}`, href: "/memories/dates" }, today);
     }
   }
 

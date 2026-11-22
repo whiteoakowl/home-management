@@ -1,5 +1,6 @@
 "use server";
 
+import { safePath } from "@/lib/safe-redirect";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
@@ -249,5 +250,6 @@ export async function askParentToTalk(fd: FormData) {
     .where(and(eq(familyMembers.familyId, viewer.family.id), eq(familyMembers.role, "parent"), eq(familyMembers.isActive, true)));
   const to = parents.map((p) => p.id).filter((id) => id !== viewer.member.id);
   await notify(viewer.family.id, to, { kind: "wellness_support", title: `${viewer.member.displayName} would like to talk with you`, body: "Find a quiet moment together when you can.", href: "/family" }, todayIn(viewer.family.timezone));
-  redirect(`${String(fd.get("back") ?? "/wellness")}${String(fd.get("back") ?? "").includes("?") ? "&" : "?"}asked=1`);
+  const back = safePath(fd.get("back"), "/wellness");
+  redirect(`${back}${back.includes("?") ? "&" : "?"}asked=1`);
 }

@@ -31,12 +31,17 @@ export type OccurrenceView = {
   priority: "low" | "normal" | "high";
   estimatedMinutes: number | null;
   points?: number | null;
+  /** "12-day streak" when this chore has been done several times in a row. */
+  streak?: string | null;
   roomName: string | null;
   dueDate: string;
   status: "pending" | "done" | "skipped" | "missed";
   assigneeId: string | null;
   assigneeName: string | null;
   assigneeColor: string | null;
+  /** Everyone assigned (when several people share it). */
+  team?: { id: string; name: string; color: string }[];
+  assigneeIds?: string[];
   completedByName: string | null;
   items: {
     id: string;
@@ -213,6 +218,11 @@ function Row({
               {o.points ? (
                 <span className="font-medium text-olive-700">★ {o.points}</span>
               ) : null}
+              {o.streak && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#fff1e6] px-2 py-0.5 text-xs font-semibold text-[#b4480d]" title="Done in a row">
+                  🔥 {o.streak}
+                </span>
+              )}
               {o.estimatedMinutes ? (
                 <span className="inline-flex items-center gap-1">
                   <Clock className="size-3.5" aria-hidden />
@@ -230,8 +240,15 @@ function Row({
             </p>
           </div>
           {badge && <span className="hidden sm:inline-flex">{badge}</span>}
-          {showAssignee && o.assigneeName && (
-            <Avatar name={o.assigneeName} color={o.assigneeColor} size="sm" />
+          {showAssignee && (o.team?.length ?? 0) > 1 ? (
+            <span className="flex shrink-0 -space-x-2" title={o.team!.map((t) => t.name).join(", ")} aria-label={`Assigned to ${o.team!.map((t) => t.name).join(", ")}`}>
+              {o.team!.slice(0, 3).map((t) => (
+                <Avatar key={t.id} name={t.name} color={t.color} size="sm" className="ring-2 ring-surface" />
+              ))}
+              {o.team!.length > 3 && <span className="flex size-8 items-center justify-center rounded-full bg-sunken text-xs ring-2 ring-surface">+{o.team!.length - 3}</span>}
+            </span>
+          ) : (
+            showAssignee && o.assigneeName && <Avatar name={o.assigneeName} color={o.assigneeColor} size="sm" />
           )}
           {(o.items.length > 0 || o.instructions) && (
             <button
@@ -291,30 +308,36 @@ function Row({
                       </button>
                     )}
                     {canManage && (
-                      <label className="flex items-center gap-2 px-3 py-2 text-sm">
-                        <UserRound className="size-4" />
-                        <select
-                          aria-label="Reassign"
-                          defaultValue={o.assigneeId ?? ""}
-                          className="flex-1 rounded-md border border-line bg-surface px-1 py-1 text-sm"
-                          onChange={(e) =>
-                            start(() => {
-                              const fd = new FormData();
-                              fd.set("id", o.id);
-                              fd.set("assigneeId", e.target.value);
-                              setMenu(false);
-                              return reassignOccurrence(fd);
-                            })
-                          }
-                        >
-                          <option value="">Unassigned</option>
-                          {members.map((m) => (
-                            <option key={m.id} value={m.id}>
+                      <fieldset className="px-3 py-2 text-sm">
+                        <legend className="mb-1 flex items-center gap-2 text-xs font-semibold tracking-wide text-muted uppercase">
+                          <UserRound className="size-3.5" /> Assigned to (this day)
+                        </legend>
+                        {members.map((m) => {
+                          const team = o.assigneeIds?.length ? o.assigneeIds : o.assigneeId ? [o.assigneeId] : [];
+                          const on = team.includes(m.id);
+                          return (
+                            <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-1 hover:bg-sunken">
+                              <input
+                                type="checkbox"
+                                className="size-4 accent-primary-600"
+                                defaultChecked={on}
+                                disabled={pending}
+                                onChange={(e) =>
+                                  start(() => {
+                                    const next = e.target.checked ? [...team, m.id] : team.filter((x) => x !== m.id);
+                                    const fd = new FormData();
+                                    fd.set("id", o.id);
+                                    fd.append("assigneeIds", "");
+                                    for (const id of next) fd.append("assigneeIds", id);
+                                    return reassignOccurrence(fd);
+                                  })
+                                }
+                              />
                               {m.displayName}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                            </label>
+                          );
+                        })}
+                      </fieldset>
                     )}
                     <Link
                       href={`/house/chores/${o.choreId}`}

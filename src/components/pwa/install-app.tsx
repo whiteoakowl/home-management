@@ -29,7 +29,7 @@ function IosSteps({ open, onClose }: { open: boolean; onClose: () => void }) {
         <li className="flex items-start gap-3">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-50 font-semibold text-primary-700">3</span>
           <span>
-            Tap <strong>Add</strong>. Vanderbilt Family appears on your Home Screen and opens full-screen, like an app.
+            Tap <strong>Add</strong>. Your family&apos;s app appears on your Home Screen and opens full-screen, like an app.
           </span>
         </li>
       </ol>
@@ -64,7 +64,7 @@ export function InstallBanner() {
     <section aria-label="Install the app" className="flex items-center gap-3 rounded-2xl border border-primary-100 bg-primary-50 p-3 pr-2 sm:p-4">
       <BrandMark className="size-11 shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-ink">Get the Vanderbilt Family app</p>
+        <p className="font-semibold text-ink">Get your family&apos;s app</p>
         <p className="text-sm text-ink-soft">Add it to your home screen for one-tap access, full-screen.</p>
       </div>
       <button

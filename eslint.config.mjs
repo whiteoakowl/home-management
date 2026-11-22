@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
   },
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    // Supabase Edge Functions are Deno code (checked with `deno check`).
+    "supabase/functions/stripe-webhook/**",
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",

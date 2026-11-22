@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { CalendarDays, ClipboardList, LayoutDashboard, Menu } from "lucide-react";
+import { CalendarDays, ClipboardList, LayoutDashboard, Lock, Menu, ShoppingBasket } from "lucide-react";
 import type { Module } from "@/db/schema/_shared";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/ui/modal";
@@ -20,12 +20,15 @@ export function MobileNav({
   isParent,
   canCalendar,
   canLists,
+  shoppingHref,
 }: {
   sections: NavSection[];
   editable: Module[];
   isParent: boolean;
   canCalendar: boolean;
   canLists: boolean;
+  /** Where Shopping goes (the family list, or "My Shopping List"); null hides the tab. */
+  shoppingHref: string | null;
 }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
@@ -58,6 +61,7 @@ export function MobileNav({
         <div className="flex flex-1 justify-center">
           <QuickAdd editable={editable} isParent={isParent} variant="fab" />
         </div>
+        {tab(shoppingHref ?? "/shopping", "Shopping", <ShoppingBasket className="size-6" />, !!shoppingHref)}
         {tab("/lists", "Lists", <ClipboardList className="size-6" />, canLists)}
         <button type="button" onClick={() => setMore(true)} className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium text-muted">
           <Menu className="size-6" />
@@ -67,7 +71,7 @@ export function MobileNav({
       <Modal open={more} onClose={() => setMore(false)} title="Everything" size="lg">
         <div className="flex flex-col gap-5">
           <InstallAppButton
-            label="Install the Vanderbilt Family app"
+            label="Install the app"
             className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-[15px] font-semibold text-white hover:bg-primary-700"
           />
           {sections.map((s) => (
@@ -81,10 +85,13 @@ export function MobileNav({
                       onClick={() => setMore(false)}
                       className={cn(
                         "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-[13px] font-medium",
-                        isActive(pathname, item.href) ? "border-primary-300 bg-primary-50 text-primary-700" : "border-line",
+                        isActive(pathname, item.href) || item.children?.some((c) => isActive(pathname, c.href.split("?")[0]!)) ? "border-primary-300 bg-primary-50 text-primary-700" : "border-line",
                       )}
                     >
-                      <Icon name={item.icon} className="size-6" />
+                      <span className="relative">
+                        <Icon name={item.icon} className="size-6" />
+                        {item.locked && <Lock className="absolute -right-2.5 -bottom-1 size-3.5 rounded-full bg-surface p-0.5 text-muted" aria-label="Premium" />}
+                      </span>
                       {item.label}
                     </Link>
                   </li>

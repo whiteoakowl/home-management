@@ -52,7 +52,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
 
   return (
     <>
-      <PageHeader eyebrow="Money" title="Reports" description="History and trends across the household." />
+      <PageHeader help="reports" eyebrow="Money" title="Reports" description="History and trends across the household." />
       <LinkTabs active={tab} tabs={tabs.map((t) => ({ key: t.key, href: `/reports?tab=${t.key}`, label: t.label }))} />
 
       {tab === "cleaning" && <CleaningTab today={today} days={days} />}

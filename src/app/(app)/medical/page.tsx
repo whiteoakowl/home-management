@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import Link from "next/link";
 import { CalendarClock, FileText, HeartPulse, Pill, Salad, Stethoscope, TriangleAlert } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -8,7 +9,7 @@ import { addDays, todayIn, zonedToUtc } from "@/lib/dates";
 import { fileUrl } from "@/lib/files";
 import { listMedical, medicalAppointments } from "@/lib/medical";
 import { SEVERITIES, SEVERITY_TONE } from "@/lib/medical-config";
-import { listFamilyMembers } from "@/lib/dal";
+
 import { memberOptions } from "@/lib/queries";
 import { AppointmentList } from "./appointment-list";
 import { AppointmentModal } from "./appointment-modal";
@@ -25,7 +26,7 @@ export default async function MedicalDashboard() {
   const soon = addDays(today, 30);
   const [members, fam, alls, rests, conds, meds, docs, appts] = await Promise.all([
     memberOptions(viewer),
-    listFamilyMembers(viewer.family.id),
+    familyMembersFor(viewer),
     listMedical(viewer, "allergy"),
     listMedical(viewer, "restriction"),
     listMedical(viewer, "condition"),
@@ -49,7 +50,7 @@ export default async function MedicalDashboard() {
   ];
   return (
     <>
-      <PageHeader
+      <PageHeader help="medical"
         eyebrow="Household"
         title="Family Medical & Health"
         description="Profiles, allergies, conditions, medications and documents, private to each person and the parents unless shared."

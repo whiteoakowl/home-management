@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { CircleHelp } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
 import { memberColor, onSolid } from "@/lib/colors";
 
@@ -153,20 +155,40 @@ export function PageHeader({
   title,
   description,
   actions,
+  help,
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  /** Help Center article for this page: shows a "?" next to the title. */
+  help?: string;
 }) {
   return (
     <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-1">
         {eyebrow && <p className="text-sm font-medium text-primary-600">{eyebrow}</p>}
-        <h1 className="text-[28px] leading-tight font-semibold sm:text-[32px]">{title}</h1>
+        <div className="flex items-center gap-1">
+          <h1 className="text-[28px] leading-tight font-semibold sm:text-[32px]">{title}</h1>
+          {help && <HelpButton slug={help} />}
+        </div>
         {description && <p className="max-w-2xl text-[15px] text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </header>
+  );
+}
+
+/** Contextual help: a "?" that opens this page's Help Center article. */
+export function HelpButton({ slug, className }: { slug: string; className?: string }) {
+  return (
+    <Link
+      href={`/help/go/${slug}`}
+      aria-label="Help for this page"
+      title="Help for this page"
+      className={cn("inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-sunken hover:text-primary-700", className)}
+    >
+      <CircleHelp className="size-5" aria-hidden />
+    </Link>
   );
 }

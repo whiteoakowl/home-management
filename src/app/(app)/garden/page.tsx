@@ -44,7 +44,7 @@ export default async function GardenPage({ searchParams }: PageProps<"/garden">)
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="garden"
         eyebrow="Land"
         title="Garden"
         description="Plan beds, track every planting, and log what you harvest."

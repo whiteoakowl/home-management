@@ -6,7 +6,6 @@ import {
   DateField,
   FormRow,
   ImageField,
-  MemberSelect,
   NumberField,
   SelectField,
   TextAreaField,
@@ -14,7 +13,7 @@ import {
   VisibilityField,
   type MemberOption,
 } from "@/components/forms/fields";
-import { BOOK_FORMATS, READING_STATUSES } from "@/lib/library-config";
+import { BOOK_FORMATS } from "@/lib/library-config";
 
 export type BookDefaults = {
   id?: string;
@@ -36,12 +35,6 @@ export type BookDefaults = {
   rating?: number | null;
   notes?: string | null;
   isFavorite?: boolean;
-  status?: string;
-  readerMemberId?: string | null;
-  startedOn?: string | null;
-  finishedOn?: string | null;
-  currentPage?: number | null;
-  readingNotes?: string | null;
   visibility?: "family" | "private" | "selected" | "parents";
   categoryIds?: string[];
   sharedWith?: string[];
@@ -102,32 +95,20 @@ export function BookFields({ d = {}, categories, members, personal }: { d?: Book
         )}
       </Section>
 
-      <Section title="Reading">
-        <FormRow>
-          <SelectField name="status" label="Reading status" defaultValue={d.status ?? "not_started"} options={[...READING_STATUSES]} />
-          <MemberSelect name="readerMemberId" label="Who's reading" members={members} defaultValue={d.readerMemberId} placeholder="—" />
-        </FormRow>
-        <FormRow cols={3}>
-          <DateField name="startedOn" label="Started" defaultValue={d.startedOn ?? ""} />
-          <DateField name="finishedOn" label="Finished" defaultValue={d.finishedOn ?? ""} />
-          <NumberField name="currentPage" label="Current page" min={0} defaultValue={d.currentPage ?? ""} />
-        </FormRow>
+      <Section title="Your copy">
         <FormRow>
           <SelectField name="rating" label="Rating" defaultValue={d.rating ? String(d.rating) : ""} placeholder="Not rated" options={[5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${"★".repeat(n)}${"☆".repeat(5 - n)}  (${n})` }))} />
           <div className="flex items-end pb-1">
             <CheckboxField name="isFavorite" label="Favorite" defaultChecked={d.isFavorite} />
           </div>
         </FormRow>
-        <TextAreaField name="readingNotes" label="Reading notes" rows={3} defaultValue={d.readingNotes ?? ""} />
-      </Section>
-
-      <Section title="Ownership">
         <FormRow cols={3}>
           <DateField name="acquiredOn" label="Date acquired" defaultValue={d.acquiredOn ?? ""} />
           <TextField name="purchaseLocation" label="Where from" defaultValue={d.purchaseLocation ?? ""} placeholder="Bookshop, gift…" />
           <NumberField name="price" label="Price" min={0} step="0.01" defaultValue={d.priceCents != null ? (d.priceCents / 100).toFixed(2) : ""} />
         </FormRow>
         <TextAreaField name="notes" label="Notes" rows={2} defaultValue={d.notes ?? ""} />
+        <p className="text-sm text-muted">Reading this book? After saving, tap <strong className="font-semibold text-ink">I&apos;m reading this</strong> on the book to add it to your reading log.</p>
         {personal ? (
           <p className="text-sm text-muted">This book is in your personal library. Only you can see it.</p>
         ) : (

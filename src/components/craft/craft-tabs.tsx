@@ -12,6 +12,8 @@ export function CraftTabs({ active }: { active: string }) {
         { key: "spell", href: "/spiritual/library/spell", label: "Spells" },
         { key: "ritual", href: "/spiritual/library/ritual", label: "Rituals" },
         { key: "grimoire", href: "/spiritual/grimoire", label: "Grimoire" },
+        { key: "devotions", href: "/spiritual/faith/spiritual/devotions", label: "Practice" },
+        { key: "reading", href: "/spiritual/faith/spiritual/reading", label: "Reading" },
         { key: "crystal", href: "/spiritual/library/crystal", label: "Crystals" },
         { key: "herb", href: "/spiritual/library/herb", label: "Herbs" },
         { key: "tool", href: "/spiritual/library/tool", label: "Tools" },

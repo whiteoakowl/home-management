@@ -1,23 +1,54 @@
 import { pool } from "@/db";
-import { databaseUrl } from "@/db/url";
+import { databaseUrl, runtimeDatabaseUrl } from "@/db/url";
 import { explainDbError } from "@/lib/health";
+import { readSessionUser } from "@/lib/auth/session";
+import { isPlatformAdmin } from "@/lib/billing";
 import { storage, supabaseBaseUrl } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
+
+const json = (body: unknown, status: number) => new Response(JSON.stringify(body, null, 2), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+
+/**
+ * Who sees the full report: platform admins (signed in), anyone holding
+ * HEALTH_CHECK_KEY (?key=…), and anyone while the site is still being set up
+ * (no database or no accounts yet). Everyone else just gets ok / not ok, so
+ * the public can't read infrastructure details or account numbers.
+ */
+export async function GET(req: Request) {
+  const key = process.env.HEALTH_CHECK_KEY;
+  if (!databaseUrl() || (key && new URL(req.url).searchParams.get("key") === key)) return fullReport();
+  try {
+    const user = await readSessionUser();
+    if (user && isPlatformAdmin(user.email)) return fullReport();
+    const client = await pool.connect();
+    try {
+      const r = await client.query<{ n: number }>("select count(*)::int as n from users");
+      if (!r.rows[0]?.n) return fullReport();
+    } finally {
+      client.release();
+    }
+    return json({ ok: true }, 200);
+  } catch {
+    // Not set up yet (no tables) or unreachable: the full report explains what to fix.
+    return fullReport();
+  }
+}
 
 /**
  * Setup check: is the database configured, reachable and set up? Safe to share:
  * shows no passwords, hostnames or family data, just yes/no answers and hints.
  * Open https://<your-site>/api/health
  */
-export async function GET() {
+async function fullReport(): Promise<Response> {
   const url = databaseUrl();
   const via = process.env.DATABASE_URL ? "DATABASE_URL" : process.env.NETLIFY_DB_URL ? "NETLIFY_DB_URL" : process.env.NETLIFY_DATABASE_URL ? "NETLIFY_DATABASE_URL" : null;
   let kind = "not set";
   if (url) {
     try {
-      const u = new URL(url);
-      kind = u.hostname.endsWith("pooler.supabase.com") ? `Supabase pooler (${u.port === "6543" ? "transaction mode" : "session mode"})` : u.hostname.endsWith("supabase.co") ? "Supabase direct connection" : u.hostname.includes("neon") ? "Neon" : "PostgreSQL";
+      const u = new URL(runtimeDatabaseUrl(url) ?? url);
+      const switched = runtimeDatabaseUrl(url) !== url;
+      kind = u.hostname.endsWith("pooler.supabase.com") ? `Supabase pooler (${u.port === "6543" ? `transaction mode${switched ? ", switched automatically from session mode" : ""}` : "session mode"})` : u.hostname.endsWith("supabase.co") ? "Supabase direct connection" : u.hostname.includes("neon") ? "Neon" : "PostgreSQL";
     } catch {
       kind = "unreadable connection string";
     }

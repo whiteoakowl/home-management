@@ -1,11 +1,15 @@
 import type { Viewer } from "@/lib/dal";
+import { FAITH_META, faithHref, faithPathsOf } from "@/lib/faith-config";
 import { MODULE_META, NAV_GROUPS } from "@/lib/modules";
+import { isPremiumModule } from "@/lib/plan-tiers";
 
 export type NavItem = {
   href: string;
   label: string;
   icon: string;
   children?: { href: string; label: string }[];
+  /** Premium section on the Free plan (view-only): shows a small lock. */
+  locked?: boolean;
 };
 
 /** Submenus for the larger areas (shown under the active item in the sidebar). */
@@ -29,27 +33,11 @@ export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
     { href: "/pets/care", label: "Care schedule" },
     { href: "/pets/memories", label: "Memories" },
   ],
-  "/spiritual": [
-    { href: "/spiritual", label: "Dashboard" },
-    { href: "/spiritual/moon", label: "Moon phases" },
-    { href: "/spiritual/wheel", label: "Wheel of the Year" },
-    { href: "/spiritual/celebrations", label: "Celebrations" },
-    { href: "/spiritual/library/spell", label: "Spells" },
-    { href: "/spiritual/library/ritual", label: "Rituals" },
-    { href: "/spiritual/grimoire", label: "Grimoire" },
-    { href: "/spiritual/library/crystal", label: "Crystals" },
-    { href: "/spiritual/library/herb", label: "Herbs" },
-    { href: "/spiritual/library/tool", label: "Tools" },
-    { href: "/spiritual/library/wellness", label: "Spiritual wellness" },
-    { href: "/spiritual/supplies", label: "Supplies" },
-  ],
   "/library": [
     { href: "/library", label: "Dashboard" },
     { href: "/library/books", label: "All books" },
-    { href: "/library/books?status=reading", label: "Currently reading" },
+    { href: "/library/reading", label: "Reading log" },
     { href: "/library/categories", label: "Categories" },
-    { href: "/library/scan", label: "Scan barcode" },
-    { href: "/library/add", label: "Add a book" },
   ],
   "/maintenance": [
     { href: "/maintenance", label: "Dashboard" },
@@ -86,6 +74,8 @@ export function buildNav(viewer: Viewer): NavSection[] {
           m.group === group &&
           m.inNav &&
           (viewer.can(m.id) ||
+            // Important Info: every family member can open it; each entry decides who sees it.
+            (m.id === "info" && viewer.family.enabledModules.includes("info")) ||
             (FOOD_MODULES.includes(m.id) && viewer.member.privateFood) ||
             (m.id === "budget" && viewer.member.privateFinance) ||
             (m.id === "projects" &&
@@ -95,7 +85,8 @@ export function buildNav(viewer: Viewer): NavSection[] {
               viewer.member.privateVehicles &&
               !viewer.isParent)),
       )
-      .map((m) =>
+      .map((m) => ({ m, locked: !viewer.premium && isPremiumModule(m.id) }))
+      .map(({ m, locked }) => ({ locked, ...(
         // Members never see the family budget; with a private money space they get "My Budget".
         m.id === "budget" && !viewer.can("budget")
           ? { href: "/budget?space=mine", label: "My Budget", icon: m.icon }
@@ -117,14 +108,21 @@ export function buildNav(viewer: Viewer): NavSection[] {
                       m.label),
                   icon: m.icon,
                   children: SUBMENUS[m.href],
-                },
-      ),
+                }) })),
   }));
   sections[0]!.items.unshift({
     href: "/",
     label: "Home",
     icon: "LayoutDashboard",
   });
+  // Grocery Shopping sits right under Calendar.
+  const today = sections[0]!.items;
+  const shopAt = today.findIndex((i) => i.href.startsWith("/shopping"));
+  const calAt = today.findIndex((i) => i.href === "/calendar");
+  if (shopAt > -1) {
+    const [shop] = today.splice(shopAt, 1);
+    today.splice(calAt > -1 ? calAt + 1 : 1, 0, shop!);
+  }
   // Cleaning & Chores: the chore board's Tasks and Rewards get their own menu entries.
   const chores = sections.find((s) => s.group === "Cleaning & Chores");
   if (chores && viewer.can("chores"))
@@ -149,30 +147,48 @@ export function buildNav(viewer: Viewer): NavSection[] {
       ],
     },
     { href: "/health/food", label: "Food Journal", icon: "Utensils" },
-    // Each family member's own Important Info; parents share the family's instead.
-    ...(!viewer.isParent && viewer.member.privateInfo
-      ? [
-          {
-            href: "/house/info?space=mine",
-            label: "My Important Info",
-            icon: "KeyRound",
-          },
-        ]
-      : []),
     ...(hidden.includes("wellness")
       ? []
       : [{ href: "/wellness", label: "Mental Wellness", icon: "Smile" }]),
   ];
   if (personal) personal.items.unshift(...mine);
+  // Spiritual: one entry per path the member chose (none = hidden from their menu).
+  const paths = faithPathsOf(viewer.member, viewer.family);
+  for (const sec of sections) {
+    const at = sec.items.findIndex((i) => i.href === "/spiritual");
+    if (at < 0) continue;
+    if (!paths.length) sec.items.splice(at, 1);
+    else sec.items[at] = { ...sec.items[at]!, children: paths.length > 1 ? paths.map((f) => ({ href: faithHref(f), label: FAITH_META[f].tab })) : undefined };
+  }
   sections[1]!.items.unshift({
     href: "/family",
     label: "Family",
     icon: "Users",
   });
+  // House comes first under Household, and its parts (maintenance, projects, pool,
+  // Important Info, documents) live under it rather than as separate menu items.
+  const household = sections.find((s) => s.group === "Household");
+  if (household) {
+    const path = (h: string) => h.split("?")[0]!;
+    const PARTS = ["/maintenance", "/maintenance/projects", "/pool", "/house/info"];
+    const parts = PARTS.map((p) => household.items.find((i) => path(i.href) === p)).filter(Boolean) as NavItem[];
+    const house = household.items.find((i) => i.href === "/house");
+    household.items = household.items.filter((i) => i !== house && !parts.includes(i));
+    const maintenance = parts.find((i) => i.href === "/maintenance");
+    const children = [
+      ...(house ? [{ href: "/house", label: "Overview" }] : []),
+      ...parts.map((i) => ({ href: i.href, label: i.label })),
+      ...(maintenance ? [{ href: "/maintenance/documents", label: "Documents" }] : []),
+    ];
+    if (children.length)
+      household.items.unshift({ href: house?.href ?? children[0]!.href, label: "House", icon: "House", locked: house?.locked, children: children.length > 1 ? children : undefined });
+  }
   if (viewer.isParent)
     sections.push({
       group: "Admin",
-      items: [{ href: "/settings", label: "Settings", icon: "Settings" }],
+      items: [{ href: "/settings", label: "Account settings", icon: "Settings" }],
     });
+  // Everyone can reach the Help Center.
+  sections.push({ group: "Help", items: [{ href: "/help", label: "Help & Support", icon: "LifeBuoy" }] });
   return sections.filter((s) => s.items.length > 0);
 }

@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Optimistic check only: the real authorization happens in src/lib/dal.ts.
-const PUBLIC_PATHS = ["/login", "/signup"];
+const PUBLIC_PATHS = ["/login", "/signup", "/welcome", "/features", "/pricing", "/reviews", "/contact", "/privacy-policy", "/terms", "/forgot-password", "/reset-password", "/verify-email"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = request.cookies.has("hearth_session");
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+  // Visitors who aren't signed in see the public website's home page at "/".
+  if (!hasSession && pathname === "/") return NextResponse.rewrite(new URL("/welcome", request.url));
 
   if (!hasSession && !isPublic) {
     const url = new URL("/login", request.url);

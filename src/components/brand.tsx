@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Vanderbilt Family mark: a house with a leaf growing from the hearth. */
+/** App mark: a house with a leaf growing from the hearth. */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 40 40" className={cn("size-9", className)} aria-hidden>
@@ -13,13 +13,17 @@ export function BrandMark({ className }: { className?: string }) {
   );
 }
 
-export function Brand({ className, compact }: { className?: string; compact?: boolean }) {
+/**
+ * Logo + name. Public screens show the product name; inside the app the
+ * sidebar shows the family's own name ("Vanderbilt" / "FAMILY").
+ */
+export function Brand({ className, compact, title = "Family Bubble", subtitle }: { className?: string; compact?: boolean; title?: string; subtitle?: string }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
       <BrandMark />
-      <span className="flex flex-col leading-none">
-        <span className="font-display text-[20px] font-semibold tracking-tight text-ink">Vanderbilt</span>
-        {!compact && <span className="mt-0.5 text-[11px] font-medium tracking-[0.18em] text-muted uppercase">Family</span>}
+      <span className="flex min-w-0 flex-col leading-none">
+        <span className="truncate font-display text-[20px] font-semibold tracking-tight text-ink">{title}</span>
+        {!compact && subtitle && <span className="mt-0.5 text-[11px] font-medium tracking-[0.18em] text-muted uppercase">{subtitle}</span>}
       </span>
     </span>
   );

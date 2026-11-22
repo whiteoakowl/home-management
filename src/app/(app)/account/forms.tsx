@@ -85,8 +85,20 @@ export function MemberEmailForm({ memberId, name, email }: { memberId: string; n
 }
 
 /** Pick an accent colour for my own app. */
-export function AppThemeForm({ current }: { current: string | null }) {
-  const [state, action] = useActionState(saveAppTheme, undefined);
+export function AppThemeForm({
+  current,
+  formAction = saveAppTheme,
+  defaultLabel = "Family default",
+  defaultSwatch = "#6a2d5e",
+  note = "Changes buttons, highlights and tabs in your app only. Your member color on the calendar and avatars (set by parents) stays the same.",
+}: {
+  current: string | null;
+  formAction?: typeof saveAppTheme;
+  defaultLabel?: string;
+  defaultSwatch?: string;
+  note?: string;
+}) {
+  const [state, action] = useActionState(formAction, undefined);
   const [value, setValue] = useState(current ?? "");
   return (
     <form action={action} className="flex flex-col gap-4">
@@ -94,7 +106,7 @@ export function AppThemeForm({ current }: { current: string | null }) {
       <input type="hidden" name="theme" value={value} />
       <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="App color theme">
         <button type="button" role="radio" aria-checked={value === ""} onClick={() => setValue("")} className={cn("inline-flex h-11 items-center gap-2 rounded-full border px-3 text-sm", value === "" ? "border-ink ring-2 ring-ink" : "border-line-strong")}>
-          <span className="size-6 rounded-full bg-[#6a2d5e]" aria-hidden /> Family default
+          <span className="size-6 rounded-full" style={{ backgroundColor: defaultSwatch }} aria-hidden /> {defaultLabel}
         </button>
         {MEMBER_COLOR_KEYS.map((key) => (
           <button
@@ -112,10 +124,11 @@ export function AppThemeForm({ current }: { current: string | null }) {
         <CustomColorSwatch value={value} onChange={setValue} size="lg" />
       </div>
       <ThemePreview value={value} />
-      <p className="text-sm text-muted">Changes buttons, highlights and tabs in your app only. Your member color on the calendar and avatars (set by parents) stays the same.</p>
+      <p className="text-sm text-muted">{note}</p>
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Saving…">Save colors</SubmitButton>
       </div>
     </form>
   );
 }
+

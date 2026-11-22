@@ -39,14 +39,16 @@ export async function addAlbumPhotos(_: ActionState, fd: FormData): Promise<Acti
     const id = String(fd.get("entityId") ?? "");
     await assertCanEdit(viewer, kind, id);
     const ids: string[] = [];
-    for (const file of fd.getAll("photos").slice(0, 12)) {
+    const chosen = fd.getAll("photos").filter((v) => v instanceof File && v.size > 0).slice(0, 12);
+    for (const file of chosen) {
       const fileId = await saveUpload(viewer, file);
       if (fileId) ids.push(fileId);
     }
     if (!ids.length) return fail("Choose at least one photo.", "photos");
     const caption = f.str(fd, "caption")?.slice(0, 200) ?? null;
     await db.insert(entityPhotos).values(ids.map((fileId) => ({ familyId: viewer.family.id, entityType: kind, entityId: id, fileId, caption, createdByMemberId: viewer.member.id })));
-    revalidatePath(PATHS[kind](id));
+    // No revalidatePath here: rebuilding a busy page (like a member's dashboard) inside this
+    // upload request can run past the host's time limit. The form refreshes the page itself.
     return ok(`${ids.length} photo${ids.length === 1 ? "" : "s"} added.`);
   });
 }
@@ -75,7 +77,8 @@ export async function saveProfilePhoto(_: ActionState, fd: FormData): Promise<Ac
     if (!fileId && !remove) return fail("Choose a photo.", "image");
     await db.update(familyMembers).set({ avatarFileId: fileId }).where(eq(familyMembers.id, m.id));
     if (m.avatarFileId) await deleteFamilyFile(viewer.family.id, m.avatarFileId);
-    revalidatePath("/", "layout");
+    // No revalidatePath here: rebuilding a busy page (like a member's dashboard) inside this
+    // upload request can run past the host's time limit. The form refreshes the page itself.
     return ok(fileId ? "Profile photo updated." : "Profile photo removed.");
   });
 }
@@ -97,7 +100,8 @@ export async function saveMainPhoto(_: ActionState, fd: FormData): Promise<Actio
     if (!fileId && !remove) return fail("Choose a photo.", "image");
     await db.update(table).set({ imageFileId: fileId }).where(eq(table.id, row.id));
     if (row.old) await deleteFamilyFile(viewer.family.id, row.old);
-    revalidatePath(kind === "pet" ? "/pets" : "/farm", "layout");
+    // No revalidatePath here: rebuilding a busy page (like a member's dashboard) inside this
+    // upload request can run past the host's time limit. The form refreshes the page itself.
     return ok(fileId ? "Photo updated." : "Photo removed.");
   });
 }

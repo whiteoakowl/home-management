@@ -4,11 +4,13 @@ import { db } from "@/db";
 import { categories, homeProjects, projectStages, rooms } from "@/db/schema";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { listFamilyMembers, type Viewer } from "./dal";
+import { withViewerNames } from "./names";
 
 export type CategoryDomain = (typeof categories.$inferSelect)["domain"];
 
 export async function memberOptions(viewer: Viewer) {
-  return (await listFamilyMembers(viewer.family.id)).map((m) => ({ id: m.id, displayName: m.displayName, color: m.color, role: m.role }));
+  // Names as this viewer sees them (kids see a parent's chosen name, e.g. "Dad").
+  return withViewerNames(viewer, await listFamilyMembers(viewer.family.id)).map((m) => ({ id: m.id, displayName: m.displayName, color: m.color, role: m.role }));
 }
 
 /** owner: null = the family's categories; a member id = their private money space's. */

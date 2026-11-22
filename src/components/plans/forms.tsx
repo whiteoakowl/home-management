@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BedDouble, Car, MapPin, NotebookPen, Pencil, Plane } from "lucide-react";
+import { BedDouble, Car, MapPin, NotebookPen, Pencil, Plane, Ticket } from "lucide-react";
 import { savePlan, savePlanItem } from "@/app/actions/trips";
 import { FormModal } from "@/components/forms/action-form";
 import { DateField, FormRow, ImageField, MemberChips, SelectField, TextAreaField, TextField, VisibilityField, type MemberOption } from "@/components/forms/fields";
@@ -85,6 +85,7 @@ const KIND_UI = {
   flight: { label: "Flight", icon: Plane, title: "Add a flight" },
   hotel: { label: "Hotel", icon: BedDouble, title: "Add a place to stay" },
   vehicle: { label: "Vehicle", icon: Car, title: "Add a car or transport" },
+  reservation: { label: "Reservation", icon: Ticket, title: "Add a reservation" },
   note: { label: "Note", icon: NotebookPen, title: "Add a note" },
 } as const;
 type ItemKind = keyof typeof KIND_UI;
@@ -125,7 +126,13 @@ export function PlanItemModal({ planId, item, defaultKind = "itinerary", default
           <TextField name="title" label="Name (optional)" defaultValue={item?.title ?? ""} placeholder={kind === "hotel" ? "Hotel" : "Rental car"} />
         </>
       ) : (
-        <TextField name="title" label={kind === "note" ? "Title" : "What"} required defaultValue={item?.title ?? ""} placeholder={kind === "note" ? "Packing list" : "Magic Kingdom, dinner reservation, beach day…"} />
+        <TextField
+          name="title"
+          label={kind === "note" ? "Title" : kind === "reservation" ? "Reservation" : "What"}
+          required
+          defaultValue={item?.title ?? ""}
+          placeholder={kind === "note" ? "Packing list" : kind === "reservation" ? "Dinner at Be Our Guest, park tickets, character breakfast…" : "Magic Kingdom, dinner reservation, beach day…"}
+        />
       )}
       {kind !== "note" && (
         <>

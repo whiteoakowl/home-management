@@ -2,10 +2,12 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { and, eq } from "drizzle-orm";
+import exifReader from "exif-reader";
 import sharp from "sharp";
 import { db } from "@/db";
 import { files } from "@/db/schema";
 import type { Viewer } from "./dal";
+import { familyStorageBytes, familyStorageLimit } from "./housekeeping";
 import { storage } from "./storage";
 
 // Uploads are stored via src/lib/storage.ts (Supabase Storage, Netlify Blobs or local disk).
@@ -42,6 +44,10 @@ export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null
   if (!isImage && !(opts.allowDocs && DOC_TYPES.includes(file.type))) {
     throw new UploadError(opts.allowDocs ? "Upload an image or PDF." : "Upload a JPG, PNG, WebP or HEIC image.");
   }
+  // Fair-use allowance per family (FAMILY_STORAGE_GB, default 10 GB).
+  if ((await familyStorageBytes(viewer.family.id)) + file.size > familyStorageLimit()) {
+    throw new UploadError(`Your family has used its ${Math.round(familyStorageLimit() / 1024 ** 3)} GB of photo and file storage. Delete some old photos or files to make room, or contact us for more.`);
+  }
   const id = randomUUID();
   const base = `${viewer.family.id}/${id}`;
   const input = Buffer.from(await file.arrayBuffer());
@@ -63,8 +69,14 @@ export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null
 
   let main: { data: Buffer; info: { width: number; height: number } };
   let thumb: Buffer;
+  let takenAt: Date | null = null;
   try {
     const img = sharp(input, { failOn: "none" }).rotate();
+    // When the photo was taken (camera data), for the timeline. The saved copy keeps no camera data or location.
+    takenAt = await img
+      .metadata()
+      .then((m) => (m.exif ? exifDate(m.exif) : null))
+      .catch(() => null);
     main = await img.clone().resize(2048, 2048, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82 }).toBuffer({ resolveWithObject: true });
     thumb = await img.clone().resize(320, 320, { fit: "cover" }).webp({ quality: 75 }).toBuffer();
   } catch {
@@ -83,9 +95,21 @@ export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null
     sizeBytes: main.data.length,
     width: main.info.width,
     height: main.info.height,
+    takenAt,
   });
   return id;
 }
+
+function exifDate(buf: Buffer): Date | null {
+  try {
+    const e = exifReader(buf) as { Photo?: { DateTimeOriginal?: Date }; Image?: { DateTime?: Date } };
+    const d = e.Photo?.DateTimeOriginal ?? e.Image?.DateTime ?? null;
+    return d instanceof Date && !Number.isNaN(+d) && d.getFullYear() > 1990 && d <= new Date() ? d : null;
+  } catch {
+    return null;
+  }
+}
+
 
 export async function readFamilyFile(familyId: string, id: string, thumb: boolean) {
   const [row] = await db.select().from(files).where(and(eq(files.id, id), eq(files.familyId, familyId)));
@@ -96,6 +120,15 @@ export async function readFamilyFile(familyId: string, id: string, thumb: boolea
   } catch {
     return null;
   }
+}
+
+/** A short-lived direct link for files over 4 MB, when the storage service supports it. */
+export async function bigFileLink(familyId: string, id: string) {
+  const s = storage();
+  if (!s.signedUrl) return null;
+  const [row] = await db.select({ key: files.storageKey, size: files.sizeBytes, mime: files.mimeType }).from(files).where(and(eq(files.id, id), eq(files.familyId, familyId)));
+  if (!row || row.size <= 4 * 1024 * 1024) return null;
+  return s.signedUrl(row.key, 300).catch(() => null);
 }
 
 export async function deleteFamilyFile(familyId: string, id: string | null | undefined) {

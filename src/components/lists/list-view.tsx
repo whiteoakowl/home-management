@@ -38,6 +38,8 @@ export type ItemView = {
   rule: { freq: string; interval: number; byWeekday: number[] | null; byMonthDay: number[] | null; byMonth: number[] | null; until: string | null } | null;
   /** Personal shopping item: who it's for (only parents and that person see it). */
   personalFor?: { id: string; name: string } | null;
+  /** Parents: who submitted the item, when it wasn't them. */
+  addedBy?: string | null;
   /** The viewer added it or it's for them. */
   mine?: boolean;
 };
@@ -149,9 +151,14 @@ function Row({
           )}
           {item.text}
         </span>
-        {item.personalFor && (
-          <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full bg-olive-50 px-2 py-0.5 text-xs font-medium text-olive-700">
-            <Lock className="size-3" aria-hidden /> For {item.personalFor.name}
+        {(item.personalFor || item.addedBy) && (
+          <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            {item.personalFor && (
+              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-olive-50 px-2 py-0.5 text-xs font-medium text-olive-700">
+                <Lock className="size-3" aria-hidden /> For {item.personalFor.name}
+              </span>
+            )}
+            {item.addedBy && <span className="text-xs text-muted">Added by {item.addedBy}</span>}
           </span>
         )}
         {(item.notes || item.dueDate || SOURCE_LABEL[item.source] || item.store || item.recurring) && (

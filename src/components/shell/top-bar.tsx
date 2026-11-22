@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, KeyRound, LogOut, Search, Settings, UserRound } from "lucide-react";
+import { Bell, KeyRound, LogOut, MessageSquareHeart, Search, Settings, ShieldCheck, UserRound, FileText, LifeBuoy } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import { BrandMark } from "@/components/brand";
 import { Avatar } from "@/components/ui/display";
@@ -15,10 +15,12 @@ export function TopBar({
   isParent,
   unread,
   editable,
+  platformAdmin = false,
 }: {
   me: M;
   members: M[];
   isParent: boolean;
+  platformAdmin?: boolean;
   unread: number;
   editable: Module[];
 }) {
@@ -77,7 +79,11 @@ export function TopBar({
           </div>
           <MenuItem href={`/family/${me.id}`} icon={<UserRound className="size-4" />}>My home</MenuItem>
           <MenuItem href="/account" icon={<KeyRound className="size-4" />}>My settings</MenuItem>
-          {isParent && <MenuItem href="/settings" icon={<Settings className="size-4" />}>Settings</MenuItem>}
+          {isParent && <MenuItem href="/settings" icon={<Settings className="size-4" />}>Account settings</MenuItem>}
+          <MenuItem href="/help" icon={<LifeBuoy className="size-4" />}>Help & Support</MenuItem>
+          <MenuItem href="/feedback" icon={<MessageSquareHeart className="size-4" />}>Feedback & feature ideas</MenuItem>
+          <MenuItem href="/terms" icon={<FileText className="size-4" />}>Terms & privacy</MenuItem>
+          {platformAdmin && <MenuItem href="/admin" icon={<ShieldCheck className="size-4" />}>Admin</MenuItem>}
           <form action={logout}>
             <MenuItem as="button" icon={<LogOut className="size-4" />}>Sign out</MenuItem>
           </form>

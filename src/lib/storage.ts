@@ -18,6 +18,10 @@ export interface StorageDriver {
   put(key: string, data: Buffer, contentType: string): Promise<void>;
   get(key: string): Promise<Buffer>;
   remove(key: string): Promise<void>;
+  /** Remove many objects in one request (Supabase). */
+  removeMany?(keys: string[]): Promise<void>;
+  /** A short-lived direct download link (Supabase), so big files skip the app server's size limit. */
+  signedUrl?(key: string, seconds: number): Promise<string | null>;
 }
 
 // ─── Supabase Storage (REST API) ────────────────────────────────────────────
@@ -90,6 +94,18 @@ export function supabaseDriver(opts: { url: string; key: string; bucket?: string
     },
     async remove(key) {
       await f(`${base}/object/${encodeURIComponent(bucket)}`, { method: "DELETE", headers: headers({ "Content-Type": "application/json" }), body: JSON.stringify({ prefixes: [key] }) }).catch(() => undefined);
+    },
+    async removeMany(keys) {
+      for (let i = 0; i < keys.length; i += 1000) {
+        const res = await f(`${base}/object/${encodeURIComponent(bucket)}`, { method: "DELETE", headers: headers({ "Content-Type": "application/json" }), body: JSON.stringify({ prefixes: keys.slice(i, i + 1000) }) });
+        if (!res.ok) throw new Error(`Supabase Storage delete failed (${res.status})`);
+      }
+    },
+    async signedUrl(key, seconds) {
+      const res = await f(`${base}/object/sign/${objectPath(key)}`, { method: "POST", headers: headers({ "Content-Type": "application/json" }), body: JSON.stringify({ expiresIn: seconds }) });
+      if (!res.ok) return null;
+      const body = (await res.json().catch(() => null)) as { signedURL?: string } | null;
+      return body?.signedURL ? `${base}${body.signedURL.startsWith("/") ? "" : "/"}${body.signedURL}` : null;
     },
   };
 }

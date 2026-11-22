@@ -43,7 +43,7 @@ export default async function MaintenanceDashboard() {
   ];
   return (
     <>
-      <PageHeader eyebrow="Household" title="Home Maintenance & Remodeling" description="Keep the house in good repair: schedules, repairs, projects and the paperwork that goes with them." />
+      <PageHeader help="home-maintenance" eyebrow="Household" title="Home Maintenance & Remodeling" description="Keep the house in good repair: schedules, repairs, projects and the paperwork that goes with them." />
       <MaintenanceTabs active="dashboard" />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {tiles.map((t) => (

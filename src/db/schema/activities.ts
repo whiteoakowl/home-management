@@ -1,4 +1,4 @@
-import { boolean, date, index, integer, pgTable, smallint, text, time, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, pgTable, smallint, text, time, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { families, familyMembers } from "./core";
 
@@ -181,4 +181,109 @@ export const workShifts = pgTable(
     ...timestamps,
   },
   (t) => [index("work_shifts_family_date_idx").on(t.familyId, t.date)],
+);
+
+// ─── Sports ───────────────────────────────────────────────────────────────────
+
+/** A family member's team for a season (several per athlete). */
+export const sportTeams = pgTable(
+  "sport_teams",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    /** Key from src/lib/sports.ts SPORTS ("soccer", "basketball", … "other"). */
+    sport: text("sport").notNull(),
+    sportName: text("sport_name"),
+    name: text("name").notNull(),
+    season: text("season"),
+    league: text("league"),
+    position: text("position"),
+    jerseyNumber: text("jersey_number"),
+    coach: text("coach"),
+    coachContact: text("coach_contact"),
+    /** Extra stat names the family tracks for this team. */
+    customStats: text("custom_stats").array().notNull().default([]),
+    active: boolean("active").notNull().default(true),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [index("sport_teams_member_idx").on(t.memberId)],
+);
+
+/** Weekly practice (repeats on `weekday` between startsOn and endsOn). */
+export const sportPractices = pgTable(
+  "sport_practices",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => sportTeams.id, { onDelete: "cascade" }),
+    weekday: smallint("weekday").notNull(),
+    startTime: time("start_time").notNull(),
+    endTime: time("end_time"),
+    location: text("location"),
+    startsOn: date("starts_on"),
+    endsOn: date("ends_on"),
+    ...timestamps,
+  },
+  (t) => [index("sport_practices_family_idx").on(t.familyId)],
+);
+
+/** A game, match, meet, tournament or tryout, with the result once played. */
+export const sportGames = pgTable(
+  "sport_games",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => sportTeams.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"game" | "tournament" | "meet" | "scrimmage" | "tryout" | "other">().notNull().default("game"),
+    opponent: text("opponent"),
+    date: date("date").notNull(),
+    arriveTime: time("arrive_time"),
+    startTime: time("start_time"),
+    location: text("location"),
+    homeAway: text("home_away").$type<"home" | "away" | "neutral">(),
+    ourScore: integer("our_score"),
+    theirScore: integer("their_score"),
+    /** win | loss | tie (when there's no score, e.g. a meet) */
+    outcome: text("outcome"),
+    /** Uniform, snacks duty, what to bring. */
+    details: text("details"),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [index("sport_games_family_idx").on(t.familyId, t.date)],
+);
+
+/** One athlete's stat line for one game ({ pts: 12, reb: 4 }). */
+export const sportStatLines = pgTable(
+  "sport_stat_lines",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    gameId: uuid("game_id")
+      .notNull()
+      .references(() => sportGames.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    stats: jsonb("stats").$type<Record<string, number>>().notNull().default({}),
+    note: text("note"),
+    ...timestamps,
+  },
+  (t) => [index("sport_stats_game_idx").on(t.gameId)],
 );

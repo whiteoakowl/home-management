@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { planItems, plans } from "@/db/schema";
+import { photoAlbums, planExpenses, planItems, plans } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, canChangeItem, requireModule, type Viewer } from "@/lib/dal";
+import { AuthorizationError, canChangeItem, requireModule, requirePremium, type Viewer } from "@/lib/dal";
 import { listGoals } from "@/lib/goals";
 import { familyMemberIds, f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 import { getPlan } from "@/lib/trips";
@@ -24,7 +24,7 @@ function revalidatePlans(id?: string) {
 }
 
 const KINDS = ["vacation", "trip", "event", "other"] as const;
-const ITEM_KINDS = ["itinerary", "flight", "hotel", "vehicle", "note"] as const;
+const ITEM_KINDS = ["itinerary", "flight", "hotel", "vehicle", "reservation", "note"] as const;
 
 async function changeablePlan(viewer: Viewer, id: string) {
   const plan = await getPlan(viewer, id);
@@ -149,4 +149,61 @@ export async function deletePlanItem(fd: FormData) {
   const p = await changeablePlan(viewer, item.planId);
   await db.delete(planItems).where(eq(planItems.id, item.id));
   revalidatePlans(p.id);
+}
+
+// ─── Trip expenses & photos ──────────────────────────────────────────────────
+
+const EXPENSE_CATEGORIES = ["lodging", "food", "tickets", "travel", "shopping", "other"] as const;
+
+export async function savePlanExpense(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("plans", "use");
+    const plan = await changeablePlan(viewer, f.str(fd, "planId") ?? "");
+    const title = f.str(fd, "title");
+    if (!title) return fail("What was it for?", "title");
+    const amount = f.cents(fd, "amount");
+    if (amount === null || amount < 0 || amount > 100_000_000) return fail("Enter the amount.", "amount");
+    const cat = f.str(fd, "category");
+    const payer = f.str(fd, "paidBy");
+    const values = {
+      title: title.slice(0, 120),
+      amountCents: amount,
+      date: f.date(fd, "date"),
+      category: EXPENSE_CATEGORIES.find((c) => c === cat) ?? "other",
+      paidByMemberId: payer ? ((await familyMemberIds(viewer.family.id, [payer]))[0] ?? null) : null,
+      notes: f.str(fd, "notes")?.slice(0, 500) ?? null,
+    };
+    const id = f.str(fd, "id");
+    if (id) await db.update(planExpenses).set(values).where(and(eq(planExpenses.id, id), eq(planExpenses.planId, plan.id)));
+    else await db.insert(planExpenses).values({ ...values, planId: plan.id, familyId: viewer.family.id });
+    revalidatePlans(plan.id);
+    return ok("Saved.");
+  });
+}
+
+export async function deletePlanExpense(fd: FormData) {
+  const viewer = await requireModule("plans", "use");
+  const id = f.str(fd, "id") ?? "";
+  const [x] = await db.select().from(planExpenses).where(and(eq(planExpenses.id, id), eq(planExpenses.familyId, viewer.family.id)));
+  if (!x) return;
+  await changeablePlan(viewer, x.planId);
+  await db.delete(planExpenses).where(eq(planExpenses.id, x.id));
+  revalidatePlans(x.planId);
+}
+
+/** Make (or open) the trip's photo album. */
+export async function openTripAlbum(fd: FormData) {
+  const viewer = await requireModule("plans", "view");
+  requirePremium(viewer);
+  const plan = await getPlan(viewer, f.str(fd, "planId") ?? "");
+  if (!plan) throw new AuthorizationError("Plan not found.");
+  const [existing] = await db.select({ id: photoAlbums.id }).from(photoAlbums).where(and(eq(photoAlbums.familyId, viewer.family.id), eq(photoAlbums.planId, plan.p.id)));
+  if (existing) redirect(`/photos/${existing.id}`);
+  if (!viewer.can("photos", "use")) throw new AuthorizationError("You can't make photo albums.");
+  const [a] = await db
+    .insert(photoAlbums)
+    .values({ familyId: viewer.family.id, title: plan.p.title, eventDate: plan.p.startDate, planId: plan.p.id, private: plan.p.visibility === "private", createdByMemberId: viewer.member.id, description: plan.p.destination })
+    .returning({ id: photoAlbums.id });
+  revalidatePlans(plan.p.id);
+  redirect(`/photos/${a!.id}`);
 }

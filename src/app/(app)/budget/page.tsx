@@ -65,7 +65,7 @@ export default async function BudgetPage({ searchParams }: PageProps<"/budget">)
 
   return (
     <>
-      <PageHeader
+      <PageHeader help="budget"
         eyebrow="Money"
         title={fin.title}
         description={fin.isPrivate ? "Your own money: what comes in, what you spend and what you save. Only you can see this, not even parents." : "Income, bills, expenses and savings, month by month. Shared by parents."}

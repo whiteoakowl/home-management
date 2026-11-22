@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   createContext,
   startTransition,
@@ -135,6 +136,7 @@ export function FormModal({
   triggerContent,
   triggerClassName,
   triggerAriaLabel,
+  refreshOnSuccess = false,
 }: {
   title: string;
   description?: ReactNode;
@@ -153,7 +155,14 @@ export function FormModal({
   triggerIcon?: ReactNode;
   size?: "sm" | "md" | "lg";
   defaultOpen?: boolean;
+  /**
+   * After saving, close and then reload the page's data in a separate request. Use for
+   * uploads whose action skips revalidatePath, so a heavy page never has to be rebuilt
+   * inside the (time-limited) upload request.
+   */
+  refreshOnSuccess?: boolean;
 }) {
+  const router = useRouter();
   const triggerIcon =
     triggerIconProp ??
     (triggerLabel === "Edit" ? (
@@ -201,7 +210,10 @@ export function FormModal({
         <ActionForm
           key={key}
           action={action}
-          onSuccess={() => setOpen(false)}
+          onSuccess={() => {
+            setOpen(false);
+            if (refreshOnSuccess) router.refresh();
+          }}
           submitLabel={submitLabel}
           footer={
             <Button variant="ghost" onClick={() => setOpen(false)}>

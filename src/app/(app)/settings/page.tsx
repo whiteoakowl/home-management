@@ -2,17 +2,25 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
-import { Bell, ShieldCheck } from "lucide-react";
+import { Bell, CreditCard, ShieldCheck } from "lucide-react";
 import { db } from "@/db";
 import { categories } from "@/db/schema";
 import { Card, CardHeader } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/display";
-import { AUTOMATIONS } from "@/lib/automation";
-import { requireParent } from "@/lib/dal";
+import { PageHeader, ProgressBar } from "@/components/ui/display";
+import { familyStorageBytes, familyStorageLimit } from "@/lib/housekeeping";
+import { AUTOMATIONS, FREE_AUTOMATIONS } from "@/lib/automation";
+import { listFamilyMembers, requireParent } from "@/lib/dal";
 import { fileUrl } from "@/lib/files";
-import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, ModulesForm } from "./forms";
+import { AppThemeForm } from "../account/forms";
+import { saveFamilyTheme } from "@/app/actions/account";
+import { DataControls } from "@/components/settings/data-controls";
+import { DownloadCenter } from "@/components/settings/download-center";
+import { FAITHS, FAITH_META, familyFaiths, faithPathsOf } from "@/lib/faith-config";
+import { usage } from "@/lib/plan-limits";
+import { FREE_LIMITS } from "@/lib/plan-tiers";
+import { AutomationsForm, CategoryManager, FamilyDetailsForm, FamilyPhotoForm, FamilyFaithsForm, KidNamesForm, ModulesForm } from "./forms";
 
-export const metadata: Metadata = { title: "Settings" };
+export const metadata: Metadata = { title: "Account settings" };
 
 const DOMAINS: { key: string; label: string }[] = [
   { key: "calendar", label: "Calendar categories" },
@@ -26,15 +34,21 @@ const DOMAINS: { key: string; label: string }[] = [
   { key: "farm", label: "Farm categories" },
 ];
 
+const fmtSize = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : b >= 1024 ** 2 ? `${Math.round(b / 1024 ** 2)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+
 export default async function SettingsPage() {
   const viewer = await requireParent().catch(() => notFound());
   const f = viewer.family;
+  const membersUsed = viewer.premium ? 0 : await usage(f.id, "members");
+  const [everyone, storageUsed] = await Promise.all([listFamilyMembers(f.id), familyStorageBytes(f.id)]);
+  const storageLimit = familyStorageLimit();
+  const parents = everyone.filter((m) => m.role === "parent");
   const cats = await db.select().from(categories).where(and(eq(categories.familyId, f.id))).orderBy(asc(categories.sortOrder), asc(categories.name));
   const grouped = Map.groupBy(cats, (c) => c.domain);
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <PageHeader title="Settings" description={`Customize the ${f.name} Family.`} />
+      <PageHeader help="account-settings" title="Account settings" description={`Customize the ${f.name} Family.`} />
       <div className="grid gap-6 md:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader title="Family details" />
@@ -45,12 +59,19 @@ export default async function SettingsPage() {
           <FamilyPhotoForm currentUrl={fileUrl(f.imageFileId, true)} />
         </Card>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Link href="/family" className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-primary-300">
           <ShieldCheck className="size-5 text-primary-600" />
           <span>
             <span className="block font-semibold">Members & permissions</span>
             <span className="text-sm text-muted">Open a member, then “Profile & access”.</span>
+          </span>
+        </Link>
+        <Link href="/settings/billing" className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-primary-300">
+          <CreditCard className="size-5 text-primary-600" />
+          <span>
+            <span className="block font-semibold">Subscription</span>
+            <span className="text-sm text-muted">Your plan, card, receipts or cancel.</span>
           </span>
         </Link>
         <Link href="/notifications" className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4 hover:border-primary-300">
@@ -62,15 +83,79 @@ export default async function SettingsPage() {
         </Link>
       </div>
       <Card>
-        <CardHeader title="Areas" />
-        <p className="mb-2 text-[15px] text-muted">Turn off anything your family doesn&apos;t use. It disappears from navigation, the dashboard, search and Quick Add.</p>
-        <ModulesForm enabled={f.enabledModules} />
+        <CardHeader title="Sections" />
+        <p className="mb-2 text-[15px] text-muted">
+          {viewer.isOwner
+            ? "Turn off anything your family doesn't use (pool, farm, pets, dance, sports…). It disappears from the menu, the dashboard, search and Quick Add for everyone. Turn it back on anytime; nothing is deleted."
+            : "Only the account owner (the person who created the family) can turn sections on or off."}
+        </p>
+        <ModulesForm enabled={f.enabledModules} readOnly={!viewer.isOwner} />
+      </Card>
+      <Card>
+        <CardHeader title="What the kids call parents" />
+        <p className="mb-4 text-[15px] text-muted">
+          Kids (and other family members who aren&apos;t parents) see these names everywhere in the app: chores, calendar, chat and more. For example, Joe can show up as &ldquo;Dad&rdquo;. Parents still see real names. Leave a box empty to use the real name.
+        </p>
+        <KidNamesForm
+          parents={parents.map((p) => ({ id: p.id, name: p.displayName, kidName: p.kidName ?? "", color: p.color, editable: viewer.isOwner || p.id === viewer.member.id }))}
+        />
+      </Card>
+
+      {f.enabledModules.includes("witchcraft") && (
+        <Card id="faith" className="scroll-mt-24">
+          <CardHeader title="Religions & spiritual paths" />
+          <p className="mb-4 text-[15px] text-muted">
+            Check each religion your family uses. Each one becomes a tab in the Spiritual section, with its holidays, reading, devotions, prayer list and journal. Then choose which family members get each tab. Anyone with no religions doesn&apos;t see the Spiritual section.
+          </p>
+          <FamilyFaithsForm
+            options={FAITHS.map((k) => ({ key: k, label: FAITH_META[k].label, emoji: FAITH_META[k].emoji, blurb: FAITH_META[k].blurb }))}
+            enabled={familyFaiths(f)}
+            members={everyone.map((m) => ({ id: m.id, name: m.displayName, color: m.color, role: m.role }))}
+            access={Object.fromEntries(everyone.map((m) => [m.id, faithPathsOf(m, f)]))}
+          />
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader title="Family colors" />
+        <AppThemeForm
+          current={f.theme?.accent ?? null}
+          formAction={saveFamilyTheme}
+          defaultLabel="Standard"
+          note="Recolors buttons, highlights and tabs for the whole family. Anyone who picked their own colors in My settings keeps theirs."
+        />
       </Card>
       <Card>
         <CardHeader title="Automations" />
         <p className="mb-3 text-[15px] text-muted">Repetitive work happens automatically once a day. Switch off anything you&apos;d rather do by hand.</p>
-        <AutomationsForm automations={AUTOMATIONS.map((a) => ({ ...a }))} settings={f.settings ?? {}} />
+        {!viewer.premium && <p className="mb-3 rounded-xl bg-sunken px-3 py-2 text-sm text-ink-soft">On the Free plan, chore and event reminders, recurring chores and birthday reminders run. Automations for Premium sections (marked Premium) start again when you upgrade.</p>}
+        <AutomationsForm automations={AUTOMATIONS.map((a) => ({ ...a, label: viewer.premium || FREE_AUTOMATIONS.includes(a.key) ? a.label : `${a.label} (Premium)` }))} settings={f.settings ?? {}} />
       </Card>
+      <Card>
+        <CardHeader title="Photo & file storage" />
+        <ProgressBar value={storageUsed} max={storageLimit} label={`${fmtSize(storageUsed)} of ${fmtSize(storageLimit)} used`} tone={storageUsed / storageLimit > 0.9 ? "wine" : "primary"} />
+        <p className="mt-2 text-sm text-muted">Photos are shrunk automatically when uploaded, so most families never come close. Deleting photos and files frees up space.</p>
+        {!viewer.premium && (
+          <div className="mt-4 flex flex-col gap-2 border-t border-line pt-4 text-sm">
+            <p className="font-medium">Free plan limits</p>
+            <ProgressBar value={membersUsed} max={FREE_LIMITS.members} label={`${membersUsed} of ${FREE_LIMITS.members} family members`} tone={membersUsed >= FREE_LIMITS.members ? "wine" : "primary"} />
+            <p className="text-muted">Premium has no limits on members or lists.</p>
+          </div>
+        )}
+      </Card>
+
+      {viewer.isOwner && (
+        <Card>
+          <CardHeader title="Download your family's data" />
+          <p className="mb-4 text-[15px] text-muted">Keep your own copy of everything: all your photos, and all the information your family has saved. Other people&apos;s private items (private journals, health tracking) aren&apos;t included.</p>
+          <DownloadCenter familyName={f.name} />
+          <div className="mt-6 border-t border-line pt-5">
+            <p className="mb-3 text-sm text-muted">Done with the app? Delete the family account and all its information for good.</p>
+            <DataControls familyName={f.name} />
+          </div>
+        </Card>
+      )}
+
       <Card>
         <CardHeader title="Categories" />
         <p className="mb-4 text-[15px] text-muted">Customize the categories each area uses. Rooms are managed on the House page.</p>

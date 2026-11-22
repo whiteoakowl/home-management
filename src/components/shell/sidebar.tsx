@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Brand, BrandMark } from "@/components/brand";
+import { Lock } from "lucide-react";
 import { Icon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { InstallAppButton } from "@/components/pwa/install-app";
@@ -13,14 +14,14 @@ export function isActive(pathname: string, href: string) {
 }
 
 /** Desktop sidebar (lg+) and tablet icon rail (sm–lg). */
-export function Sidebar({ sections, familyName }: { sections: NavSection[]; familyName: string }) {
+export function Sidebar({ sections, familyName, badges = {} }: { sections: NavSection[]; familyName: string; badges?: Record<string, number> }) {
   const pathname = usePathname();
   return (
     <aside className="hidden shrink-0 border-r border-line bg-surface/70 sm:block sm:w-[76px] lg:w-64 print:hidden">
       <div className="sticky top-0 flex h-dvh flex-col">
       <div className="flex h-16 items-center px-4 lg:px-5">
         <Link href="/" aria-label={`${familyName} Family`} className="hidden lg:block">
-          <Brand />
+          <Brand title={familyName} subtitle="Family" />
         </Link>
         <Link href="/" aria-label="Home" className="mx-auto lg:hidden">
           <BrandMark />
@@ -32,7 +33,7 @@ export function Sidebar({ sections, familyName }: { sections: NavSection[]; fami
             <p className="mb-1.5 hidden px-3 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase lg:block">{s.group}</p>
             <ul className="flex flex-col gap-0.5">
               {s.items.map((item) => {
-                const active = isActive(pathname, item.href);
+                const active = isActive(pathname, item.href) || !!item.children?.some((c) => isActive(pathname, c.href.split("?")[0]!));
                 return (
                   <li key={item.href}>
                     <Link
@@ -44,13 +45,25 @@ export function Sidebar({ sections, familyName }: { sections: NavSection[]; fami
                         active ? "bg-primary-600 text-white shadow-sm" : "text-ink-soft hover:bg-primary-50 hover:text-primary-700",
                       )}
                     >
-                      <Icon name={item.icon} className="size-5 shrink-0" />
+                      <span className="relative">
+                        <Icon name={item.icon} className="size-5 shrink-0" />
+                        {!!badges[item.href] && <span className="absolute -top-1 -right-1 size-2.5 rounded-full bg-wine-500 ring-2 ring-surface lg:hidden" aria-hidden />}
+                      </span>
                       <span className="hidden lg:inline">{item.label}</span>
+                      {item.locked && <Lock className={cn("ml-auto hidden size-3.5 shrink-0 lg:inline", active ? "text-white/80" : "text-muted")} aria-label="Premium" />}
+                      {!!badges[item.href] && (
+                        <span className={cn("ml-auto hidden min-w-5 rounded-full px-1.5 text-center text-xs font-semibold lg:inline", active ? "bg-white/25 text-white" : "bg-wine-500 text-white")} aria-label={`${badges[item.href]} new`}>
+                          {badges[item.href]! > 99 ? "99+" : badges[item.href]}
+                        </span>
+                      )}
                     </Link>
                     {active && item.children && (
                       <ul className="mt-1 mb-2 ml-6 hidden flex-col border-l border-line pl-3 lg:flex" aria-label={`${item.label} sections`}>
                         {item.children.map((c) => {
-                          const on = c.href === item.href ? pathname === c.href : isActive(pathname, c.href);
+                          // Only the closest match lights up (Documents, not also Home maintenance).
+                          const matches = item.children!.filter((x) => (x.href === item.href ? pathname === x.href : isActive(pathname, x.href.split("?")[0]!)));
+                          const best = matches.sort((x, y) => y.href.length - x.href.length)[0];
+                          const on = best?.href === c.href;
                           return (
                             <li key={c.href}>
                               <Link

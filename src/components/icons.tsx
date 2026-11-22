@@ -1,4 +1,5 @@
 import {
+  Bell,
   BookOpen,
   CalendarDays,
   CalendarHeart,
@@ -35,10 +36,21 @@ import {
   Music,
   Briefcase,
   Car,
+  Contact,
+  Images,
+  MessagesSquare,
+  Gift,
+  UserRound,
+  ClipboardCheck,
+  MessageCircle,
+  CreditCard,
+  LifeBuoy,
+  CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 
 const ICONS: Record<string, LucideIcon> = {
+  Bell,
   LibraryBig,
   PawPrint,
   Hammer,
@@ -75,6 +87,16 @@ const ICONS: Record<string, LucideIcon> = {
   Music,
   Briefcase,
   Car,
+  Contact,
+  Images,
+  MessagesSquare,
+  Gift,
+  UserRound,
+  ClipboardCheck,
+  MessageCircle,
+  CreditCard,
+  LifeBuoy,
+  CircleHelp,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {

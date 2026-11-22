@@ -17,6 +17,24 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Security headers for every page and file.
+        source: "/:path*",
+        headers: [
+          // Nobody can show the app inside a frame on another site (clickjacking).
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // HTTPS only from now on (browsers ignore this on plain http, e.g. local development).
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          // Camera for barcode scanning; location for weather; nothing else.
+          { key: "Permissions-Policy", value: "camera=(self), geolocation=(self), microphone=(), payment=(), usb=(), interest-cohort=()" },
+        ],
+      },
+      {
         // The service worker must always be re-checked so app updates reach installed phones.
         source: "/sw.js",
         headers: [

@@ -15,6 +15,7 @@ import { logActivity } from "@/lib/family";
 import { ownedCategoryId } from "@/lib/queries";
 import { f, familyMemberIdOrNull, saveRecordAccess, upsertRule, visibilityFromForm } from "@/lib/records";
 import { nextOccurrence, ruleFromForm, type Rule } from "@/lib/recurrence";
+import { assertRoom } from "@/lib/plan-limits";
 import { addDays } from "@/lib/dates";
 
 const KINDS = ["checklist", "bullet", "numbered", "todo", "shopping"] as const;
@@ -39,6 +40,7 @@ export async function saveList(_: ActionState, fd: FormData): Promise<ActionStat
     // Shopping lists can be created with Add access, or in your private food space.
     const owner = !id && kind === "shopping" ? ownerForNew(viewer, "shopping", fd) : null;
     if (!id && kind !== "shopping" && !viewer.can(listModule(kind), "edit")) throw new AuthorizationError("You can't create lists.");
+    if (!id && kind !== "shopping") await assertRoom(viewer, "lists");
     const title = f.str(fd, "title");
     if (!title) return fail("Give the list a name.", "title");
     const { visibility, memberIds } = visibilityFromForm(fd);

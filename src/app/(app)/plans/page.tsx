@@ -82,7 +82,7 @@ export default async function PlansPage({ searchParams }: PageProps<"/plans">) {
 
   return (
     <>
-      <PageHeader title="Plans" description="Vacations, trips and big events: itinerary, flights, hotels, cars and a countdown. Each planner chooses who sees their plan." actions={canAdd ? <PlanModal members={members} goals={goalOpts} defaultOpen={sp.new === "1"} /> : undefined} />
+      <PageHeader help="trips" title="Plans" description="Vacations, trips and big events: itinerary, flights, hotels, cars and a countdown. Each planner chooses who sees their plan." actions={canAdd ? <PlanModal members={members} goals={goalOpts} defaultOpen={sp.new === "1"} /> : undefined} />
       {rows.length === 0 ? (
         <Card>
           <EmptyState icon={<Plane />} title="Nothing planned yet" description="Start a plan for a vacation, trip or event. Add the itinerary, flights, hotel and car, link a savings goal, and watch the countdown." example="Beach week · Jun 14–21 · Outer Banks · 211 days to go" />

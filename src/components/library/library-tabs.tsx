@@ -1,4 +1,5 @@
-import { BookLock, LibraryBig } from "lucide-react";
+import { BookLock, FileUp, LibraryBig, Plus, ScanBarcode } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 import { setLibrarySpace } from "@/app/actions/library";
 import { LinkTabs } from "@/components/ui/tabs";
 import type { LibrarySpace } from "@/lib/library";
@@ -32,7 +33,27 @@ export function LibrarySpaceSwitch({ space }: { space: LibrarySpace }) {
   );
 }
 
-export function LibraryTabs({ active, canEdit, space = "family" }: { active: string; canEdit?: boolean; space?: LibrarySpace }) {
+/** Add Book and Scan Barcode side by side (one row, even on phones), then Import. */
+export function LibraryAddButtons() {
+  return (
+    <>
+      <span className="flex flex-nowrap gap-2">
+        <ButtonLink href="/library/add" size="sm" icon={<Plus className="size-4" />}>
+          Add Book
+        </ButtonLink>
+        <ButtonLink href="/library/scan" size="sm" variant="secondary" icon={<ScanBarcode className="size-4" />}>
+          Scan Barcode
+        </ButtonLink>
+      </span>
+      <ButtonLink href="/library/import" size="sm" variant="secondary" icon={<FileUp className="size-4" />}>
+        Import
+      </ButtonLink>
+    </>
+  );
+}
+
+// `canEdit` is kept for callers; adding books lives in the buttons above the tabs.
+export function LibraryTabs({ active, space = "family" }: { active: string; canEdit?: boolean; space?: LibrarySpace }) {
   return (
     <>
       <LibrarySpaceSwitch space={space} />
@@ -41,14 +62,8 @@ export function LibraryTabs({ active, canEdit, space = "family" }: { active: str
         tabs={[
           { key: "dashboard", href: "/library", label: "Dashboard" },
           { key: "books", href: "/library/books", label: space === "mine" ? "My books" : "All books" },
-          { key: "reading", href: "/library/books?status=reading", label: "Currently reading" },
+          { key: "reading", href: "/library/reading", label: "Reading log" },
           { key: "categories", href: "/library/categories", label: "Categories" },
-          ...(canEdit
-            ? [
-                { key: "scan", href: "/library/scan", label: "Scan barcode" },
-                { key: "add", href: "/library/add", label: "Add manually" },
-              ]
-            : []),
         ]}
       />
     </>

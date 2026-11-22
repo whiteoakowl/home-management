@@ -41,8 +41,8 @@ export async function cleaningReport(viewer: Viewer, today: string, days = 30) {
         missed: sql<number>`count(*) filter (where ${choreOccurrences.status} = 'missed')::int`,
         total: sql<number>`count(*) filter (where ${choreOccurrences.status} in ('done','missed') or (${choreOccurrences.status} = 'pending' and ${choreOccurrences.dueDate} < ${today}))::int`,
       })
-      .from(choreOccurrences)
-      .innerJoin(assignee, eq(assignee.id, choreOccurrences.assigneeId))
+      .from(sql`${choreOccurrences} cross join lateral unnest(case when cardinality(${choreOccurrences.assigneeIds}) > 0 then ${choreOccurrences.assigneeIds} else array[${choreOccurrences.assigneeId}] end) as who(id)`)
+      .innerJoin(assignee, sql`${assignee.id} = who.id`)
       .where(and(eq(choreOccurrences.familyId, viewer.family.id), gte(choreOccurrences.dueDate, from), lte(choreOccurrences.dueDate, today)))
       .groupBy(assignee.displayName),
     db

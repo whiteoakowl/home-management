@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import * as z from "zod";
 import { db } from "@/db";
-import { familyMembers, users } from "@/db/schema";
+import { families, familyMembers, users } from "@/db/schema";
 import { cleanColor } from "@/lib/colors";
 import { fieldErrors, type ActionState } from "@/lib/action-state";
 import { hashPassword, revokeSessions, verifyPassword } from "@/lib/auth/session";
 import { getFamilyMember, getViewer, requireParent } from "@/lib/dal";
 import { logActivity } from "@/lib/family";
+import { sendVerification } from "@/lib/auth/verify-email";
+import { rateLimit, TOO_MANY } from "@/lib/rate-limit";
 
 const NewPassword = z.string().min(8, "Use at least 8 characters.").max(200, "That's too long.");
 
@@ -21,6 +23,7 @@ const ChangePassword = z
 /** Change your own password. Other devices are signed out; this one stays signed in. */
 export async function changePassword(_: ActionState, fd: FormData): Promise<ActionState> {
   const viewer = await getViewer();
+  if (!(await rateLimit(`pw:${viewer.user.id}`, 8, 900))) return { ok: false, message: TOO_MANY };
   const parsed = ChangePassword.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return fieldErrors(parsed.error);
   const [u] = await db.select().from(users).where(eq(users.id, viewer.user.id));
@@ -34,13 +37,15 @@ const ChangeEmail = z.object({ email: z.email("Please enter a valid email.").tri
 
 export async function changeEmail(_: ActionState, fd: FormData): Promise<ActionState> {
   const viewer = await getViewer();
+  if (!(await rateLimit(`pw:${viewer.user.id}`, 8, 900))) return { ok: false, message: TOO_MANY };
   const parsed = ChangeEmail.safeParse(Object.fromEntries(fd));
   if (!parsed.success) return fieldErrors(parsed.error);
   const [u] = await db.select().from(users).where(eq(users.id, viewer.user.id));
   if (!u || !(await verifyPassword(parsed.data.current, u.passwordHash))) return { ok: false, errors: { current: ["That isn't your current password."] } };
   const [taken] = await db.select({ id: users.id }).from(users).where(and(eq(users.email, parsed.data.email), ne(users.id, u.id)));
   if (taken) return { ok: false, errors: { email: ["That email is already used by another account."] } };
-  await db.update(users).set({ email: parsed.data.email }).where(eq(users.id, u.id));
+  await db.update(users).set({ email: parsed.data.email, emailVerifiedAt: null }).where(eq(users.id, u.id));
+  await sendVerification({ id: u.id, email: parsed.data.email, name: u.name }).catch((e) => console.error("Verification email failed:", e));
   revalidatePath("/account");
   return { ok: true, message: `Email changed. Sign in with ${parsed.data.email} from now on.` };
 }
@@ -94,4 +99,18 @@ export async function saveAppTheme(_: ActionState, fd: FormData): Promise<Action
   await db.update(familyMembers).set({ appTheme: theme }).where(eq(familyMembers.id, viewer.member.id));
   revalidatePath("/", "layout");
   return { ok: true, message: theme ? "Your app colors are updated." : "Back to the family's default colors." };
+}
+
+/** The whole family's colour theme (parents). People who picked their own colour keep it. */
+export async function saveFamilyTheme(_: ActionState, fd: FormData): Promise<ActionState> {
+  const viewer = await getViewer();
+  if (!viewer.isParent) return { ok: false, message: "Only parents can change the family's colors." };
+  const raw = String(fd.get("theme") ?? "");
+  const accent = raw ? cleanColor(raw) : null;
+  await db
+    .update(families)
+    .set({ theme: { ...(viewer.family.theme ?? {}), accent: accent ?? undefined } })
+    .where(eq(families.id, viewer.family.id));
+  revalidatePath("/", "layout");
+  return { ok: true, message: accent ? "The family's colors are updated." : "Back to the standard colors." };
 }

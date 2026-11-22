@@ -52,7 +52,7 @@ export default async function WellnessPage({ searchParams }: PageProps<"/wellnes
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <PageHeader eyebrow="My private" title={own ? "Mental Wellness" : `${first}'s Mental Wellness`} description={own ? "A calm space to check in with yourself, reflect and build small, kind habits." : `What ${first} has chosen to share with you.`} />
+      <PageHeader help="mental-wellness" eyebrow="My private" title={own ? "Mental Wellness" : `${first}'s Mental Wellness`} description={own ? "A calm space to check in with yourself, reflect and build small, kind habits." : `What ${first} has chosen to share with you.`} />
       <PersonalSwitcher subjects={subjects} current={subject.id} base="/wellness" />
       <WellnessTabs active="today" member={own ? undefined : subject.id} />
       {own && sp.support === "1" && <SupportPanel back="/wellness?support=1" asked={sp.asked === "1"} />}

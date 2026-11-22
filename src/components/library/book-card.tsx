@@ -10,16 +10,17 @@ type B = {
   title: string;
   author: string | null;
   coverFileId: string | null;
-  status: string;
   rating: number | null;
   isFavorite: boolean;
-  currentPage: number | null;
   pageCount: number | null;
+  /** The viewer's own reading-log entry, if the book is in their log. */
+  reading?: { status: string; currentPage: number | null } | null;
 };
 
 /** Cover-first card for grid views and dashboard shelves. */
 export function BookCard({ b, compact }: { b: B; compact?: boolean }) {
-  const pct = percentRead(b);
+  const pct = percentRead(b.reading, b.pageCount);
+  const status = b.reading?.status;
   return (
     <Link href={`/library/books/${b.id}`} className="group flex min-w-0 flex-col gap-2">
       <div className="relative transition-transform group-hover:-translate-y-0.5">
@@ -35,11 +36,11 @@ export function BookCard({ b, compact }: { b: B; compact?: boolean }) {
         {b.author && <p className="truncate text-sm text-muted">{b.author}</p>}
         {!compact && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <Badge tone={STATUS_TONE[b.status] ?? "neutral"}>{statusLabel(b.status)}</Badge>
+            {status && <Badge tone={STATUS_TONE[status] ?? "neutral"}>{statusLabel(status)}</Badge>}
             <Stars value={b.rating} className="text-xs" />
           </div>
         )}
-        {b.status === "reading" && (
+        {status === "reading" && (
           <div className="mt-2 flex items-center gap-2">
             <ProgressBar value={pct} label={`${pct}% read`} />
             <span className="shrink-0 text-xs text-muted tabular-nums">{pct}%</span>
@@ -65,7 +66,8 @@ export function BookGrid({ books, compact }: { books: B[]; compact?: boolean }) 
 
 /** Table-like row: cover, title, author, categories, status, rating. */
 export function BookRow({ b, categories }: { b: B; categories: string[] }) {
-  const pct = percentRead(b);
+  const pct = percentRead(b.reading, b.pageCount);
+  const status = b.reading?.status;
   return (
     <li>
       <Link href={`/library/books/${b.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-2.5 pr-4 hover:border-primary-300">
@@ -82,8 +84,8 @@ export function BookRow({ b, categories }: { b: B; categories: string[] }) {
         </div>
         <p className="hidden w-48 truncate text-sm text-muted md:block">{categories.join(", ") || "—"}</p>
         <div className="flex w-28 shrink-0 flex-col items-end gap-1 sm:w-36">
-          <Badge tone={STATUS_TONE[b.status] ?? "neutral"}>{statusLabel(b.status)}</Badge>
-          {b.status === "reading" ? <span className="text-xs text-muted tabular-nums">{pct}% read</span> : <Stars value={b.rating} className="text-xs" />}
+          {status && <Badge tone={STATUS_TONE[status] ?? "neutral"}>{statusLabel(status)}</Badge>}
+          {status === "reading" ? <span className="text-xs text-muted tabular-nums">{pct}% read</span> : <Stars value={b.rating} className="text-xs" />}
         </div>
       </Link>
     </li>

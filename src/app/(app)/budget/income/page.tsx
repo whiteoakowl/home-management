@@ -47,8 +47,8 @@ export default async function IncomePage({ searchParams }: PageProps<"/budget/in
           <EmptyState icon={<HandCoins />} title="No income sources yet" description="Add each source with how often it pays. We'll calculate your monthly total." example="Income Source | Amount | Frequency" action={canEdit ? add : undefined} />
         </Card>
       ) : (
-        <Card className="p-0 sm:p-0">
-          <table className="w-full text-left text-[15px]">
+        <Card className="overflow-x-auto p-0 sm:p-0">
+          <table className="w-full min-w-[520px] text-left text-[15px]">
             <thead>
               <tr className="border-b border-line text-sm text-muted">
                 <th className="px-5 py-3 font-medium">Income source</th>

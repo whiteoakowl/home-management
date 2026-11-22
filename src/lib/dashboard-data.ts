@@ -1,6 +1,6 @@
 import "server-only";
+import { memberNameSql } from "./names";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, or, sql, notInArray } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
 import { itemVisible } from "./lists";
 import { db } from "@/db";
 import {
@@ -9,8 +9,6 @@ import {
   animals,
   announcements,
   calendarEvents,
-  choreOccurrences,
-  chores,
   eventAttendees,
   familyMembers,
   gardenPlantings,
@@ -23,11 +21,11 @@ import {
   plants,
   productionLogs,
   recipes,
-  rooms,
   transactions,
   workoutLogs,
 } from "@/db/schema";
 import { addDays, todayIn } from "./dates";
+import { countOccurrences, listOccurrences, overdueQuery, type ChoreKind } from "./chores";
 import { visibleTo, type Viewer } from "./dal";
 import { canViewFitness } from "./fitness";
 
@@ -43,45 +41,50 @@ export function makeScope(viewer: Viewer, subjectId?: string): Scope {
 
 const fid = (s: Scope) => s.viewer.family.id;
 
-/** Today's (and overdue) work of one kind; "all" = everything but tasks (for the at-a-glance count). */
-export async function getChoreSummary(s: Scope, kind: "all" | "chore" | "cleaning" | "task" | "farm" = "all") {
-  const assignee = alias(familyMembers, "assignee");
-  const completer = alias(familyMembers, "completer");
-  const kindFilter = kind === "all" ? ne(chores.kind, "task") : eq(chores.kind, kind);
-  const rows = await db
-    .select({
-      id: choreOccurrences.id,
-      title: chores.title,
-      dueDate: choreOccurrences.dueDate,
-      status: choreOccurrences.status,
-      priority: chores.priority,
-      estimatedMinutes: chores.estimatedMinutes,
-      assigneeName: assignee.displayName,
-      assigneeColor: assignee.color,
-      roomName: rooms.name,
-      completedByName: completer.displayName,
-    })
-    .from(choreOccurrences)
-    .innerJoin(chores, eq(chores.id, choreOccurrences.choreId))
-    .leftJoin(assignee, eq(assignee.id, choreOccurrences.assigneeId))
-    .leftJoin(completer, eq(completer.id, choreOccurrences.completedByMemberId))
-    .leftJoin(rooms, eq(rooms.id, chores.roomId))
-    .where(
-      and(
-        eq(choreOccurrences.familyId, fid(s)),
-        kindFilter,
-        lte(choreOccurrences.dueDate, addDays(s.today, kind === "task" ? 7 : 0)),
-        or(eq(choreOccurrences.status, "pending"), eq(choreOccurrences.dueDate, s.today)),
-        s.subjectId ? or(eq(choreOccurrences.assigneeId, s.subjectId), isNull(choreOccurrences.assigneeId)) : undefined,
-      ),
-    )
-    .orderBy(asc(choreOccurrences.dueDate), desc(chores.priority))
-    .limit(50);
+/**
+ * Whose work the home page counts: a portal's person; otherwise parents see the
+ * whole family and everyone else sees their own (plus jobs open to anyone),
+ * the same defaults as the Chores page.
+ */
+const workFor = (s: Scope) => s.subjectId ?? (s.viewer.isParent ? undefined : s.viewer.member.id);
 
-  const overdue = rows.filter((r) => r.status === "pending" && r.dueDate < s.today);
-  const today = rows.filter((r) => r.dueDate >= s.today);
-  const done = today.filter((r) => r.status === "done").length;
-  return { overdue, today, done, total: today.length };
+/**
+ * Today's work of one kind, plus what's overdue. Counts come from the same
+ * filter as the Chores / Cleaning pages (no row cap), so the numbers match.
+ */
+export async function getChoreSummary(s: Scope, kind: "chore" | "cleaning" | "task" | "farm" = "chore") {
+  const kinds = [kind] as ChoreKind[];
+  const assigneeId = workFor(s);
+  const [todayRows, upcomingTasks, overdue, overdueCount] = await Promise.all([
+    listOccurrences(s.viewer, { kinds, from: s.today, to: s.today, statuses: ["pending", "done"], assigneeId }),
+    kind === "task" ? listOccurrences(s.viewer, { kinds, from: addDays(s.today, 1), to: addDays(s.today, 7), statuses: ["pending"], assigneeId, limit: 20 }) : [],
+    listOccurrences(s.viewer, { ...overdueQuery(s.today, kinds, assigneeId), limit: 8 }),
+    countOccurrences(s.viewer, overdueQuery(s.today, kinds, assigneeId)),
+  ]);
+  const today = [...todayRows, ...upcomingTasks];
+  const done = todayRows.filter((r) => r.status === "done").length;
+  return { overdue, overdueCount, today, done, total: kind === "task" ? today.length : todayRows.length };
+}
+
+/** The home page's at-a-glance numbers for chores and cleaning, each from its own page's rules. */
+export async function getHouseworkCounts(s: Scope) {
+  const assigneeId = workFor(s);
+  const count = (kind: ChoreKind, opts: { from?: string; to?: string; statuses: ("pending" | "done")[] }) => countOccurrences(s.viewer, { kinds: [kind], assigneeId, ...opts });
+  const kinds = (["chore", "cleaning"] as const).filter((k) => s.viewer.can(k === "chore" ? "chores" : "cleaning"));
+  const rows = await Promise.all(
+    kinds.map(async (kind) => {
+      const [left, done, overdue] = await Promise.all([
+        count(kind, { from: s.today, to: s.today, statuses: ["pending"] }),
+        count(kind, { from: s.today, to: s.today, statuses: ["done"] }),
+        countOccurrences(s.viewer, overdueQuery(s.today, [kind], assigneeId)),
+      ]);
+      return { kind, left, done, overdue };
+    }),
+  );
+  return {
+    chore: rows.find((r) => r.kind === "chore") ?? null,
+    cleaning: rows.find((r) => r.kind === "cleaning") ?? null,
+  };
 }
 
 export async function getEvents(s: Scope, days = 7) {
@@ -124,7 +127,7 @@ export async function getAnnouncements(s: Scope) {
       body: announcements.body,
       pinned: announcements.pinned,
       createdAt: announcements.createdAt,
-      authorName: familyMembers.displayName,
+      authorName: memberNameSql(s.viewer, familyMembers),
       authorColor: familyMembers.color,
     })
     .from(announcements)
@@ -321,7 +324,7 @@ export async function getActivity(s: Scope, limit = 8) {
       id: activityLog.id,
       summary: activityLog.summary,
       createdAt: activityLog.createdAt,
-      actorName: familyMembers.displayName,
+      actorName: memberNameSql(s.viewer, familyMembers),
       actorColor: familyMembers.color,
     })
     .from(activityLog)

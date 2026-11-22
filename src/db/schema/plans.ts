@@ -30,7 +30,7 @@ export const plans = pgTable(
   (t) => [index("plans_family_idx").on(t.familyId, t.startDate)],
 );
 
-/** One piece of a plan: an itinerary stop, a flight, a hotel stay, a vehicle, or a note. */
+/** One piece of a plan: an itinerary stop, a flight, a hotel stay, a vehicle, a reservation, or a note. */
 export const planItems = pgTable(
   "plan_items",
   {
@@ -38,7 +38,7 @@ export const planItems = pgTable(
     planId: uuid("plan_id")
       .notNull()
       .references(() => plans.id, { onDelete: "cascade" }),
-    kind: text("kind").$type<"itinerary" | "flight" | "hotel" | "vehicle" | "note">().notNull().default("itinerary"),
+    kind: text("kind").$type<"itinerary" | "flight" | "hotel" | "vehicle" | "reservation" | "note">().notNull().default("itinerary"),
     title: text("title").notNull(),
     date: date("date"),
     startTime: time("start_time"),
@@ -59,4 +59,27 @@ export const planItems = pgTable(
     ...timestamps,
   },
   (t) => [index("plan_items_plan_idx").on(t.planId, t.date)],
+);
+
+/** Money spent on a trip (against its budget). */
+export const planExpenses = pgTable(
+  "plan_expenses",
+  {
+    id: id(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => plans.id, { onDelete: "cascade" }),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    date: date("date"),
+    /** lodging | food | tickets | travel | shopping | other */
+    category: text("category").notNull().default("other"),
+    paidByMemberId: uuid("paid_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [index("plan_expenses_plan_idx").on(t.planId)],
 );

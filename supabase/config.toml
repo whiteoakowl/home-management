@@ -1,0 +1,8 @@
+# Supabase CLI settings for this project's Edge Functions.
+# Deploy:  npx supabase functions deploy stripe-webhook --project-ref <your-project-ref>
+project_id = "family-bubble"
+
+[functions.stripe-webhook]
+# Stripe calls this function directly (it can't send a Supabase login token);
+# the function checks Stripe's signature instead.
+verify_jwt = false

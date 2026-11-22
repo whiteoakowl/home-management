@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, gte } from "drizzle-orm";
-import { CalendarOff, Camera, ChevronLeft, ChevronRight, Clock, ExternalLink, Footprints, MapPin, Megaphone, Music, Star, Trophy } from "lucide-react";
+import { CalendarOff, ChevronLeft, ChevronRight, Clock, ExternalLink, Footprints, MapPin, Music, Star, Trophy } from "lucide-react";
 import { db } from "@/db";
 import { danceClasses, danceDaysOff, danceEnrollments, danceEvents } from "@/db/schema";
 import { deleteDanceClass, deleteDanceEvent, deleteDayOff, deleteEnrollment } from "@/app/actions/dance";
@@ -71,7 +71,6 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
   const actions = canUse ? (
     <>
       <DanceClassModal dancers={dancersForForms} enrollments={enrollments.filter((e) => e.active)} defaultMember={member || undefined} defaultOpen={sp.new === "1"} />
-      <DanceEventModal dancers={dancersForForms} defaultMember={member || undefined} />
       <DayOffModal dancers={dancersForForms} canAll={canAll} />
       <EnrollmentModal dancers={dancersForForms} defaultMember={member || undefined} />
     </>
@@ -79,7 +78,7 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
 
   return (
     <>
-      <PageHeader eyebrow="Activities" title="Dance" description="Classes, teams and levels, days off and performances for each dancer. Everything shows on the family calendar." actions={actions} />
+      <PageHeader help="dance" eyebrow="Activities" title="Dance" description="Classes, teams and levels, days off and performances for each dancer. Everything shows on the family calendar." actions={actions} />
       {dancers.length > 0 && (
         <div className="mb-5">
           <SegmentLinks fit active={member || "all"} items={[{ key: "all", href: `/dance?week=${week}`, label: "Everyone" }, ...dancers.map((m) => ({ key: m.id, href: `/dance?member=${m.id}&week=${week}`, label: m.displayName.split(" ")[0]! }))]} />
@@ -88,7 +87,15 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
 
       {!hasAny ? (
         <Card>
-          <EmptyState icon={<Music />} title="Set up the dance schedule" description="Add each dancer and their level, their weekly classes, days off and upcoming performances. Classes repeat every week and show on the calendar." example="Serenity · Junior Competition Team · Tue & Thu 4:30–6:00 PM" action={canUse ? <DanceClassModal dancers={dancersForForms} enrollments={enrollments.filter((e) => e.active)} defaultMember={member || undefined} /> : undefined} />
+          <EmptyState icon={<Music />} title="Set up the dance schedule" description="Add each dancer and their level, their weekly classes, days off and upcoming performances. Classes repeat every week and show on the calendar." example="Serenity · Junior Competition Team · Tue & Thu 4:30–6:00 PM" action={
+              canUse ? (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <DanceClassModal dancers={dancersForForms} enrollments={enrollments.filter((e) => e.active)} defaultMember={member || undefined} />
+                  <DanceEventModal dancers={dancersForForms} defaultMember={member || undefined} />
+                </div>
+              ) : undefined
+            }
+          />
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -149,18 +156,12 @@ export default async function DancePage({ searchParams }: PageProps<"/dance">) {
             </Card>
 
             <Card>
-              <CardHeader
-                title="Performances, auditions & picture days"
-                icon={<Trophy className="size-4" />}
-                action={
-                  canUse ? (
-                    <span className="flex flex-wrap gap-1">
-                      <DanceEventModal dancers={dancersForForms} defaultMember={member || undefined} defaultKind="audition" triggerLabel="Audition" triggerIcon={<Megaphone className="size-4" />} />
-                      <DanceEventModal dancers={dancersForForms} defaultMember={member || undefined} defaultKind="photos" triggerLabel="Picture day" triggerIcon={<Camera className="size-4" />} />
-                    </span>
-                  ) : undefined
-                }
-              />
+              <CardHeader title="Performances, auditions & picture days" icon={<Trophy className="size-4" />} className="mb-2" />
+              {canUse && (
+                <div className="mb-4">
+                  <DanceEventModal dancers={dancersForForms} defaultMember={member || undefined} />
+                </div>
+              )}
               {upcomingCost > 0 && (
                 <p className="-mt-1 mb-3 text-sm text-muted">
                   Coming up: <strong className="text-ink tabular-nums">{usd(upcomingCost)}</strong> in costs

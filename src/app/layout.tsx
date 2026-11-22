@@ -2,16 +2,18 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { ServiceWorker } from "@/components/pwa/service-worker";
+import { getBrand } from "@/lib/billing";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["SOFT", "opsz"] });
 
-export const metadata: Metadata = {
-  title: { default: "Vanderbilt Family", template: "%s · Vanderbilt Family" },
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = await getBrand();
+  return { ...baseMetadata, title: { default: brand, template: `%s · ${brand}` }, applicationName: brand, appleWebApp: { capable: true, title: brand, statusBarStyle: "default" } };
+}
+
+const baseMetadata: Metadata = {
   description: "Your family's home, organised in one place.",
-  applicationName: "Vanderbilt Family",
-  // iPhone "Add to Home Screen": open full-screen with the family name and icon.
-  appleWebApp: { capable: true, title: "Vanderbilt", statusBarStyle: "default" },
   icons: {
     icon: [{ url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],

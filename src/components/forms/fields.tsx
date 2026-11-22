@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { Camera, ImagePlus, Lock, ShieldCheck, Upload, Users, UsersRound } from "lucide-react";
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { Camera, Check, ChevronDown, ImagePlus, Lock, ShieldCheck, Upload, Users, UsersRound } from "lucide-react";
 import { Avatar } from "@/components/ui/display";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
@@ -456,5 +456,92 @@ export function ChipSelect({ name, options, defaultValue = [] }: { name: string;
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Dropdown with a checkbox per person, for assigning to several people at
+ * once. Posts one `name` value per person, in the order they were ticked.
+ */
+export function MemberMultiSelect({
+  name,
+  label = "Assigned to",
+  members,
+  defaultValue = [],
+  placeholder = "Anyone",
+  hint,
+  className,
+}: {
+  name: string;
+  label?: string;
+  members: MemberOption[];
+  defaultValue?: string[];
+  placeholder?: string;
+  hint?: ReactNode;
+  className?: string;
+}) {
+  const [picked, setPicked] = useState<string[]>(defaultValue.filter((id) => members.some((m) => m.id === id)));
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const error = useFieldError(name);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const names = picked.map((id) => members.find((m) => m.id === id)?.displayName).filter(Boolean);
+  const id = `f-${name}`;
+  return (
+    <Field label={label} htmlFor={id} hint={hint ?? (picked.length > 1 ? "Everyone ticked earns the points." : undefined)} error={error} className={className}>
+      <div ref={box} className="relative">
+        <button
+          id={id}
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+          className="flex h-11 w-full items-center justify-between gap-2 rounded-[var(--radius-control)] border border-line-strong bg-surface px-3 text-left text-[15px] focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none"
+        >
+          <span className={cn("truncate", !names.length && "text-muted")}>{names.length ? names.join(", ") : placeholder}</span>
+          <ChevronDown className={cn("size-4 shrink-0 text-muted transition-transform", open && "rotate-180")} aria-hidden />
+        </button>
+        {open && (
+          <div role="listbox" aria-multiselectable="true" aria-label={label} className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-[var(--shadow-pop)]">
+            {members.map((m) => {
+              const on = picked.includes(m.id);
+              return (
+                <label key={m.id} role="option" aria-selected={on} className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-[15px] hover:bg-sunken">
+                  <input type="checkbox" className="size-4 accent-primary-600" checked={on} onChange={() => toggle(m.id)} />
+                  <Avatar name={m.displayName} color={m.color} size="xs" />
+                  <span className="flex-1">{m.displayName}</span>
+                  {on && <Check className="size-4 text-primary-600" aria-hidden />}
+                </label>
+              );
+            })}
+            <div className="mt-1 flex justify-between border-t border-line px-1 pt-1">
+              <button type="button" className="rounded-lg px-2 py-1.5 text-sm text-muted hover:bg-sunken" onClick={() => setPicked([])}>
+                Clear
+              </button>
+              <button type="button" className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary-700 hover:bg-primary-50" onClick={() => setOpen(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+        {/* Always post the field (even empty) so the server knows the team was edited. */}
+        <input type="hidden" name={name} value="" />
+        {picked.map((v) => (
+          <input key={v} type="hidden" name={name} value={v} />
+        ))}
+      </div>
+    </Field>
   );
 }

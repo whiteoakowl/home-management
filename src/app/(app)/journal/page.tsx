@@ -80,7 +80,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
 
   return (
     <>
-      <PageHeader title="Journal" description="Private moments and shared family memories." actions={canEdit ? add : undefined} />
+      <PageHeader help="journal" title="Journal" description="Private moments and shared family memories." actions={canEdit ? add : undefined} />
       <LinkTabs
         active={view}
         tabs={[

@@ -14,7 +14,7 @@ import { addDays, startOfWeek, todayIn } from "@/lib/dates";
 import { memberOptions } from "@/lib/queries";
 import { pointBalances, redemptionsFor, rewardsFor, workShare } from "@/lib/rewards";
 import { cn } from "@/lib/utils";
-import { HouseTabs } from "../house-tabs";
+import { ChoreTabs } from "../house-tabs";
 
 export const metadata: Metadata = { title: "Rewards" };
 
@@ -71,7 +71,7 @@ export default async function RewardsPage() {
   const totalMinutes = month.reduce((s, m) => s + m.minutes, 0);
   return (
     <>
-      <PageHeader
+      <PageHeader help="points-rewards"
         eyebrow="House"
         title="Points & rewards"
         description="Chores earn points. Save them up for rewards the parents set, from screen time to allowance."
@@ -88,7 +88,7 @@ export default async function RewardsPage() {
           )
         }
       />
-      <HouseTabs active="rewards" viewer={viewer} />
+      <ChoreTabs active="rewards" viewer={viewer} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {members.map((m) => {

@@ -1,6 +1,6 @@
-# Vanderbilt Family
+# Family Bubble
 
-A family home-management app: chores, cleaning, calendar, lists, kitchen inventory, recipes, meal
+A family home-management app sold as a subscription (the product name is set in Admin): chores, cleaning, calendar, lists, kitchen inventory, recipes, meal
 planning, shopping, garden, farm, journal, goals, fitness, budget and reports, all connected, with
 per-member portals and parent-controlled permissions.
 
@@ -23,7 +23,7 @@ npm run db:seed                 # optional: sample family for local development
 npm run dev                     # http://localhost:3000
 ```
 
-Sample logins after `db:seed` (password `vanderbilt123`): `sarah@vanderbilt.family` (parent, owner),
+Sample logins after `db:seed` (password `vanderbilt123`): `sara@vanderbilt.family` (parent, owner),
 `michael@vanderbilt.family` (parent), `serenity@vanderbilt.family` (family member with limited access).
 Or create your own account at `/signup`; the setup wizard walks you through the rest.
 
@@ -56,7 +56,11 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Pets | Pet profiles & photos, vet records, flea/tick/heartworm reminders, food & supplies, care chores, memories |
 | Book Library | Scan a book's barcode (camera, incl. iPhone) or type the ISBN → details, cover and description from Open Library / Google Books → confirm & edit → save; manual add; your own categories (multi-category, reorder, rename, move, delete); grid / list / by category / author / status views with search & filters; reading status, progress, start/finish dates, ratings, notes; yearly stats; customizable dashboard |
 | Spiritual | Dark celestial theme; customizable dashboard; moon phases, Wheel of the Year, celebrations, spells, rituals, printable grimoire, crystals, herbs (with safety notes), tools, wellness, supplies |
-| Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared |
+| Lists | Checklist, bullet, numbered and to-do lists (due dates, owners, repeats), private or shared; **Wishlists** tab: everyone's gift wishlist (link, price, priority, details, occasion), editable anytime; others quietly claim or mark items bought without the owner seeing |
+| Sports | Teams per athlete, weekly practices, games/meets/tournaments with arrive-by times, scores and win-loss records, per-game stats for 13 sports (plus custom stats) and season totals, all on the calendar |
+| Family Chat | One group chat for the family with photos, unread count in the menu |
+| Contacts | Family address book with groups, favorites, private contacts, tap to call/text/email, birthdays on the calendar |
+| Photo Albums | Shared albums anyone can add to |
 | Family Pantry | FAMILY space (Family Pantry, Family Recipes, Family Meal Plans, Family Shopping) with per-member No access / View / Add / Edit, and an optional MY PRIVATE space per member (My Pantry, My Recipes, My Meal Plans, My Shopping List) that only they see. Pantry / fridge / freezer / supplies, gentle expiration alerts, barcode scanning, waste tracking, “What can I cook?” with use-it-up suggestions |
 | Meals & recipes | Recipe book with pantry check and printable books, import from a link or pasted text, cook mode with step-by-step view and timers, weekly planner (copy last week), auto-built shopping lists with prices, totals and “buy again” |
 | Garden | Plant database, drag-and-drop bed planner, plantings, garden log, harvest totals, seeds |
@@ -69,7 +73,8 @@ Uploaded photos and documents are stored in `./storage` (set `STORAGE_DIR` to ch
 | Personal Health | Privacy Center (private by default; share with parents or selected people; parent oversight for minors), Period Tracker (simple tracking or ovulation estimates), Food Journal (day/week/month/timeline) |
 | Mental Wellness | Daily check-ins, wellness journal with prompts, gratitude, self-care, gentle goals, daily quotes, mood history, per-item sharing, safety support, gentle reminders |
 | Imports | Grocery receipts (on-device OCR → review → pantry, history, optional expense) and recipes from Word documents (one per page) |
-| Everywhere | Global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
+| Settings | Owner turns sections on/off, family colors, family name (shown as the app title on phones), subscription |
+| Everywhere | Send feedback, write a review, global search, notifications, Quick Add (press **N**), mobile tab bar & swipe-to-complete |
 
 ## Supported devices
 
@@ -119,12 +124,61 @@ Without these, uploads use Netlify Blobs on Netlify, or `./storage` locally. `ST
 **Book lookups (optional).** Scanning a book asks Open Library and Google Books. Google limits
 anonymous lookups; add a free `GOOGLE_BOOKS_API_KEY` in Netlify if lookups often come back empty.
 
-Something wrong? Open **`/api/health`** on your site: it checks the database and storage setup and explains
-the problem in plain English (it shows no passwords or family data).
+Something wrong? Open **`/api/health`** on your site while signed in as a platform admin (or add
+`HEALTH_CHECK_KEY` in Netlify and open `/api/health?key=…`): it checks the database and storage setup and
+explains the problem in plain English. Visitors only see `{"ok": true}`. See **[docs/SECURITY.md](docs/SECURITY.md)**
+for the security review and launch checklist.
 
 Then redeploy and create your family at `/signup` (or sign in with your existing account). Change passwords
 under the avatar menu → **Account & password**; parents can set a member's email and password from
 Family → person → **Manage**.
+
+## Selling the app (Family Bubble)
+
+**Public website.** Visitors who aren't signed in see the website at `/` (Home), plus `/features`,
+`/pricing`, `/reviews`, `/contact`, `/privacy-policy` and `/terms`. Signed-in people get their family's
+app at `/`. Prices and the trial length on the website come from Admin, so they always match checkout.
+The Privacy and Terms pages are plain-language starting points: have them reviewed before launch.
+
+**Accounts.** Any family can sign up at `/signup`, name their family, add members and pick colors. The
+family's name is the app's title on their phones (per-family manifest + Apple web-app title). The person
+who created the account (the owner) chooses which sections the family uses in Settings → Sections.
+
+**Payments (Stripe, inside the app).** Families pay on a branded page in the app with Stripe's Payment
+Element (card numbers go straight to Stripe; nothing card-related is stored except brand, last 4 and
+expiry). They manage everything in **Settings → Subscription & billing**: plan, price, status, renewal date,
+card, receipts; switch monthly ↔ yearly (yearly now with credit, monthly at the end of the paid year),
+update the card, pay a failed renewal, cancel or resume. Only the account holder can change billing.
+
+How it fits together:
+- `supabase/functions/_shared/billing-core.ts`: the billing engine (Stripe REST + SQL), shared by the app and
+  the webhook.
+- `supabase/functions/stripe-webhook`: Supabase Edge Function that Stripe calls; keeps `family_billing`,
+  `billing_invoices` and `stripe_events` in step with Stripe. `src/app/api/stripe/webhook` is a backup
+  endpoint with the same code.
+- Access: trialing (with a card), active and past_due (while Stripe retries) can use the app; anything else
+  goes to `/billing`. Enforced on the server for every page and action.
+
+Setup, step by step: **[docs/LAUNCH.md](docs/LAUNCH.md)** (Stripe keys and settings, deploying the Edge
+Function, webhook events, email, domain, going live).
+
+Tests: `npm test`; with a migrated database also `TEST_DATABASE_URL=postgres://… npm test` (full subscription
+lifecycle against a fake Stripe) and `TEST_DATABASE_URL=postgres://… npx tsx tests/edge-webhook.e2e.mts`
+(the Edge Function in Deno).
+
+**Email.** Password resets and email confirmation use Resend (`RESEND_API_KEY`, `EMAIL_FROM`, optional
+`EMAIL_REPLY_TO`); set `SITE_URL` for links. Without email, people are told a parent can reset passwords.
+
+**Admin** (avatar menu → Admin, only for `PLATFORM_ADMIN_EMAILS`): product name, monthly and yearly
+prices (new Stripe Prices are created automatically), trial length, the billing switch, every family's status, **Make free** for complimentary
+families (families with an admin in them are always free), the feedback/contact inbox, and **Reviews**,
+where you approve customer reviews (and feature the best on the home page) before they appear publicly.
+
+**App stores.** The app installs from the browser on iPhone, Android, tablets and computers today. Listing
+it in the App Store / Google Play needs a native wrapper (for example Capacitor or a Trusted Web Activity)
+built on a Mac / with developer accounts, which can't be done from this repository alone. Note that Apple
+generally requires in-app purchase for subscriptions bought inside an iOS app; a common approach is a
+"reader"-style app where people subscribe on the website and simply sign in on the phone.
 
 ## Project layout
 

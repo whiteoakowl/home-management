@@ -15,6 +15,7 @@ export function toChoreDefaults(t: ChoreTemplate): ChoreDefaults {
     priority: c.priority,
     estimatedMinutes: c.estimatedMinutes,
     defaultAssigneeId: c.defaultAssigneeId,
+    assigneeIds: c.assigneeIds?.length ? c.assigneeIds : c.defaultAssigneeId ? [c.defaultAssigneeId] : [],
     dueDate: c.dueDate,
     notes: c.notes,
     estimatedCostCents: c.estimatedCostCents,

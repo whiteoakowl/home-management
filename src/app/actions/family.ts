@@ -1,5 +1,6 @@
 "use server";
 
+import { rememberDeviceFamily } from "@/lib/auth/device-family";
 import { USE_ONLY_MODULES } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -33,6 +34,7 @@ import {
 } from "@/lib/family";
 import { LAST_STEP, ONBOARDING_STEPS, TIMEZONES } from "@/lib/onboarding";
 import { AUTOMATIONS } from "@/lib/automation";
+import { assertRoom } from "@/lib/plan-limits";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 
 // ─── Family ──────────────────────────────────────────────────────────────────
@@ -50,13 +52,14 @@ export async function createFamily(_: ActionState, formData: FormData): Promise<
   if (member) redirect("/onboarding?step=2");
   const parsed = FamilySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fieldErrors(parsed.error);
-  await createFamilyForUser({
+  const { family } = await createFamilyForUser({
     userId: user.id,
     userName: user.name,
     familyName: parsed.data.familyName,
     timezone: parsed.data.timezone,
     locationName: parsed.data.locationName,
   });
+  await rememberDeviceFamily(family.id);
   redirect("/onboarding?step=2");
 }
 
@@ -75,6 +78,8 @@ export async function updateFamily(_: ActionState, formData: FormData): Promise<
 
 export async function updateEnabledModules(_: ActionState, formData: FormData): Promise<ActionState> {
   const viewer = await requireParent();
+  // Which sections the family has is the account owner's choice (the person who created it).
+  if (!viewer.isOwner) return { ok: false, message: "Only the account owner can turn sections on or off." };
   const enabled = MODULES.filter((m) => formData.get(`module:${m}`) === "on");
   await db.update(families).set({ enabledModules: enabled }).where(eq(families.id, viewer.family.id));
   revalidatePath("/", "layout");
@@ -104,6 +109,11 @@ export async function createMember(_: ActionState, formData: FormData): Promise<
   const parsed = MemberSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return fieldErrors(parsed.error);
   const d = parsed.data;
+  try {
+    await assertRoom(viewer, "members");
+  } catch (e) {
+    return { ok: false, message: (e as Error).message };
+  }
   try {
     await addMember({
       familyId: viewer.family.id,
@@ -439,4 +449,27 @@ export async function uploadFamilyImage(_: ActionState, formData: FormData): Pro
     revalidatePath("/", "layout");
     return { ok: true, message: "Family photo updated." };
   });
+}
+
+/**
+ * The names kids see for parents ("Dad", "Mom"). Each parent sets their own;
+ * the account holder can set any parent's. Empty = their real name.
+ */
+export async function saveKidNames(_: ActionState, formData: FormData): Promise<ActionState> {
+  const viewer = await requireParent();
+  const parents = await db
+    .select({ id: familyMembers.id })
+    .from(familyMembers)
+    .where(and(eq(familyMembers.familyId, viewer.family.id), eq(familyMembers.role, "parent"), eq(familyMembers.isActive, true)));
+  let saved = 0;
+  for (const p of parents) {
+    const key = `kidName:${p.id}`;
+    if (!formData.has(key)) continue;
+    if (p.id !== viewer.member.id && !viewer.isOwner) continue;
+    const value = String(formData.get(key) ?? "").trim().replace(/\s+/g, " ").slice(0, 30);
+    await db.update(familyMembers).set({ kidName: value || null }).where(eq(familyMembers.id, p.id));
+    saved++;
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: saved ? "Saved. Kids will see these names everywhere in the app." : "Nothing to save." };
 }

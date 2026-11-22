@@ -40,7 +40,11 @@ export function Menu({ label, trigger, children }: { label: string; trigger: Rea
         <div
           id={id}
           role="menu"
-          onClick={() => setOpen(false)}
+          // Close after choosing an item, but not on a submit button (like Sign out): removing its
+          // form before the browser sends it would cancel the action.
+          onClick={(e) => {
+            if (!(e.target as HTMLElement).closest('button[type="submit"]')) setOpen(false);
+          }}
           className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-[var(--shadow-pop)]"
         >
           {children}

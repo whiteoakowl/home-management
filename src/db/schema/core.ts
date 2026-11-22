@@ -57,8 +57,33 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
+  /** When the person proved they own this email (verification or reset link). */
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   ...timestamps,
 });
+
+/**
+ * One-time links sent by email: password reset (1 hour) and email
+ * verification (3 days). Only a SHA-256 hash of the token is stored.
+ */
+export const authTokens = pgTable(
+  "auth_tokens",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** reset | verify */
+    kind: text("kind").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    /** For verify links: the address being confirmed. */
+    email: text("email"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("auth_tokens_user_idx").on(t.userId, t.kind), index("auth_tokens_expires_idx").on(t.expiresAt)],
+);
 
 export const sessions = pgTable(
   "sessions",
@@ -71,7 +96,7 @@ export const sessions = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     ...timestamps,
   },
-  (t) => [index("sessions_user_idx").on(t.userId)],
+  (t) => [index("sessions_user_idx").on(t.userId), index("sessions_expires_idx").on(t.expiresAt)],
 );
 
 // ─── Tenant ──────────────────────────────────────────────────────────────────
@@ -110,6 +135,8 @@ export const families = pgTable("families", {
     .array()
     .notNull()
     .default([...MODULES]),
+  /** Religions/paths the family uses in the Spiritual section (null = Spiritual only, as before). Parents choose them in Account settings. */
+  faithPaths: text("faith_paths").array(),
   theme: jsonb("theme").$type<FamilyTheme>().notNull().default({}),
   settings: jsonb("settings").$type<FamilySettings>().notNull().default({}),
   ...timestamps,
@@ -124,6 +151,8 @@ export const familyMembers = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
     displayName: text("display_name").notNull(),
+    /** For parents: the name kids (and other non-parent members) see, e.g. "Dad" or "Mom". */
+    kidName: text("kid_name"),
     role: memberRole("role").notNull().default("member"),
     color: text("color").notNull().default("plum"),
     avatarFileId: uuid("avatar_file_id"),
@@ -156,6 +185,8 @@ export const familyMembers = pgTable(
     appTheme: text("app_theme"),
     /** Personal areas parents turned off for this profile ("period", "wellness"). Data is kept. */
     hiddenAreas: text("hidden_areas").array().notNull().default([]),
+    /** Religions this member can use in the Spiritual section, set by parents in Account settings. Null = all of the family's. */
+    faithPaths: text("faith_paths").array(),
     birthday: date("birthday"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,
@@ -234,9 +265,11 @@ export const files = pgTable(
     sizeBytes: integer("size_bytes").notNull(),
     width: integer("width"),
     height: integer("height"),
+    /** When a photo was taken (from the camera's data), if known. */
+    takenAt: timestamp("taken_at", { withTimezone: true }),
     ...timestamps,
   },
-  (t) => [index("files_family_idx").on(t.familyId)],
+  (t) => [index("files_family_idx").on(t.familyId), index("files_created_idx").on(t.createdAt)],
 );
 
 // ─── Dashboard, announcements, activity, notifications ───────────────────────
@@ -304,7 +337,7 @@ export const activityLog = pgTable(
     visibleToMemberIds: uuid("visible_to_member_ids").array(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("activity_family_idx").on(t.familyId, t.createdAt)],
+  (t) => [index("activity_family_idx").on(t.familyId, t.createdAt), index("activity_created_idx").on(t.createdAt)],
 );
 
 export const notifications = pgTable(
@@ -325,7 +358,7 @@ export const notifications = pgTable(
     dueAt: timestamp("due_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("notifications_member_idx").on(t.memberId, t.readAt)],
+  (t) => [index("notifications_member_idx").on(t.memberId, t.readAt), index("notifications_created_idx").on(t.createdAt)],
 );
 
 export const notificationPreferences = pgTable(
@@ -337,7 +370,8 @@ export const notificationPreferences = pgTable(
     kind: text("kind").notNull(),
     inApp: boolean("in_app").notNull().default(true),
     email: boolean("email").notNull().default(false),
-    push: boolean("push").notNull().default(false),
+    /** Phone/computer push for this kind (needs push turned on for a device). */
+    push: boolean("push").notNull().default(true),
   },
   (t) => [primaryKey({ columns: [t.memberId, t.kind] })],
 );
@@ -360,8 +394,34 @@ export const entityPhotos = pgTable(
       .notNull()
       .references(() => files.id, { onDelete: "cascade" }),
     caption: text("caption"),
+    /** photo | video */
+    mediaType: text("media_type").notNull().default("photo"),
+    /** When it was taken (from the photo itself when available), for the timeline. */
+    takenAt: timestamp("taken_at", { withTimezone: true }),
+    /** A milestone moment ("First steps!"): shown on the family timeline. */
+    milestone: text("milestone"),
     createdByMemberId: uuid("created_by_member_id").references(() => familyMembers.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("entity_photos_entity_idx").on(t.entityType, t.entityId)],
+  (t) => [index("entity_photos_entity_idx").on(t.entityType, t.entityId), index("entity_photos_family_taken_idx").on(t.familyId, t.takenAt)],
+);
+
+/** Push notification subscriptions: one per device/browser a member turned push on for. */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    device: text("device"),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint_uq").on(t.endpoint), index("push_subscriptions_member_idx").on(t.memberId)],
 );

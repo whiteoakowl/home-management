@@ -45,7 +45,7 @@ export default async function PoolPage({ searchParams }: PageProps<"/pool">) {
   if (!all.length) {
     return (
       <>
-        <PageHeader eyebrow="Household" title="Pool" description="Water tests, exactly what to add, maintenance and equipment for your pool or spa." actions={canEdit ? <PoolModal defaultOpen={sp.new === "1"} /> : undefined} />
+        <PageHeader help="pool" eyebrow="Household" title="Pool" description="Water tests, exactly what to add, maintenance and equipment for your pool or spa." actions={canEdit ? <PoolModal defaultOpen={sp.new === "1"} /> : undefined} />
         <Card>
           <EmptyState
             icon={<Waves />}

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { familyMembersFor } from "@/lib/names";
 import Link from "next/link";
 import { Eye, Lock, ShieldAlert } from "lucide-react";
 import { PRIVACY_CATEGORIES } from "@/db/schema";
 import { PrivacyForm } from "@/components/privacy/privacy-form";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
-import { getViewer, listFamilyMembers } from "@/lib/dal";
+import { getViewer } from "@/lib/dal";
 import { todayIn } from "@/lib/dates";
 import { allPrivacy, isMinor, PRIVACY_META } from "@/lib/privacy";
 
@@ -18,7 +19,7 @@ const OPTION_LABELS: Partial<Record<(typeof PRIVACY_CATEGORIES)[number], Record<
 /** Each person controls who can see their personal areas. */
 export default async function PrivacyCenterPage() {
   const viewer = await getViewer();
-  const [settings, members] = await Promise.all([allPrivacy(viewer.member.id), listFamilyMembers(viewer.family.id)]);
+  const [settings, members] = await Promise.all([allPrivacy(viewer.member.id), familyMembersFor(viewer)]);
   const others = members.filter((m) => m.id !== viewer.member.id).map((m) => ({ id: m.id, displayName: m.displayName, color: m.color }));
   const oversight = isMinor(viewer.member, todayIn(viewer.family.timezone)) ? viewer.member.parentAccess : [];
   const areas = PRIVACY_CATEGORIES.filter((c) => !PRIVACY_META[c].perEntry && !viewer.member.hiddenAreas.includes(c));
@@ -42,7 +43,7 @@ export default async function PrivacyCenterPage() {
   );
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <PageHeader eyebrow="My private" title="Privacy Center" description="You decide who can see your personal information. Everything here starts private." />
+      <PageHeader help="privacy-overview" eyebrow="My private" title="Privacy Center" description="You decide who can see your personal information. Everything here starts private." />
       <p className="flex items-start gap-2 rounded-xl border border-dashed border-olive-400 bg-olive-50 px-4 py-3 text-sm text-olive-700">
         <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
         Nothing personal appears on the family dashboard or the family calendar unless you share it here. Family areas (calendar, chores, pantry, recipes, meal plans) are shared with the family as usual.

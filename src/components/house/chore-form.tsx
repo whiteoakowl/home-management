@@ -1,5 +1,6 @@
 "use client";
 
+import { PremiumNote, usePremium } from "@/components/billing/plan-context";
 import { useState, type ReactNode } from "react";
 import { Pencil, Plus, X } from "lucide-react";
 import { saveChore } from "@/app/actions/chores";
@@ -8,7 +9,7 @@ import {
   DateField,
   FormRow,
   MemberChips,
-  MemberSelect,
+  MemberMultiSelect,
   NumberField,
   RecurrenceField,
   SelectField,
@@ -31,6 +32,7 @@ export type ChoreDefaults = {
   priority: string;
   estimatedMinutes: number | null;
   defaultAssigneeId: string | null;
+  assigneeIds?: string[];
   dueDate: string | null;
   notes: string | null;
   rule: (RuleDefaults & { startsOn?: string }) | null;
@@ -118,6 +120,7 @@ export function ChoreFormModal({
   /** Pre-select a room for new items. */
   presetRoomId?: string;
 }) {
+  const premium = usePremium();
   const [cadence, setCadence] = useState(defaults?.cleaningCadence ?? "weekly");
   const editing = !!defaults;
   // While editing, the type can be switched (chore ↔ cleaning ↔ task); the fields follow it.
@@ -170,7 +173,7 @@ export function ChoreFormModal({
         placeholder={{ chore: "Empty the dishwasher", cleaning: "Kitchen deep clean", maintenance: "Replace HVAC filter", task: "Call the plumber", farm: "Feed the chickens and collect eggs" }[type]}
       />
       <FormRow>
-        {!limited && <MemberSelect name="assigneeId" members={members} defaultValue={defaults?.defaultAssigneeId} />}
+        {!limited && <MemberMultiSelect name="assigneeIds" members={members} defaultValue={defaults?.assigneeIds ?? (defaults?.defaultAssigneeId ? [defaults.defaultAssigneeId] : [])} />}
         {rooms.length > 0 && (
           <SelectField name="roomId" label="Room" defaultValue={defaults?.roomId ?? presetRoomId ?? ""} placeholder="No room" options={rooms.map((r) => ({ value: r.id, label: r.name }))} />
         )}
@@ -236,6 +239,7 @@ export function ChoreFormModal({
       {!limited && type !== "task" && (
         <fieldset className="flex flex-col gap-1.5">
           <legend className="mb-1.5 text-sm font-medium text-ink-soft">Take turns (optional)</legend>
+          {!premium && <PremiumNote what="Taking turns" />}
           <MemberChips name="rotation" members={members} defaultValue={defaults?.rotationMemberIds ?? []} />
           <p className="text-xs text-muted">Pick two or more people and they take turns evenly. On any day, everyone gets one chore before anyone gets a second. Change who&apos;s on a day and the turns after it follow on. Leave empty to use the assignee above.</p>
         </fieldset>
