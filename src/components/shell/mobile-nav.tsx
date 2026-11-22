@@ -85,7 +85,7 @@ export function MobileNav({
                       onClick={() => setMore(false)}
                       className={cn(
                         "flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-[13px] font-medium",
-                        isActive(pathname, item.href) ? "border-primary-300 bg-primary-50 text-primary-700" : "border-line",
+                        isActive(pathname, item.href) || item.children?.some((c) => isActive(pathname, c.href.split("?")[0]!)) ? "border-primary-300 bg-primary-50 text-primary-700" : "border-line",
                       )}
                     >
                       <span className="relative">

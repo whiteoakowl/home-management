@@ -165,6 +165,24 @@ export function buildNav(viewer: Viewer): NavSection[] {
     label: "Family",
     icon: "Users",
   });
+  // House comes first under Household, and its parts (maintenance, projects, pool,
+  // Important Info, documents) live under it rather than as separate menu items.
+  const household = sections.find((s) => s.group === "Household");
+  if (household) {
+    const path = (h: string) => h.split("?")[0]!;
+    const PARTS = ["/maintenance", "/maintenance/projects", "/pool", "/house/info"];
+    const parts = PARTS.map((p) => household.items.find((i) => path(i.href) === p)).filter(Boolean) as NavItem[];
+    const house = household.items.find((i) => i.href === "/house");
+    household.items = household.items.filter((i) => i !== house && !parts.includes(i));
+    const maintenance = parts.find((i) => i.href === "/maintenance");
+    const children = [
+      ...(house ? [{ href: "/house", label: "Overview" }] : []),
+      ...parts.map((i) => ({ href: i.href, label: i.label })),
+      ...(maintenance ? [{ href: "/maintenance/documents", label: "Documents" }] : []),
+    ];
+    if (children.length)
+      household.items.unshift({ href: house?.href ?? children[0]!.href, label: "House", icon: "House", locked: house?.locked, children: children.length > 1 ? children : undefined });
+  }
   if (viewer.isParent)
     sections.push({
       group: "Admin",

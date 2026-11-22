@@ -89,7 +89,7 @@ export const LIFE: HelpArticle[] = [
     modules: ["info"],
     openIn: { label: "Open Important Info", href: "/house/info" },
     steps: [
-      "Open **Important Info** from the menu.",
+      "Open **House → Important info** from the menu.",
       "Pick a tab at the top (**Emergency contacts**, **Important phone numbers**, **School information**, **Doctors**, **Insurance**, **Babysitter information**, **Household instructions**, **Important addresses**, **Membership numbers**, **Wi-Fi** or **Other info**) and select **Add**. **All** shows everything.",
       "Fill in the fields.",
       "In **Who can see this**, choose the whole family, **Selected people**, parents, or only you.",
@@ -109,7 +109,7 @@ export const LIFE: HelpArticle[] = [
     keywords: ["babysitter", "sitter sheet", "nanny", "grandparents", "print emergency"],
     modules: ["info"],
     openIn: { label: "Open the babysitter sheet", href: "/house/info/sitter" },
-    steps: ["Open **Important Info**.", "Select **Babysitter sheet**.", "Select **Print or save as PDF**."],
+    steps: ["Open **House → Important info**.", "Select **Babysitter sheet**.", "Select **Print or save as PDF**."],
     sections: [{ heading: "What's on it", body: "Only entries the whole family can see are included, so private and parents-only details (like auto or home insurance) never end up on paper." }],
   },
   {
@@ -136,7 +136,8 @@ export const LIFE: HelpArticle[] = [
     keywords: ["house", "rooms", "overview", "add room"],
     modules: ["house"],
     openIn: { label: "Open House", href: "/house" },
-    steps: ["Open **House**.", "See what's due today, active projects and documents expiring.", "Add rooms with **Add a room**."],
+    steps: ["Open **House** (first under Household in the menu).", "See what's due today, active projects and documents expiring.", "Add rooms with **Add a room**."],
+    sections: [{ heading: "Everything under House", body: "House holds **Home maintenance**, **House projects**, **Pool**, **Important info** and **Documents**. Open them from the House menu or the tabs at the top of the House page." }],
   },
   {
     slug: "vehicles",
@@ -156,7 +157,7 @@ export const LIFE: HelpArticle[] = [
     keywords: ["pool", "spa", "hot tub", "chlorine", "ph", "water test"],
     modules: ["pool"],
     openIn: { label: "Open Pool", href: "/pool" },
-    steps: ["Open **Pool** and add your pool or spa.", "Select **Log test** to record a water test.", "**What to add** tells you what the water needs; select **I added this** when you do."],
+    steps: ["Open **House → Pool** and add your pool or spa.", "Select **Log test** to record a water test.", "**What to add** tells you what the water needs; select **I added this** when you do."],
   },
 
   // ─── Memories & photos ─────────────────────────────────────────────────────

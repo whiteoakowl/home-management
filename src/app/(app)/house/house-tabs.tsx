@@ -15,13 +15,15 @@ export function ChoreTabs({ active, viewer }: { active: string; viewer: Viewer }
   return tabs.length > 1 ? <LinkTabs tabs={tabs} active={active} /> : null;
 }
 
-/** Tabs for the House overview: the other Household pages. */
+/** Tabs for the House overview: everything that lives under House. */
 export function HouseTabs({ active, viewer }: { active: string; viewer: Viewer }) {
   const tabs = [
     viewer.can("house") && { key: "overview", href: "/house", label: "Overview" },
     viewer.can("maintenance") && { key: "maintenance", href: "/maintenance", label: "Home maintenance" },
     viewer.can("projects") && { key: "projects", href: "/maintenance/projects", label: "House projects" },
+    viewer.can("pool") && { key: "pool", href: "/pool", label: "Pool" },
     viewer.family.enabledModules.includes("info") && { key: "info", href: "/house/info", label: "Important info" },
+    viewer.can("maintenance") && { key: "documents", href: "/maintenance/documents", label: "Documents" },
   ].filter(Boolean) as { key: string; href: string; label: string }[];
   return tabs.length > 1 ? <LinkTabs tabs={tabs} active={active} /> : null;
 }

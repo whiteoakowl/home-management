@@ -33,7 +33,7 @@ export function Sidebar({ sections, familyName, badges = {} }: { sections: NavSe
             <p className="mb-1.5 hidden px-3 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase lg:block">{s.group}</p>
             <ul className="flex flex-col gap-0.5">
               {s.items.map((item) => {
-                const active = isActive(pathname, item.href);
+                const active = isActive(pathname, item.href) || !!item.children?.some((c) => isActive(pathname, c.href.split("?")[0]!));
                 return (
                   <li key={item.href}>
                     <Link
@@ -60,7 +60,10 @@ export function Sidebar({ sections, familyName, badges = {} }: { sections: NavSe
                     {active && item.children && (
                       <ul className="mt-1 mb-2 ml-6 hidden flex-col border-l border-line pl-3 lg:flex" aria-label={`${item.label} sections`}>
                         {item.children.map((c) => {
-                          const on = c.href === item.href ? pathname === c.href : isActive(pathname, c.href);
+                          // Only the closest match lights up (Documents, not also Home maintenance).
+                          const matches = item.children!.filter((x) => (x.href === item.href ? pathname === x.href : isActive(pathname, x.href.split("?")[0]!)));
+                          const best = matches.sort((x, y) => y.href.length - x.href.length)[0];
+                          const on = best?.href === c.href;
                           return (
                             <li key={c.href}>
                               <Link
