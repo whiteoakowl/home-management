@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CalendarOff, Pencil, Plus, Star, Trophy } from "lucide-react";
+import { CalendarOff, Pencil, Plus, Star } from "lucide-react";
 import { saveDanceClass, saveDanceEvent, saveDayOff, saveEnrollment, savePointeFavorite, savePointeShoe } from "@/app/actions/dance";
 import { FormModal } from "@/components/forms/action-form";
 import { ChipSelect, DateField, FormRow, MemberChips, SelectField, TextAreaField, TextField, type MemberOption } from "@/components/forms/fields";
@@ -124,14 +124,14 @@ export type DanceEventDefaults = { id: string; memberIds: string[]; kind: string
 const money = (c: number | null | undefined) => (c != null ? (c / 100).toFixed(2) : "");
 const KIND_TITLE: Record<string, string> = { audition: "Add an audition", photos: "Add a picture day" };
 
-export function DanceEventModal({ dancers, item, defaultMember, defaultKind = "performance", triggerLabel = "Performance", triggerIcon }: { dancers: MemberOption[]; item?: DanceEventDefaults; defaultMember?: string; defaultKind?: string; triggerLabel?: string; triggerIcon?: ReactNode }) {
+export function DanceEventModal({ dancers, item, defaultMember, defaultKind = "performance", triggerLabel = "Dancer's activity", triggerIcon }: { dancers: MemberOption[]; item?: DanceEventDefaults; defaultMember?: string; defaultKind?: string; triggerLabel?: string; triggerIcon?: ReactNode }) {
   const kind = item?.kind ?? defaultKind;
   return (
     <FormModal
-      title={item ? `Edit ${item.title}` : (KIND_TITLE[defaultKind] ?? "Add a performance or competition")}
+      title={item ? `Edit ${item.title}` : (KIND_TITLE[defaultKind] ?? "Add a dancer's activity")}
       triggerLabel={triggerLabel}
       triggerVariant="secondary"
-      triggerIcon={triggerIcon ?? <Trophy className="size-4" />}
+      triggerIcon={triggerIcon ?? <Plus className="size-4" />}
       triggerContent={item ? editIcon : undefined}
       triggerAriaLabel={item ? `Edit ${item.title}` : undefined}
       triggerClassName={iconBtn}
