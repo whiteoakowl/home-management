@@ -1,1 +1,1 @@
-ALTER TABLE "files" ADD COLUMN "taken_at" timestamp with time zone;
+ALTER TABLE "files" ADD COLUMN IF NOT EXISTS "taken_at" timestamp with time zone;

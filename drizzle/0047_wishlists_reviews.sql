@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS "reviews" (
 	"featured" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
+);--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "wishlist_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"family_id" uuid NOT NULL,
@@ -27,8 +26,7 @@ CREATE TABLE IF NOT EXISTS "wishlist_items" (
 	"received" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
+);--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "reviews" ADD CONSTRAINT "reviews_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "reviews" ADD CONSTRAINT "reviews_member_id_family_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."family_members"("id") ON DELETE set null ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "wishlist_items" ADD CONSTRAINT "wishlist_items_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint

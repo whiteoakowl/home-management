@@ -17,14 +17,12 @@ CREATE TABLE IF NOT EXISTS "billing_invoices" (
 	"invoice_created_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
+);--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "stripe_events" (
 	"id" text PRIMARY KEY NOT NULL,
 	"type" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
+);--> statement-breakpoint
 ALTER TABLE "family_billing" ADD COLUMN IF NOT EXISTS "stripe_status" text;--> statement-breakpoint
 ALTER TABLE "family_billing" ADD COLUMN IF NOT EXISTS "stripe_price_id" text;--> statement-breakpoint
 ALTER TABLE "family_billing" ADD COLUMN IF NOT EXISTS "price_cents" integer;--> statement-breakpoint
@@ -46,8 +44,7 @@ ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "stripe_monthly_price_i
 ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "stripe_yearly_price_id" text;--> statement-breakpoint
 ALTER TABLE "platform_settings" ADD COLUMN IF NOT EXISTS "stripe_prices_key" text;--> statement-breakpoint
 DO $$ BEGIN ALTER TABLE "billing_invoices" ADD CONSTRAINT "billing_invoices_family_id_families_id_fk" FOREIGN KEY ("family_id") REFERENCES "public"."families"("id") ON DELETE cascade ON UPDATE no action; EXCEPTION WHEN duplicate_object THEN NULL; END $$;--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "billing_invoices_family_idx" ON "billing_invoices" USING btree ("family_id","invoice_created_at");
---> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "billing_invoices_family_idx" ON "billing_invoices" USING btree ("family_id","invoice_created_at");--> statement-breakpoint
 -- Supabase hardening: no direct access to app tables through Supabase's public API keys.
 -- The app (and the stripe-webhook Edge Function) connect as the tables' owner, which RLS doesn't restrict.
 DO $$
