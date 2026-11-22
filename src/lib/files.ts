@@ -26,6 +26,8 @@ const store = {
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif", "image/avif"];
 const DOC_TYPES = ["application/pdf", "text/plain"];
+/** Voice recordings (wellness journal, baby journal). */
+const AUDIO_TYPES = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav", "audio/x-wav", "audio/aac", "audio/x-m4a", "audio/m4a"];
 const MAX_BYTES = 10 * 1024 * 1024;
 
 /** Shown as the form's message (not tied to one field: album and journal forms have no "image" field). */
@@ -37,12 +39,14 @@ export class UploadError extends Error {
  * Save an uploaded File. Images are auto-rotated, resized to ≤2048px and a
  * 320px thumbnail (both WebP). Returns the files.id, or null if nothing uploaded.
  */
-export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null, opts: { allowDocs?: boolean } = {}) {
+export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null, opts: { allowDocs?: boolean; allowAudio?: boolean } = {}) {
   if (!file || typeof file === "string" || file.size === 0) return null;
   if (file.size > MAX_BYTES) throw new UploadError("Files must be 10 MB or smaller.");
   const isImage = IMAGE_TYPES.includes(file.type);
-  if (!isImage && !(opts.allowDocs && DOC_TYPES.includes(file.type))) {
-    throw new UploadError(opts.allowDocs ? "Upload an image or PDF." : "Upload a JPG, PNG, WebP or HEIC image.");
+  const baseType = file.type.split(";")[0]!.trim().toLowerCase();
+  const isAudio = !!opts.allowAudio && AUDIO_TYPES.includes(baseType);
+  if (!isImage && !isAudio && !(opts.allowDocs && DOC_TYPES.includes(file.type))) {
+    throw new UploadError(opts.allowAudio ? "Upload an image or a voice recording." : opts.allowDocs ? "Upload an image or PDF." : "Upload a JPG, PNG, WebP or HEIC image.");
   }
   // Fair-use allowance per family (FAMILY_STORAGE_GB, default 10 GB).
   if ((await familyStorageBytes(viewer.family.id)) + file.size > familyStorageLimit()) {
@@ -53,15 +57,16 @@ export async function saveUpload(viewer: Viewer, file: FormDataEntryValue | null
   const input = Buffer.from(await file.arrayBuffer());
 
   if (!isImage) {
-    const key = `${base}${path.extname(file.name) || ".bin"}`;
-    await store.put(key, input, file.type);
+    const ext = isAudio ? { "audio/webm": ".webm", "audio/mp4": ".m4a", "audio/x-m4a": ".m4a", "audio/m4a": ".m4a", "audio/mpeg": ".mp3", "audio/ogg": ".ogg", "audio/wav": ".wav", "audio/x-wav": ".wav", "audio/aac": ".aac" }[baseType] : null;
+    const key = `${base}${ext ?? (path.extname(file.name).replace(/[^.a-z0-9]/gi, "") || ".bin")}`;
+    await store.put(key, input, isAudio ? baseType : file.type);
     await db.insert(files).values({
       id,
       familyId: viewer.family.id,
       uploadedByMemberId: viewer.member.id,
       storageKey: key,
-      originalName: file.name,
-      mimeType: file.type,
+      originalName: file.name.slice(0, 200),
+      mimeType: isAudio ? baseType : file.type,
       sizeBytes: input.length,
     });
     return id;

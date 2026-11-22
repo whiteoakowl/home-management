@@ -6,6 +6,7 @@ import { refreshImport } from "@/lib/calendar-sync";
 import { cleanupOldRows, cleanupOrphanFiles } from "@/lib/housekeeping";
 import { sendEventReminders } from "@/lib/event-reminders";
 import { sendSoundReminders } from "@/lib/sounds/reminders";
+import { sendWellnessTimedReminders } from "@/lib/wellness-reminders";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
 import { familyAccess } from "@/lib/billing";
@@ -36,6 +37,11 @@ export async function POST(req: Request) {
     await sendSoundReminders();
   } catch (e) {
     console.error("Sleep Sounds reminders failed:", e);
+  }
+  try {
+    await sendWellnessTimedReminders();
+  } catch (e) {
+    console.error("Wellness reminders failed:", e);
   }
   const all = await db.select().from(families);
   let ran = 0,

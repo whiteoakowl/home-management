@@ -10,7 +10,9 @@ import { AreaOff } from "@/components/health/area-off";
 import { getViewer } from "@/lib/dal";
 import { addDays, addMonths, formatLongDate, formatShortDate, monthLabel, startOfMonth, startOfWeek, todayIn } from "@/lib/dates";
 import { personalSubject, areaHidden } from "@/lib/privacy";
-import { checkInsFor, wellnessEntriesFor, type WellnessAccess } from "@/lib/wellness-data";
+import { checkInsFor, sleepNightsFor, wellnessEntriesFor, type WellnessAccess } from "@/lib/wellness-data";
+import { insights, moodByWeekday, periodSummary, SCALES, series, sleepMinutes } from "@/lib/wellness-insights";
+import { BarChart, TrendChart } from "@/components/wellness/charts";
 import { averageMood, MOODS, moodForScore, moodInfo, selfCareLabel } from "@/lib/wellness";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +33,17 @@ export default async function MoodHistoryPage({ searchParams }: PageProps<"/well
   const from = range === "week" ? startOfWeek(date, 1) : range === "month" ? startOfMonth(date) : `${date.slice(0, 4)}-01-01`;
   const to = range === "week" ? addDays(from, 6) : range === "month" ? addDays(addMonths(from, 1), -1) : `${date.slice(0, 4)}-12-31`;
   const day = typeof sp.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.day) ? sp.day : null;
-  const [checkIns, entries] = await Promise.all([checkInsFor(subject.id, access, from, to), wellnessEntriesFor(viewer, subject.id, { from, to })]);
+  const trendFrom = addDays(today, -29);
+  const [checkIns, entries, recent, nights] = await Promise.all([
+    checkInsFor(subject.id, access, from, to),
+    wellnessEntriesFor(viewer, subject.id, { from, to }),
+    checkInsFor(subject.id, access, addDays(today, -120), today),
+    access === "self" || access === "managed" ? sleepNightsFor(subject.id, addDays(today, -120), today) : Promise.resolve([]),
+  ]);
+  const found = insights(recent, nights.map((n) => ({ date: n.date, minutes: sleepMinutes(n.bedTime, n.wakeTime), quality: n.quality })), today);
+  const summary = periodSummary(checkIns, from, to);
+  const moodScore = (c: (typeof recent)[number]) => moodInfo(c.mood)?.score ?? null;
+  const byWeekday = moodByWeekday(recent).filter((d) => d.n > 0);
   const byDay = new Map(checkIns.map((c) => [c.date, c]));
   const href = (o: { range?: string; date?: string; day?: string | null }) => {
     const p = new URLSearchParams();
@@ -144,6 +156,60 @@ export default async function MoodHistoryPage({ searchParams }: PageProps<"/well
           ))}
         </Card>
       )}
+
+      <Card className="flex flex-col gap-3">
+        <CardHeader title={`Summary: ${title}`} />
+        {summary.checkIns ? (
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { k: "Check-ins", v: String(summary.checkIns) },
+              { k: "Average mood", v: summary.mood ? `${moodForScore(summary.mood)?.emoji ?? ""} ${moodForScore(summary.mood)?.label ?? ""}` : "—" },
+              { k: "Average energy", v: summary.energy ? SCALES.energy.options[Math.round(summary.energy) - 1]! : "—" },
+              { k: "Average stress", v: summary.stress ? SCALES.stress.options[Math.round(summary.stress) - 1]! : "—" },
+            ].map((x) => (
+              <div key={x.k} className="rounded-xl bg-sunken/60 p-3">
+                <dt className="text-xs text-muted">{x.k}</dt>
+                <dd className="font-semibold">{x.v}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-sm text-muted">No check-ins in this period.</p>
+        )}
+        {(summary.topFeelings.length > 0 || summary.topSelfCare.length > 0) && (
+          <p className="text-sm text-ink-soft">
+            {summary.topFeelings.length > 0 && <>Felt most: {summary.topFeelings.join(", ")}. </>}
+            {summary.topSelfCare.length > 0 && <>Self-care you did most: {summary.topSelfCare.join(", ")}.</>}
+          </p>
+        )}
+      </Card>
+
+      <Card className="flex flex-col gap-3">
+        <CardHeader title="Insights" />
+        {found.length ? (
+          <ul className="flex flex-col gap-2">
+            {found.map((i) => (
+              <li key={i.key} className="rounded-xl bg-primary-50/60 px-3 py-2 text-[15px]">
+                💡 {i.text}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted">Keep checking in (energy, stress and sleep too). Patterns show up here after a couple of weeks.</p>
+        )}
+        <p className="text-xs text-muted">Based only on what you logged. Patterns, not diagnoses.</p>
+      </Card>
+
+      <Card className="flex flex-col gap-4">
+        <CardHeader title="Last 30 days" />
+        <div className="grid gap-5 md:grid-cols-2">
+          <TrendChart title="Mood" points={series(recent, trendFrom, 30, moodScore)} labels={["Rough", "Great"]} />
+          <TrendChart title="Energy" points={series(recent, trendFrom, 30, (c) => c.energy)} labels={["Drained", "High"]} />
+          <TrendChart title="Stress" points={series(recent, trendFrom, 30, (c) => c.stress)} labels={["Calm", "Very"]} />
+          <TrendChart title="Sleep quality" points={series(recent, trendFrom, 30, (c) => c.sleepQuality)} labels={["Poor", "Great"]} />
+        </div>
+        {byWeekday.length >= 3 && <BarChart title="Average mood by day of the week (1–5)" bars={byWeekday.map((d) => ({ label: d.name.slice(0, 3), value: d.avg ?? 0 }))} max={5} />}
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

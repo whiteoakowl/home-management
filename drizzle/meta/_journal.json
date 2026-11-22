@@ -470,6 +470,13 @@
       "when": 1795379032169,
       "tag": "0066_sleep_sounds",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1795389599582,
+      "tag": "0067_wellness_plus",
+      "breakpoints": true
     }
   ]
 }

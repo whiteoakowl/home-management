@@ -131,6 +131,14 @@ export default async function WellnessJournalPage({ searchParams }: PageProps<"/
                           ))}
                         </div>
                       )}
+                      {e.voice.map((v) => (
+                        <div key={v.id} className="flex flex-col gap-1">
+                          <span className="text-xs font-medium text-muted">🎙️ Voice note</span>
+                          <audio controls preload="none" className="h-10 w-full max-w-sm">
+                            <source src={v.url} type={v.mime} />
+                          </audio>
+                        </div>
+                      ))}
                       {e.tags.length > 0 && <p className="text-xs text-muted">{e.tags.map((t) => `#${t}`).join(" ")}</p>}
                     </Card>
                   </li>

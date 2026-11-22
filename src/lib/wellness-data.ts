@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { journalEntries, journalEntryFiles, wellnessCheckIns, wellnessGoalMarks, wellnessGoals } from "@/db/schema";
+import { files, journalEntries, journalEntryFiles, wellnessCheckIns, wellnessGoalMarks, wellnessGoals, wellnessSleep } from "@/db/schema";
 import { visibleTo, type Viewer } from "./dal";
 import { addDays } from "./dates";
 import { fileUrl } from "./files";
@@ -39,9 +39,23 @@ export async function wellnessEntriesFor(viewer: Viewer, memberId: string, opts:
     )
     .orderBy(desc(journalEntries.date), desc(journalEntries.createdAt))
     .limit(opts.limit ?? 200);
-  const photos = rows.length ? await db.select().from(journalEntryFiles).where(inArray(journalEntryFiles.entryId, rows.map((r) => r.id))).orderBy(asc(journalEntryFiles.position)) : [];
-  const by = Map.groupBy(photos, (p) => p.entryId);
-  return rows.map((e) => ({ ...e, photos: (by.get(e.id) ?? []).map((p) => ({ id: p.fileId, thumb: fileUrl(p.fileId, true)!, full: fileUrl(p.fileId)! })) }));
+  const attached = rows.length
+    ? await db
+        .select({ entryId: journalEntryFiles.entryId, fileId: journalEntryFiles.fileId, mime: files.mimeType })
+        .from(journalEntryFiles)
+        .innerJoin(files, eq(files.id, journalEntryFiles.fileId))
+        .where(inArray(journalEntryFiles.entryId, rows.map((r) => r.id)))
+        .orderBy(asc(journalEntryFiles.position))
+    : [];
+  const by = Map.groupBy(attached, (p) => p.entryId);
+  return rows.map((e) => {
+    const list = by.get(e.id) ?? [];
+    return {
+      ...e,
+      photos: list.filter((p) => !p.mime.startsWith("audio/")).map((p) => ({ id: p.fileId, thumb: fileUrl(p.fileId, true)!, full: fileUrl(p.fileId)! })),
+      voice: list.filter((p) => p.mime.startsWith("audio/")).map((p) => ({ id: p.fileId, url: fileUrl(p.fileId)!, mime: p.mime })),
+    };
+  });
 }
 export type WellnessEntry = Awaited<ReturnType<typeof wellnessEntriesFor>>[number];
 
@@ -53,7 +67,7 @@ export async function goalsWithProgress(viewer: Viewer, memberId: string, access
     .where(and(eq(wellnessGoals.memberId, memberId), isNull(wellnessGoals.archivedAt), access === "shared" ? eq(wellnessGoals.shared, true) : undefined))
     .orderBy(asc(wellnessGoals.createdAt));
   if (!goals.length) return [];
-  const from = addDays(today, -7);
+  const from = addDays(today, -62);
   const [checkIns, entries, marks] = await Promise.all([
     db.select({ date: wellnessCheckIns.date, selfCare: wellnessCheckIns.selfCare }).from(wellnessCheckIns).where(and(eq(wellnessCheckIns.memberId, memberId), gte(wellnessCheckIns.date, from))),
     db.select({ date: journalEntries.date, details: journalEntries.details }).from(journalEntries).where(and(eq(journalEntries.authorMemberId, memberId), eq(journalEntries.book, "wellness"), gte(journalEntries.date, from))),
@@ -70,6 +84,34 @@ export async function goalsWithProgress(viewer: Viewer, memberId: string, access
             : g.kind === "self_care"
               ? [...checkIns.filter((c) => g.selfCareKey && c.selfCare.includes(g.selfCareKey)).map((c) => c.date), ...entries.filter((e) => g.selfCareKey && e.details?.selfCare?.includes(g.selfCareKey)).map((e) => e.date)]
               : marks.filter((m) => m.goalId === g.id).map((m) => m.date);
-    return { ...g, done: thisWeekCount(dates, today), doneToday: dates.includes(today) };
+    return { ...g, dates: [...new Set(dates)], done: thisWeekCount(dates, today), doneToday: dates.includes(today) };
   });
+}
+
+/** Sleep journal nights for a member (self or a managed member only; never shared). */
+export async function sleepNightsFor(memberId: string, from: string, to: string) {
+  return db
+    .select()
+    .from(wellnessSleep)
+    .where(and(eq(wellnessSleep.memberId, memberId), gte(wellnessSleep.date, from), lte(wellnessSleep.date, to)))
+    .orderBy(desc(wellnessSleep.date));
+}
+
+/**
+ * Photos and voice notes in a journal entry are only served to people who may
+ * read that entry (private entries: the author alone).
+ */
+export async function canReadJournalFile(viewer: Viewer, fileId: string) {
+  const links = await db
+    .select({ id: journalEntries.id })
+    .from(journalEntryFiles)
+    .innerJoin(journalEntries, eq(journalEntries.id, journalEntryFiles.entryId))
+    .where(and(eq(journalEntryFiles.fileId, fileId), eq(journalEntries.familyId, viewer.family.id)));
+  if (!links.length) return true;
+  const ok = await db
+    .select({ id: journalEntries.id })
+    .from(journalEntries)
+    .where(and(inArray(journalEntries.id, links.map((l) => l.id)), visibleTo(viewer, { id: journalEntries.id, visibility: journalEntries.visibility, author: journalEntries.authorMemberId }, "journal_entry")))
+    .limit(1);
+  return ok.length > 0;
 }

@@ -1,6 +1,7 @@
 import { getMembership, getViewer } from "@/lib/dal";
 import { canReadMedicalFile } from "@/lib/medical";
 import { bigFileLink, readFamilyFile } from "@/lib/files";
+import { canReadJournalFile } from "@/lib/wellness-data";
 
 /** Serves uploaded files to members of the owning family only. */
 export async function GET(request: Request, { params }: RouteContext<"/api/files/[id]">) {
@@ -8,7 +9,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   const { family } = await getMembership();
   if (!family || !/^[0-9a-f-]{36}$/i.test(id)) return new Response("Not found", { status: 404 });
   // Medical attachments are private to whoever may see the record.
-  if (!(await canReadMedicalFile(await getViewer(), id))) return new Response("Not found", { status: 404 });
+  const viewer = await getViewer();
+  if (!(await canReadMedicalFile(viewer, id)) || !(await canReadJournalFile(viewer, id))) return new Response("Not found", { status: 404 });
   const thumb = new URL(request.url).searchParams.has("thumb");
   const download = new URL(request.url).searchParams.has("download");
   // Big files (large PDFs) go straight from storage with a 5-minute private link: the
@@ -19,11 +21,30 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   }
   const file = await readFamilyFile(family.id, id, thumb);
   if (!file) return new Response("Not found", { status: 404 });
+  const headers = {
+    "Content-Type": file.mime,
+    "Cache-Control": "private, max-age=31536000, immutable",
+    "X-Content-Type-Options": "nosniff",
+    "Accept-Ranges": "bytes",
+  };
+  // Byte ranges (Safari and iPhone need these to play audio and video).
+  const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get("range") ?? "");
+  if (range && !download) {
+    const size = file.data.length;
+    let start = range[1] ? Number(range[1]) : size - Number(range[2] || 0);
+    let end = range[1] && range[2] ? Number(range[2]) : size - 1;
+    if (!range[1]) end = size - 1;
+    start = Math.max(0, start);
+    end = Math.min(size - 1, end);
+    if (start > end || start >= size) return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+    return new Response(new Uint8Array(file.data.subarray(start, end + 1)), { status: 206, headers: { ...headers, "Content-Range": `bytes ${start}-${end}/${size}`, "Content-Length": String(end - start + 1) } });
+  }
   return new Response(new Uint8Array(file.data), {
     headers: {
       "Content-Type": file.mime,
       "Cache-Control": "private, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
+      "Accept-Ranges": "bytes",
       ...(download
         ? { "Content-Disposition": `attachment; filename="${downloadName(file.name, file.mime)}"` }
         : file.mime === "application/pdf" && file.name

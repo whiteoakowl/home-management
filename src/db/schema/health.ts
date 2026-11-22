@@ -1,4 +1,4 @@
-import { boolean, date, index, integer, jsonb, numeric, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, numeric, pgTable, primaryKey, smallint, text, time, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { id, timestamps } from "./_shared";
 import { families, familyMembers, files } from "./core";
 import { inventoryItems } from "./kitchen";
@@ -70,6 +70,11 @@ export const personalHealthProfiles = pgTable("personal_health_profiles", {
   /** Daily quote categories the person prefers (empty = all). */
   quoteCategories: text("quote_categories").array().notNull().default([]),
   reminders: jsonb("reminders").$type<WellnessReminders>().notNull().default({}),
+  /** Optional bedtime reminder (local time) for the sleep journal. */
+  bedtimeReminder: time("bedtime_reminder"),
+  bedtimeReminderOn: date("bedtime_reminder_on"),
+  /** Hours of sleep the person aims for. */
+  sleepGoalHours: numeric("sleep_goal_hours").notNull().default("8"),
   ...timestamps,
 });
 
@@ -115,12 +120,43 @@ export const wellnessCheckIns = pgTable(
     /** low | medium | high */
     intensity: text("intensity"),
     selfCare: text("self_care").array().notNull().default([]),
+    /** 1 (very low) – 5 (very high). */
+    energy: smallint("energy"),
+    /** 1 (calm) – 5 (very stressed). */
+    stress: smallint("stress"),
+    /** 1 (poor) – 5 (great): how they slept last night. */
+    sleepQuality: smallint("sleep_quality"),
+    /** Simple daily questions ("Drank enough water?" …): key → yes/no. */
+    answers: jsonb("answers").$type<Record<string, boolean>>().notNull().default({}),
     note: text("note"),
     /** "Share today's mood": visible to the person's wellness audience. */
     shared: boolean("shared").notNull().default(false),
     ...timestamps,
   },
   (t) => [uniqueIndex("wellness_check_ins_member_date_idx").on(t.memberId, t.date)],
+);
+
+/** Sleep journal: one night per person, dated by the morning they woke up. */
+export const wellnessSleep = pgTable(
+  "wellness_sleep",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    bedTime: time("bed_time"),
+    wakeTime: time("wake_time"),
+    /** 1 (poor) – 5 (great). */
+    quality: smallint("quality"),
+    awakenings: smallint("awakenings"),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("wellness_sleep_member_date_idx").on(t.memberId, t.date)],
 );
 
 /** Gentle personal habits ("Journal 3 times this week"). Progress comes from check-ins and journal entries. */
@@ -140,6 +176,11 @@ export const wellnessGoals = pgTable(
     /** For kind self_care: which activity counts. */
     selfCareKey: text("self_care_key"),
     timesPerWeek: smallint("times_per_week").notNull().default(3),
+    /** daily (every day) or weekly (timesPerWeek days a week). */
+    cadence: text("cadence").$type<"daily" | "weekly">().notNull().default("weekly"),
+    /** Optional reminder at this local time (not sent once it's done for the day/week). */
+    reminderTime: time("reminder_time"),
+    lastReminderOn: date("last_reminder_on"),
     shared: boolean("shared").notNull().default(false),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     ...timestamps,

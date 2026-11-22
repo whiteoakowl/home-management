@@ -32,6 +32,8 @@ export const SELF_CARE = [
   { key: "relaxed", label: "Relaxed" },
   { key: "journaled", label: "Journaled" },
   { key: "creative", label: "Did something creative" },
+  { key: "water", label: "Drank enough water" },
+  { key: "rested", label: "Rested" },
 ] as const;
 export const selfCareLabel = (k: string) => SELF_CARE.find((s) => s.key === k)?.label ?? k;
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { and, eq } from "drizzle-orm";
-import { Archive, Flame, Heart, Lock, NotebookPen, Pencil, Quote, Share2, Sparkles, Target } from "lucide-react";
+import { Archive, AudioLines, BookOpen, Flame, Heart, Lock, Moon, NotebookPen, Pencil, Quote, Share2, Sparkles, Target, Wind } from "lucide-react";
 import { db } from "@/db";
 import { quoteFavorites } from "@/db/schema";
 import { archiveWellnessGoal, setCheckInShared, setGoalShared, toggleGoalMark, toggleQuoteFavorite } from "@/app/actions/wellness";
@@ -19,6 +19,7 @@ import { audienceNames, personalSubject, privacyFor, areaHidden } from "@/lib/pr
 import { quoteFor } from "@/lib/quotes";
 import { checkInsFor, goalsWithProgress, wellnessEntriesFor, type WellnessAccess } from "@/lib/wellness-data";
 import { currentStreak, moodInfo, promptFor, selfCareLabel, thisWeekCount } from "@/lib/wellness";
+import { AFFIRMATIONS, ENCOURAGEMENT, followUps, GRATITUDE_PROMPTS, pickForDay } from "@/lib/wellness-insights";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Mental Wellness" };
@@ -57,6 +58,41 @@ export default async function WellnessPage({ searchParams }: PageProps<"/wellnes
       <WellnessTabs active="today" member={own ? undefined : subject.id} />
       {own && sp.support === "1" && <SupportPanel back="/wellness?support=1" asked={sp.asked === "1"} />}
 
+      {own && (
+        <nav aria-label="Wellness tools" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          {[
+            { href: "/wellness/breathe", label: "Breathe", icon: <Wind className="size-4" /> },
+            { href: "/wellness/sleep", label: "Sleep journal", icon: <Moon className="size-4" /> },
+            { href: "/wellness/habits", label: "Goals & habits", icon: <Target className="size-4" /> },
+            ...(viewer.can("sounds") ? [{ href: "/sounds", label: "Sleep Sounds", icon: <AudioLines className="size-4" /> }] : []),
+            { href: "/wellness/learn", label: "Learn", icon: <BookOpen className="size-4" /> },
+          ].map((t) => (
+            <Link key={t.href} href={t.href} className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-4 text-sm font-medium hover:bg-sunken">
+              {t.icon} {t.label}
+            </Link>
+          ))}
+        </nav>
+      )}
+
+      {canManage && followUps(todays ? { ...todays } : null).length > 0 && (
+        <Card className="flex flex-col gap-3 border-primary-100 bg-primary-50/50">
+          <CardHeader title="For you today" icon={<Sparkles className="size-4" />} />
+          <ul className="grid gap-3 md:grid-cols-3">
+            {followUps(todays ? { ...todays } : null).map((x) => (
+              <li key={x.key} className="flex flex-col gap-1 rounded-xl bg-surface p-3">
+                <p className="font-medium">{x.title}</p>
+                <p className="text-sm text-ink-soft">{x.body}</p>
+                {x.href && x.cta && (
+                  <Link href={x.href} className="mt-1 text-sm font-semibold text-primary-700 hover:underline">
+                    {x.cta} →
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <Card className="flex flex-col gap-4">
           <CardHeader title={canManage ? (todays ? "Today's check-in" : "Daily check-in") : "Recent moods"} icon={<Heart className="size-4" />} />
@@ -66,7 +102,7 @@ export default async function WellnessPage({ searchParams }: PageProps<"/wellnes
               customFeelings={profile.customFeelings}
               customSelfCare={profile.customSelfCare}
               shareWith={own ? shareWith : null}
-              defaults={todays ? { mood: todays.mood, feelings: todays.feelings, intensity: todays.intensity, selfCare: todays.selfCare, note: todays.note, shared: todays.shared } : undefined}
+              defaults={todays ? { mood: todays.mood, feelings: todays.feelings, intensity: todays.intensity, selfCare: todays.selfCare, note: todays.note, shared: todays.shared, energy: todays.energy, stress: todays.stress, sleepQuality: todays.sleepQuality, answers: todays.answers } : undefined}
             />
           ) : checkIns.length ? (
             <ul className="flex flex-col gap-2">
@@ -107,6 +143,20 @@ export default async function WellnessPage({ searchParams }: PageProps<"/wellnes
                 </ActionButton>
                 <Link href={`/wellness/quotes?quote=${quote.id}`} className="inline-flex h-10 items-center gap-1.5 rounded-full border border-line-strong px-3 text-sm font-medium hover:bg-sunken">
                   <Pencil className="size-4" /> Add a note
+                </Link>
+              </div>
+            </Card>
+          )}
+          {own && (
+            <Card className="flex flex-col gap-2">
+              <CardHeader title="A little positivity" icon={<Heart className="size-4" />} />
+              <p className="font-display text-lg leading-snug">“{pickForDay(AFFIRMATIONS, today)}”</p>
+              <p className="text-sm text-ink-soft">{pickForDay(ENCOURAGEMENT, today, 3)}</p>
+              <div className="rounded-xl bg-sunken/60 p-3">
+                <p className="text-xs font-semibold tracking-wider text-muted uppercase">Gratitude prompt</p>
+                <p className="text-[15px]">{pickForDay(GRATITUDE_PROMPTS, today, 5)}</p>
+                <Link href="/wellness/journal?view=gratitude&new=1" className="mt-1 inline-block text-sm font-semibold text-primary-700 hover:underline">
+                  Write it down →
                 </Link>
               </div>
             </Card>

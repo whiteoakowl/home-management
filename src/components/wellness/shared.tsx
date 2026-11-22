@@ -11,8 +11,17 @@ export function WellnessTabs({ active, member }: { active: string; member?: stri
         { key: "today", href: `/wellness${q}`, label: "Today" },
         { key: "journal", href: `/wellness/journal${q}`, label: "Journal" },
         { key: "gratitude", href: `/wellness/journal?view=gratitude${member ? `&member=${member}` : ""}`, label: "Gratitude" },
-        { key: "history", href: `/wellness/history${q}`, label: "Mood history" },
-        ...(member ? [] : [{ key: "quotes", href: "/wellness/quotes", label: "Quotes" }, { key: "settings", href: "/wellness/settings", label: "Settings" }]),
+        { key: "history", href: `/wellness/history${q}`, label: "Mood & insights" },
+        { key: "habits", href: `/wellness/habits${q}`, label: "Goals & habits" },
+        ...(member
+          ? []
+          : [
+              { key: "sleep", href: "/wellness/sleep", label: "Sleep journal" },
+              { key: "breathe", href: "/wellness/breathe", label: "Breathe" },
+              { key: "learn", href: "/wellness/learn", label: "Learn" },
+              { key: "quotes", href: "/wellness/quotes", label: "Quotes" },
+              { key: "settings", href: "/wellness/settings", label: "Settings" },
+            ]),
       ]}
     />
   );

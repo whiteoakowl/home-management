@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { familyMembers, journalEntries, journalEntryFiles, personalHealthProfiles, quoteFavorites, wellnessCheckIns, wellnessGoalMarks, wellnessGoals } from "@/db/schema";
+import { familyMembers, journalEntries, journalEntryFiles, personalHealthProfiles, quoteFavorites, wellnessCheckIns, wellnessGoalMarks, wellnessGoals, wellnessSleep } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { notify } from "@/lib/automation";
 import { AuthorizationError, getViewer } from "@/lib/dal";
@@ -16,6 +16,7 @@ import { privacyFor } from "@/lib/privacy";
 import { QUOTE_CATEGORIES, quoteById } from "@/lib/quotes";
 import { f, saveRecordAccess } from "@/lib/records";
 import { GOAL_KINDS, INTENSITIES, MOODS, needsSupport } from "@/lib/wellness";
+import { DAILY_KEYS } from "@/lib/wellness-insights";
 
 const revalidate = () => revalidatePath("/wellness", "layout");
 const clean = (xs: FormDataEntryValue[], max = 20) => [...new Set(xs.map(String).map((x) => x.trim()).filter(Boolean).map((x) => x.slice(0, 40)))].slice(0, max);
@@ -33,8 +34,20 @@ export async function saveCheckIn(_: ActionState, fd: FormData): Promise<ActionS
     const feelings = clean(fd.getAll("feelings"));
     const selfCare = clean(fd.getAll("selfCare"));
     const note = f.str(fd, "note")?.slice(0, 2000) ?? null;
-    if (!mood && !feelings.length && !selfCare.length && !note) return fail("Pick how you're feeling, or add a note.");
-    const values = { mood, feelings, intensity, selfCare, note, ...(fd.has("shared") ? { shared: f.bool(fd, "shared") } : {}) };
+    const scale = (k: string) => {
+      const n = f.int(fd, k);
+      return n !== null && n >= 1 && n <= 5 ? n : null;
+    };
+    const energy = scale("energy");
+    const stress = scale("stress");
+    const sleepQuality = scale("sleepQuality");
+    const answers: Record<string, boolean> = {};
+    for (const k of DAILY_KEYS) {
+      const v = fd.get(`q_${k}`);
+      if (v === "yes" || v === "no") answers[k] = v === "yes";
+    }
+    if (!mood && !feelings.length && !selfCare.length && !note && !energy && !stress && !sleepQuality && !Object.keys(answers).length) return fail("Pick how you're feeling, or add a note.");
+    const values = { mood, feelings, intensity, selfCare, note, energy, stress, sleepQuality, answers, ...(fd.has("shared") ? { shared: f.bool(fd, "shared") } : {}) };
     await db
       .insert(wellnessCheckIns)
       .values({ familyId: viewer.family.id, memberId: member.id, date, ...values })
@@ -75,7 +88,8 @@ export async function saveWellnessEntry(_: ActionState, fd: FormData): Promise<A
     const gratitude = clean(fd.getAll("gratitude"), 10).map((g) => g.slice(0, 200));
     const accomplishments = f.str(fd, "accomplishments")?.slice(0, 2000) ?? null;
     const challenges = f.str(fd, "challenges")?.slice(0, 2000) ?? null;
-    if (!body && !gratitude.length && !accomplishments && !challenges) return fail("Write a few words first. Any of the boxes is fine.", "body");
+    const hasVoice = fd.get("voice") instanceof File && (fd.get("voice") as File).size > 0;
+    if (!body && !gratitude.length && !accomplishments && !challenges && !hasVoice) return fail("Write a few words or record a voice note first. Any of the boxes is fine.", "body");
     const moodRaw = f.str(fd, "mood");
     const intensityRaw = f.str(fd, "intensity");
     const { visibility, memberIds } = await entryVisibility(viewer.member.id, f.bool(fd, "share"));
@@ -103,6 +117,9 @@ export async function saveWellnessEntry(_: ActionState, fd: FormData): Promise<A
       const fileId = await saveUpload(viewer, file);
       if (fileId) uploads.push(fileId);
     }
+    // A voice note (recorded in the app, or picked from the phone).
+    const voice = await saveUpload(viewer, fd.get("voice"), { allowAudio: true });
+    if (voice) uploads.push(voice);
     let entryId = id;
     await db.transaction(async (tx) => {
       if (existing) await tx.update(journalEntries).set(values).where(eq(journalEntries.id, existing.id));
@@ -150,7 +167,8 @@ export async function saveWellnessGoal(_: ActionState, fd: FormData): Promise<Ac
     const kind = GOAL_KINDS.some((k) => k.key === kindRaw) ? kindRaw : "custom";
     const times = Math.min(7, Math.max(1, f.int(fd, "timesPerWeek") ?? 3));
     const id = f.str(fd, "id");
-    const values = { title, kind, timesPerWeek: times, selfCareKey: kind === "self_care" ? f.str(fd, "selfCareKey") : null };
+    const cadence = fd.get("cadence") === "daily" ? ("daily" as const) : ("weekly" as const);
+    const values = { title, kind, timesPerWeek: cadence === "daily" ? 7 : times, cadence, reminderTime: hhmm(fd.get("reminderTime")), selfCareKey: kind === "self_care" ? f.str(fd, "selfCareKey") : null };
     if (id) {
       const [g] = await db.select().from(wellnessGoals).where(and(eq(wellnessGoals.id, id), eq(wellnessGoals.memberId, member.id)));
       if (!g) throw new AuthorizationError("Goal not found.");
@@ -252,4 +270,60 @@ export async function askParentToTalk(fd: FormData) {
   await notify(viewer.family.id, to, { kind: "wellness_support", title: `${viewer.member.displayName} would like to talk with you`, body: "Find a quiet moment together when you can.", href: "/family" }, todayIn(viewer.family.timezone));
   const back = safePath(fd.get("back"), "/wellness");
   redirect(`${back}${back.includes("?") ? "&" : "?"}asked=1`);
+}
+
+// ─── Sleep journal ──────────────────────────────────────────────────────────
+
+const hhmm = (v: FormDataEntryValue | null) => {
+  const s = String(v ?? "");
+  return /^([01]\d|2[0-3]):[0-5]\d/.test(s) ? s.slice(0, 5) : null;
+};
+
+/** Log a night: bedtime, wake time, quality, wake-ups and notes (one per morning; saving again updates it). */
+export async function saveSleepEntry(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await getViewer();
+    const member = await managedMember(viewer, fd.get("memberId") ?? viewer.member.id);
+    const date = f.date(fd, "date") ?? todayIn(viewer.family.timezone);
+    if (date > todayIn(viewer.family.timezone)) return fail("That date is in the future.", "date");
+    const bedTime = hhmm(fd.get("bedTime"));
+    const wakeTime = hhmm(fd.get("wakeTime"));
+    const q = f.int(fd, "quality");
+    const quality = q !== null && q >= 1 && q <= 5 ? q : null;
+    const a = f.int(fd, "awakenings");
+    const awakenings = a !== null && a >= 0 && a <= 30 ? a : null;
+    const notes = f.str(fd, "notes")?.slice(0, 1000) ?? null;
+    if (!bedTime && !wakeTime && !quality && !notes) return fail("Add when you went to bed and woke up, or how you slept.");
+    const values = { bedTime, wakeTime, quality, awakenings, notes };
+    await db
+      .insert(wellnessSleep)
+      .values({ familyId: viewer.family.id, memberId: member.id, date, ...values })
+      .onConflictDoUpdate({ target: [wellnessSleep.memberId, wellnessSleep.date], set: { ...values, updatedAt: new Date() } });
+    revalidate();
+    return ok("Saved to your sleep journal.");
+  });
+}
+
+export async function deleteSleepEntry(fd: FormData) {
+  const viewer = await getViewer();
+  const [n] = await db.select().from(wellnessSleep).where(and(eq(wellnessSleep.id, String(fd.get("id"))), eq(wellnessSleep.familyId, viewer.family.id)));
+  if (!n) return;
+  await managedMember(viewer, n.memberId);
+  await db.delete(wellnessSleep).where(eq(wellnessSleep.id, n.id));
+  revalidate();
+}
+
+/** Bedtime reminder and sleep goal (just for you). */
+export async function saveSleepSettings(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await getViewer();
+    await healthProfile(viewer.family.id, viewer.member.id);
+    const goal = Number(fd.get("sleepGoalHours"));
+    await db
+      .update(personalHealthProfiles)
+      .set({ bedtimeReminder: hhmm(fd.get("bedtimeReminder")), sleepGoalHours: String(Number.isFinite(goal) && goal >= 4 && goal <= 14 ? Math.round(goal * 2) / 2 : 8) })
+      .where(eq(personalHealthProfiles.memberId, viewer.member.id));
+    revalidate();
+    return ok("Saved.");
+  });
 }
