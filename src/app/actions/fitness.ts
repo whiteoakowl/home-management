@@ -53,7 +53,7 @@ async function ownWorkout(viewer: Viewer, workoutId: string) {
 
 export async function savePlan(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("fitness", "edit");
+    const viewer = await requireModule("fitness", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name the plan.", "name");
     const id = f.str(fd, "id");
@@ -72,7 +72,7 @@ export async function savePlan(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deletePlan(fd: FormData) {
-  const viewer = await requireModule("fitness", "edit");
+  const viewer = await requireModule("fitness", "use");
   const p = await ownPlan(viewer, String(fd.get("id")));
   await db.delete(fitnessPlans).where(eq(fitnessPlans.id, p.id));
   revalidateFitness();
@@ -81,7 +81,7 @@ export async function deletePlan(fd: FormData) {
 
 export async function saveWorkout(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("fitness", "edit");
+    const viewer = await requireModule("fitness", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name the workout (e.g. Strength, Cardio).", "name");
     const days = f
@@ -102,7 +102,7 @@ export async function saveWorkout(_: ActionState, fd: FormData): Promise<ActionS
 }
 
 export async function deleteWorkout(fd: FormData) {
-  const viewer = await requireModule("fitness", "edit");
+  const viewer = await requireModule("fitness", "use");
   const { w } = await ownWorkout(viewer, String(fd.get("id")));
   await db.delete(workouts).where(eq(workouts.id, w.id));
   revalidateFitness();
@@ -110,7 +110,7 @@ export async function deleteWorkout(fd: FormData) {
 
 export async function saveExercise(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("fitness", "edit");
+    const viewer = await requireModule("fitness", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name the exercise.", "name");
     const { w } = await ownWorkout(viewer, String(fd.get("workoutId")));
@@ -135,7 +135,7 @@ export async function saveExercise(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function deleteExercise(fd: FormData) {
-  const viewer = await requireModule("fitness", "edit");
+  const viewer = await requireModule("fitness", "use");
   const [ex] = await db.select().from(workoutExercises).where(eq(workoutExercises.id, String(fd.get("id"))));
   if (!ex) return;
   await ownWorkout(viewer, ex.workoutId);
@@ -154,7 +154,7 @@ function parseSetLine(line: string) {
 
 export async function logWorkout(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("fitness", "edit");
+    const viewer = await requireModule("fitness", "use");
     const memberId = await subject(viewer, f.str(fd, "memberId"));
     const title = f.str(fd, "title");
     if (!title) return fail("What did you do?", "title");
@@ -208,7 +208,7 @@ export async function logWorkout(_: ActionState, fd: FormData): Promise<ActionSt
 }
 
 export async function deleteWorkoutLog(fd: FormData) {
-  const viewer = await requireModule("fitness", "edit");
+  const viewer = await requireModule("fitness", "use");
   const [l] = await db.select().from(workoutLogs).where(and(eq(workoutLogs.id, String(fd.get("id"))), eq(workoutLogs.familyId, viewer.family.id)));
   if (!l) return;
   await subject(viewer, l.memberId);
@@ -218,7 +218,7 @@ export async function deleteWorkoutLog(fd: FormData) {
 
 export async function logMetric(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("fitness", "edit");
+    const viewer = await requireModule("fitness", "use");
     const memberId = await subject(viewer, f.str(fd, "memberId"));
     const value = f.num(fd, "value");
     if (value === null || value <= 0) return fail("Enter a value.", "value");
@@ -230,7 +230,7 @@ export async function logMetric(_: ActionState, fd: FormData): Promise<ActionSta
 }
 
 export async function deleteMetric(fd: FormData) {
-  const viewer = await requireModule("fitness", "edit");
+  const viewer = await requireModule("fitness", "use");
   const [m] = await db.select().from(bodyMetrics).where(eq(bodyMetrics.id, String(fd.get("id"))));
   if (!m) return;
   await subject(viewer, m.memberId);

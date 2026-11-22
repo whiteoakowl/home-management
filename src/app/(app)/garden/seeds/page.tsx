@@ -23,7 +23,7 @@ export default async function SeedsPage() {
     db.select({ s: seedInventory, imageUrl: plants.imageUrl, category: plants.category }).from(seedInventory).leftJoin(plants, eq(plants.id, seedInventory.plantId)).where(eq(seedInventory.familyId, viewer.family.id)).orderBy(asc(seedInventory.name)),
     plantOptions(viewer),
   ]);
-  const canEdit = viewer.can("garden", "edit");
+  const canEdit = viewer.can("garden", "use");
   const add = <SeedFormModal plants={opts} />;
   return (
     <>

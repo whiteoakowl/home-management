@@ -20,7 +20,7 @@ export default async function PetHealthPage({ searchParams }: PageProps<"/pets/h
   const ids = list.map((p) => p.id);
   const rows = ids.length ? await db.select().from(petMedicalRecords).where(inArray(petMedicalRecords.petId, sp.pet && ids.includes(sp.pet) ? [sp.pet] : ids)).orderBy(desc(petMedicalRecords.date)) : [];
   const shown = sp.kind ? rows.filter((r) => r.kind === sp.kind) : rows;
-  const canEdit = viewer.can("pets", "edit");
+  const canEdit = viewer.can("pets", "use");
   const name = (id: string) => list.find((p) => p.id === id)?.name;
   const selected = sp.pet && list.find((p) => p.id === sp.pet);
   return (

@@ -26,7 +26,7 @@ export default async function PlantsPage({ searchParams }: PageProps<"/garden/pl
   const shown = all.filter((p) => (cat === "all" || p.category === cat) && (!q || `${p.name} ${p.variety ?? ""}`.toLowerCase().includes(q)));
   return (
     <>
-      <PageHeader eyebrow="Garden" title="Plant database" description="Growing guides for every plant: spacing, sun, soil, companions and timing." actions={viewer.can("garden", "edit") ? <PlantFormModal defaultOpen={sp.new === "1"} /> : undefined} />
+      <PageHeader eyebrow="Garden" title="Plant database" description="Growing guides for every plant: spacing, sun, soil, companions and timing." actions={viewer.can("garden", "use") ? <PlantFormModal defaultOpen={sp.new === "1"} /> : undefined} />
       <GardenTabs active="plants" />
       <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center">
         <form className="relative flex-1" action="/garden/plants">

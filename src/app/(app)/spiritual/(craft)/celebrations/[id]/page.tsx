@@ -30,7 +30,8 @@ export default async function CelebrationPage({ params }: PageProps<"/spiritual/
   const viewer = await craftViewer();
   const [c] = await db.select().from(celebrations).where(and(eq(celebrations.id, id), eq(celebrations.familyId, viewer.family.id)));
   if (!c) notFound();
-  const canEdit = viewer.can("witchcraft", "edit");
+  // Whoever planned it, or a parent / Add & edit.
+  const canEdit = viewer.can("witchcraft", "edit") || (viewer.can("witchcraft", "use") && c.createdByMemberId === viewer.member.id);
   const [links, recipeOpts, ritualOpts, spent] = await Promise.all([
     db.select().from(celebrationLinks).where(eq(celebrationLinks.celebrationId, c.id)),
     viewer.can("recipes") ? db.select({ id: recipes.id, name: recipes.name, imageFileId: recipes.imageFileId }).from(recipes).where(and(eq(recipes.familyId, viewer.family.id), isNull(recipes.ownerMemberId))).orderBy(asc(recipes.name)) : [],

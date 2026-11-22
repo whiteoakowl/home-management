@@ -274,11 +274,13 @@ export default async function PoolPage({ searchParams }: PageProps<"/pool">) {
                         </span>
                       </span>
                       {overdue && <Badge tone="wine">Service due</Badge>}
+                      {canUse && (
+                        <ActionButton action={markServiced} fields={{ id: e.id }} label={`Mark ${e.name} serviced today`} className="h-8 rounded-full px-2 text-xs font-medium text-primary-700 hover:bg-primary-50">
+                          Serviced
+                        </ActionButton>
+                      )}
                       {canEdit && (
                         <>
-                          <ActionButton action={markServiced} fields={{ id: e.id }} label={`Mark ${e.name} serviced today`} className="h-8 rounded-full px-2 text-xs font-medium text-primary-700 hover:bg-primary-50">
-                            Serviced
-                          </ActionButton>
                           <EquipmentModal poolId={pool.id} item={{ id: e.id, name: e.name, kind: e.kind, model: e.model, installedOn: e.installedOn, lastServicedOn: e.lastServicedOn, serviceEveryMonths: e.serviceEveryMonths, notes: e.notes }} />
                           <DeleteButton action={deleteEquipment} fields={{ id: e.id }} what={e.name} className="size-8" />
                         </>

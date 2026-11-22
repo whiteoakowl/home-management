@@ -23,8 +23,9 @@ export default async function RepairsPage({ searchParams }: PageProps<"/maintena
   const q = sp.q?.toLowerCase();
   const shown = rows.filter((r) => (!sp.status || r.status === sp.status) && (!sp.room || r.roomId === sp.room) && (!q || `${r.title} ${r.problem} ${r.contractor} ${r.notes}`.toLowerCase().includes(q)));
   const total = shown.reduce((s, r) => s + (r.costCents ?? 0), 0);
+  const canAdd = viewer.can("maintenance", "use");
   const canEdit = viewer.can("maintenance", "edit");
-  const add = canEdit ? <RepairModal rooms={rooms} vendors={vendors} canBudget={viewer.can("budget", "edit")} today={today} defaultOpen={(sp as { new?: string }).new === "1"} /> : undefined;
+  const add = canAdd ? <RepairModal rooms={rooms} vendors={vendors} canBudget={viewer.can("budget", "edit")} today={today} defaultOpen={(sp as { new?: string }).new === "1"} /> : undefined;
   const sel = "h-10 rounded-full border border-line-strong bg-surface px-3 text-sm";
   return (
     <>

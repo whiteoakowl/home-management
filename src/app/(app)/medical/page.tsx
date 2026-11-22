@@ -54,7 +54,7 @@ export default async function MedicalDashboard() {
         eyebrow="Household"
         title="Family Medical & Health"
         description="Profiles, allergies, conditions, medications and documents, private to each person and the parents unless shared."
-        actions={viewer.can("medical", "edit") && <AppointmentModal members={members} />}
+        actions={viewer.can("medical", "use") && <AppointmentModal members={viewer.isParent || viewer.can("medical", "edit") ? members : members.filter((m) => m.id === viewer.member.id)} />}
       />
       <MedicalTabs active="overview" />
 

@@ -41,7 +41,7 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
     all: { title: "No goals yet", description: "Set savings and family goals with milestones and watch the progress bars fill up." },
   }[kind];
   const add = <GoalFormModal initialVisibility={initialVisibility} members={members} me={viewer.member.id} isParent={viewer.isParent} defaultOpen={sp.new === "1"} />;
-  const canEdit = viewer.can("goals", "edit");
+  const canEdit = viewer.can("goals", "use");
 
   return (
     <>

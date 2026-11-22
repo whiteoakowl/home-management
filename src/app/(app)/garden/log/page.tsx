@@ -22,7 +22,8 @@ export default async function GardenLogPage() {
   const viewer = await getViewer();
   if (!viewer.can("garden")) notFound();
   const [plantings, log, plants] = await Promise.all([plantingsWithPlants(viewer), gardenLog(viewer, 200), plantOptions(viewer)]);
-  const canEdit = viewer.can("garden", "edit");
+  const canEdit = viewer.can("garden", "use");
+  const canRemoveAny = viewer.can("garden", "edit");
   const opts = plantings.filter((p) => p.status !== "finished").map((p) => ({ id: p.id, label: `${p.plantName}${p.planName ? ` · ${p.planName}` : ""}` }));
   const harvestTotals = Map.groupBy(
     log.filter((x) => x.l.kind === "harvest"),
@@ -101,7 +102,7 @@ export default async function GardenLogPage() {
                         <img src={fileUrl(l.photoFileId, true)!} alt="" className="mt-2 size-24 rounded-xl object-cover" />
                       )}
                     </div>
-                    {canEdit && <DeleteButton action={deleteGardenLog} fields={{ id: l.id }} what="this entry" />}
+                    {canEdit && (canRemoveAny || l.memberId === viewer.member.id) && <DeleteButton action={deleteGardenLog} fields={{ id: l.id }} what="this entry" />}
                   </div>
                 </li>
               ))}

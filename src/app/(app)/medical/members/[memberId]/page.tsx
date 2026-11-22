@@ -37,7 +37,8 @@ export default async function MemberMedicalPage({ params }: PageProps<"/medical/
   if (!/^[0-9a-f-]{36}$/i.test(memberId)) notFound();
   const member = await getFamilyMember(viewer, memberId);
   if (!member) notFound();
-  const canEdit = viewer.can("medical", "edit");
+  // Your own page with Use; anyone's with Add & edit (or as a parent).
+  const canEdit = viewer.can("medical", "use") && (viewer.isParent || viewer.can("medical", "edit") || member.id === viewer.member.id);
   const [members, profileRows, appts, ...lists] = await Promise.all([
     memberOptions(viewer),
     listMedical(viewer, "profile", memberId),

@@ -16,7 +16,7 @@ export async function AppointmentList({ viewer, rows, members, empty }: { viewer
   if (!rows.length) return <p className="py-3 text-sm text-muted">{empty}</p>;
   const access = await getRecordAccess("event", rows.map((r) => r.id));
   const tz = viewer.family.timezone;
-  const canEdit = viewer.can("medical", "edit");
+  const canEdit = viewer.can("medical", "use");
   return (
     <ul className="divide-y divide-line">
       {rows.map((a) => {

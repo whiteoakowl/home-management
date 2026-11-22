@@ -32,7 +32,7 @@ export default async function HomeTodoPage() {
           .orderBy(asc(lists.title))
       : Promise.resolve([]),
   ]);
-  const canCreate = viewer.can("maintenance", "edit") && viewer.can("lists", "edit");
+  const canCreate = viewer.can("maintenance", "use") && viewer.can("lists", "use");
   const add = canCreate ? (
     <FormModal title="New home to-do list" action={createHomeTodoList} triggerLabel="New list" size="md" description="Lists live in Lists too, so everyone can check items off.">
       <TextField name="title" label="List" placeholder="Garage clean-out" required />

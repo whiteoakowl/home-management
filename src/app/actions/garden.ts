@@ -22,6 +22,13 @@ function revalidateGarden() {
   revalidatePath("/");
 }
 
+/** A plan the viewer may change: their own, or any for parents / Add & edit. */
+async function changeablePlan(viewer: Viewer, id: string) {
+  const p = await ownPlan(viewer, id);
+  if (!viewer.can("garden", "edit") && !canChangeItem(viewer, p.createdByMemberId)) throw new AuthorizationError("Only the person who made this plan (or a parent) can change it.");
+  return p;
+}
+
 async function ownPlan(viewer: Viewer, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Plan not found.");
   const [p] = await db.select().from(gardenPlans).where(and(eq(gardenPlans.id, id), eq(gardenPlans.familyId, viewer.family.id), gardenPlanVisible(viewer)));
@@ -46,7 +53,7 @@ const firstNumber = (s: string | null) => {
 
 export async function createGardenPlan(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("garden", "edit");
+    const viewer = await requireModule("garden", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name your plan.", "name");
     const { visibility, memberIds } = visibilityFromForm(fd);
@@ -73,8 +80,8 @@ export async function createGardenPlan(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function saveGardenLayout(planId: string, layout: BlueprintLayout) {
-  const viewer = await requireModule("garden", "edit");
-  await ownPlan(viewer, planId);
+  const viewer = await requireModule("garden", "use");
+  await changeablePlan(viewer, planId);
   const parsed = LayoutSchema.safeParse(layout);
   if (!parsed.success) return { ok: false, message: "That layout couldn't be saved." };
   await db.update(gardenPlans).set({ layout: parsed.data }).where(eq(gardenPlans.id, planId));
@@ -88,8 +95,8 @@ export async function saveGardenLayout(planId: string, layout: BlueprintLayout) 
 
 export async function updateGardenPlan(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("garden", "edit");
-    const plan = await ownPlan(viewer, String(fd.get("id")));
+    const viewer = await requireModule("garden", "use");
+    const plan = await changeablePlan(viewer, String(fd.get("id")));
     const name = f.str(fd, "name");
     if (!name) return fail("Name your plan.", "name");
     // Who sees the plan is for its creator or a parent to decide.
@@ -105,8 +112,8 @@ export async function updateGardenPlan(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function deleteGardenPlan(fd: FormData) {
-  const viewer = await requireModule("garden", "edit");
-  const plan = await ownPlan(viewer, String(fd.get("id")));
+  const viewer = await requireModule("garden", "use");
+  const plan = await changeablePlan(viewer, String(fd.get("id")));
   await db.delete(gardenPlans).where(eq(gardenPlans.id, plan.id));
   revalidateGarden();
   redirect("/garden");
@@ -115,8 +122,8 @@ export async function deleteGardenPlan(fd: FormData) {
 // ─── Plantings ───────────────────────────────────────────────────────────────
 
 export async function addPlanting(planId: string, bedKey: string, plantId: string, quantity: number) {
-  const viewer = await requireModule("garden", "edit");
-  const plan = await ownPlan(viewer, planId);
+  const viewer = await requireModule("garden", "use");
+  const plan = await changeablePlan(viewer, planId);
   const plant = await visiblePlant(viewer, plantId);
   if (!plan.layout.objects.some((o) => o.key === bedKey)) throw new AuthorizationError("Bed not found.");
   // Same plant in the same bed → bump quantity.
@@ -138,15 +145,17 @@ async function ownPlanting(viewer: Viewer, id: string) {
 }
 
 export async function updatePlantingQuantity(id: string, quantity: number) {
-  const viewer = await requireModule("garden", "edit");
+  const viewer = await requireModule("garden", "use");
   const p = await ownPlanting(viewer, id);
+  if (p.planId) await changeablePlan(viewer, p.planId);
   await db.update(gardenPlantings).set({ quantity: Math.max(1, Math.min(999, Math.round(quantity))) }).where(eq(gardenPlantings.id, p.id));
   revalidatePath(`/garden/plans/${p.planId}`);
 }
 
 export async function removePlanting(id: string) {
-  const viewer = await requireModule("garden", "edit");
+  const viewer = await requireModule("garden", "use");
   const p = await ownPlanting(viewer, id);
+  if (p.planId) await changeablePlan(viewer, p.planId);
   await db.delete(gardenPlantings).where(eq(gardenPlantings.id, p.id));
   revalidatePath(`/garden/plans/${p.planId}`);
   revalidatePath("/garden");
@@ -156,7 +165,7 @@ const STATUSES = ["planned", "sown", "growing", "harvesting", "finished", "faile
 
 export async function updatePlanting(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("garden", "edit");
+    const viewer = await requireModule("garden", "use");
     const p = await ownPlanting(viewer, String(fd.get("id")));
     const status = f.str(fd, "status") as (typeof STATUSES)[number];
     const plantedOn = f.date(fd, "plantedOn");
@@ -181,7 +190,7 @@ const SUN = sunRequirement.enumValues;
 
 export async function savePlant(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("garden", "edit");
+    const viewer = await requireModule("garden", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name the plant.", "name");
     const id = f.str(fd, "id");
@@ -243,7 +252,7 @@ export async function deletePlant(fd: FormData) {
 
 export async function saveSeed(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("garden", "edit");
+    const viewer = await requireModule("garden", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("What seeds are these?", "name");
     const plantId = f.str(fd, "plantId");
@@ -258,7 +267,8 @@ export async function saveSeed(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deleteSeed(fd: FormData) {
-  const viewer = await requireModule("garden", "edit");
+  const viewer = await requireModule("garden", "use");
+  // The seed box is shared, like the pantry: anyone with Use keeps it up to date.
   await db.delete(seedInventory).where(and(eq(seedInventory.id, String(fd.get("id"))), eq(seedInventory.familyId, viewer.family.id)));
   revalidateGarden();
 }
@@ -270,7 +280,7 @@ const LOCATIONS = storageLocation.enumValues;
 
 export async function logGarden(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("garden", "edit");
+    const viewer = await requireModule("garden", "use");
     const kind = f.str(fd, "kind") as (typeof LOG_KINDS)[number];
     if (!LOG_KINDS.includes(kind)) return fail("Choose what happened.", "kind");
     const date = f.date(fd, "date") ?? todayIn(viewer.family.timezone);
@@ -324,8 +334,11 @@ export async function logGarden(_: ActionState, fd: FormData): Promise<ActionSta
 }
 
 export async function deleteGardenLog(fd: FormData) {
-  const viewer = await requireModule("garden", "edit");
-  const [l] = await db.delete(gardenLogs).where(and(eq(gardenLogs.id, String(fd.get("id"))), eq(gardenLogs.familyId, viewer.family.id))).returning();
+  const viewer = await requireModule("garden", "use");
+  const [entry] = await db.select({ id: gardenLogs.id, by: gardenLogs.memberId }).from(gardenLogs).where(and(eq(gardenLogs.id, String(fd.get("id"))), eq(gardenLogs.familyId, viewer.family.id)));
+  if (!entry) return;
+  if (!viewer.can("garden", "edit") && !canChangeItem(viewer, entry.by)) throw new AuthorizationError("Only the person who logged this (or a parent) can remove it.");
+  const [l] = await db.delete(gardenLogs).where(eq(gardenLogs.id, entry.id)).returning();
   if (l) await deleteFamilyFile(viewer.family.id, l.photoFileId);
   revalidateGarden();
 }

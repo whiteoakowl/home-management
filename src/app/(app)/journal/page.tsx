@@ -74,7 +74,7 @@ export default async function JournalPage({ searchParams }: PageProps<"/journal"
             ? await listEntries(viewer, { q: q || undefined, tag: tag || undefined })
             : []
           : await listEntries(viewer);
-  const canEdit = viewer.can("journal", "edit");
+  const canEdit = viewer.can("journal", "use");
   const add = <JournalFormModal initialVisibility={initialVisibility} members={members} today={today} defaultOpen={sp.new === "1"} />;
   const mine = entries.filter((x) => x.e.date === today && x.e.authorMemberId === viewer.member.id);
 

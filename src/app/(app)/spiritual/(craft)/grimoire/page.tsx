@@ -62,7 +62,7 @@ export default async function GrimoirePage({ searchParams }: PageProps<"/spiritu
   ]);
   const q = sp.q?.toLowerCase().trim();
   const shown = entries.filter((e) => (!sp.category || e.category === sp.category) && (!q || `${e.title} ${e.body} ${e.tags.join(" ")}`.toLowerCase().includes(q)));
-  const canEdit = viewer.can("witchcraft", "edit");
+  const canEdit = viewer.can("witchcraft", "use");
   const moon = moonFor(viewer, today).phase;
   const cat = (v: string | null) => GRIMOIRE_CATEGORIES.find((c) => c.value === v)?.label;
   return (

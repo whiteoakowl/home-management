@@ -27,8 +27,9 @@ export default async function VendorsPage() {
     .from(vendors)
     .where(eq(vendors.familyId, viewer.family.id))
     .orderBy(desc(vendors.isFavorite), asc(vendors.name));
+  const canAdd = viewer.can("maintenance", "use");
   const canEdit = viewer.can("maintenance", "edit");
-  const add = canEdit ? <RecordModal title="Add a service provider" triggerLabel="Add provider" action={saveVendor} fields={VENDOR_FIELDS} size="md" /> : undefined;
+  const add = canAdd ? <RecordModal title="Add a service provider" triggerLabel="Add provider" action={saveVendor} fields={VENDOR_FIELDS} size="md" /> : undefined;
   return (
     <>
       <PageHeader eyebrow="Home Maintenance" title="Service providers" description="Plumbers, electricians, cleaners and everyone else you call, with how they did. Link them to repairs." actions={add} />

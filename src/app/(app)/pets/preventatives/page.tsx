@@ -16,7 +16,7 @@ export default async function PreventativesPage() {
   const today = todayIn(viewer.family.timezone);
   const [members, list] = await Promise.all([memberOptions(viewer), listPets(viewer)]);
   const prevs = await preventativesFor(viewer, list.map((p) => p.id));
-  const canEdit = viewer.can("pets", "edit");
+  const canEdit = viewer.can("pets", "use");
   return (
     <>
       <PageHeader eyebrow="Pets" title="Preventatives" description="Flea, tick, heartworm, deworming and vaccinations. Mark doses given and the next due date moves forward; reminders go to whoever gives it." />

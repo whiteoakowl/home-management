@@ -39,7 +39,7 @@ export async function saveList(_: ActionState, fd: FormData): Promise<ActionStat
     if (!KINDS.includes(kind)) return fail("Choose a list type.", "kind");
     // Shopping lists can be created with Add access, or in your private food space.
     const owner = !id && kind === "shopping" ? ownerForNew(viewer, "shopping", fd) : null;
-    if (!id && kind !== "shopping" && !viewer.can(listModule(kind), "edit")) throw new AuthorizationError("You can't create lists.");
+    if (!id && kind !== "shopping" && !viewer.can(listModule(kind), "use")) throw new AuthorizationError("You can't create lists.");
     if (!id && kind !== "shopping") await assertRoom(viewer, "lists");
     const title = f.str(fd, "title");
     if (!title) return fail("Give the list a name.", "title");

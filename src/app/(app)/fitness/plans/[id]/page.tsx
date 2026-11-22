@@ -27,7 +27,7 @@ export default async function PlanPage({ params }: PageProps<"/fitness/plans/[id
   const owner = row ? await getFamilyMember(viewer, row.memberId) : null;
   if (!row || !owner || !(await canViewFitness(viewer, owner.id))) notFound();
   const plan = (await plansFor(row.memberId)).find((p) => p.id === id)!;
-  const canEdit = viewer.can("fitness", "edit") && canEditFitness(viewer, owner);
+  const canEdit = viewer.can("fitness", "use") && canEditFitness(viewer, owner);
   const today = todayIn(viewer.family.timezone);
   const opts = plan.workouts.map((w) => ({ id: w.id, name: w.name, template: templateFor(w.exercises) }));
   return (

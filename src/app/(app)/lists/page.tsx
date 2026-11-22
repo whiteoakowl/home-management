@@ -30,7 +30,7 @@ export default async function ListsPage({ searchParams }: PageProps<"/lists">) {
     listIndex(viewer, ["checklist", "bullet", "numbered", "todo"], { archived }),
   ]);
   const shown = category === "all" ? rows : rows.filter((r) => (r.categoryId ?? "none") === category);
-  const canEdit = viewer.can("lists", "edit");
+  const canEdit = viewer.can("lists", "use");
   const add = <ListFormModal members={members} categories={cats} defaultOpen={sp.new === "1"} />;
 
   return (

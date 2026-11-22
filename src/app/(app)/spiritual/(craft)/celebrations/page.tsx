@@ -22,7 +22,7 @@ export default async function CelebrationsPage() {
   const rows = await db.select().from(celebrations).where(eq(celebrations.familyId, viewer.family.id)).orderBy(asc(celebrations.date));
   const upcoming = rows.filter((r) => r.date >= today);
   const past = rows.filter((r) => r.date < today).reverse();
-  const canEdit = viewer.can("witchcraft", "edit");
+  const canEdit = viewer.can("witchcraft", "use");
   const Item = ({ c }: { c: (typeof rows)[number] }) => {
     const s = c.sabbat ? sabbatByKey(c.sabbat) : null;
     const img = fileUrl(c.imageFileId, true);

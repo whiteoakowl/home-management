@@ -189,7 +189,7 @@ export async function saveEquipment(_: ActionState, fd: FormData): Promise<Actio
 }
 
 export async function markServiced(fd: FormData) {
-  const viewer = await requireModule("pool", "edit");
+  const viewer = await requireModule("pool", "use");
   await db.update(poolEquipment).set({ lastServicedOn: todayIn(viewer.family.timezone) }).where(and(eq(poolEquipment.id, String(fd.get("id"))), eq(poolEquipment.familyId, viewer.family.id)));
   revalidatePool();
 }

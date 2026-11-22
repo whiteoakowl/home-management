@@ -23,7 +23,7 @@ import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { mainShoppingListId } from "@/lib/automation";
 import { getCraftItem } from "@/lib/craft";
 import { COLLECTION_FIELDS, CELEBRATION_FIELDS, CRAFT_COLUMNS, CRAFT_FIELDS, CRAFT_KINDS, type CraftKind } from "@/lib/craft-config";
-import { AuthorizationError, requireModule } from "@/lib/dal";
+import { AuthorizationError, requireModule, canChangeItem } from "@/lib/dal";
 import { todayIn, zonedToUtc } from "@/lib/dates";
 import { recordExpense } from "@/lib/expenses";
 import { logActivity } from "@/lib/family";
@@ -45,7 +45,7 @@ async function ownItem(viewer: Awaited<ReturnType<typeof requireModule>>, id: st
 
 export async function saveCraftItem(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("witchcraft", "edit");
+    const viewer = await requireModule("witchcraft", "use");
     const kind = String(fd.get("kind")) as CraftKind;
     if (!CRAFT_KINDS.includes(kind)) return fail("Unknown type.");
     const { values, errors } = parseFields(fd, CRAFT_FIELDS[kind]);
@@ -100,7 +100,7 @@ async function ownedPlant(viewer: Awaited<ReturnType<typeof requireModule>>, id:
 }
 
 export async function deleteCraftItem(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const it = await ownItem(viewer, f.str(fd, "id"));
   await db.delete(craftItems).where(eq(craftItems.id, it.id));
   if (it.imageFileId) await deleteFamilyFile(viewer.family.id, it.imageFileId);
@@ -109,7 +109,7 @@ export async function deleteCraftItem(fd: FormData) {
 }
 
 export async function toggleCraftFavorite(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const it = await ownItem(viewer, f.str(fd, "id"));
   await db.update(craftItems).set({ isFavorite: !it.isFavorite }).where(eq(craftItems.id, it.id));
   revalidateCraft();
@@ -117,7 +117,7 @@ export async function toggleCraftFavorite(fd: FormData) {
 
 /** Copy a built-in reference entry into the family's own library to customize it. */
 export async function copyCraftItem(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const it = await getCraftItem(viewer, String(fd.get("id")));
   if (!it) throw new AuthorizationError("Not found.");
   const [r] = await db
@@ -130,8 +130,8 @@ export async function copyCraftItem(fd: FormData) {
 
 /** Herb → garden: create a family plant from a herb entry and link them (no duplicate if already linked). */
 export async function addHerbToGarden(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
-  if (!viewer.can("garden", "edit")) throw new AuthorizationError("You can't edit the garden.");
+  const viewer = await requireModule("witchcraft", "use");
+  if (!viewer.can("garden", "use")) throw new AuthorizationError("You can't add to the garden.");
   const it = await getCraftItem(viewer, String(fd.get("id")));
   if (!it || it.kind !== "herb") return;
   if (it.plantId) redirect(`/garden/plants/${it.plantId}`);
@@ -149,7 +149,7 @@ export async function addHerbToGarden(fd: FormData) {
 
 export async function saveCollectionEntry(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("witchcraft", "edit");
+    const viewer = await requireModule("witchcraft", "use");
     const item = await getCraftItem(viewer, String(fd.get("itemId")));
     if (!item) return fail("Choose a crystal or tool.");
     const { values, errors } = parseFields(fd, COLLECTION_FIELDS);
@@ -178,7 +178,7 @@ export async function saveCollectionEntry(_: ActionState, fd: FormData): Promise
 }
 
 export async function deleteCollectionEntry(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const [old] = await db.select().from(craftCollection).where(and(eq(craftCollection.id, String(fd.get("id"))), eq(craftCollection.familyId, viewer.family.id)));
   if (!old) return;
   await db.delete(craftCollection).where(eq(craftCollection.id, old.id));
@@ -190,7 +190,7 @@ export async function deleteCollectionEntry(fd: FormData) {
 
 export async function saveCraftSupply(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("witchcraft", "edit");
+    const viewer = await requireModule("witchcraft", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name the supply.", "name");
     const row = {
@@ -216,7 +216,7 @@ export async function saveCraftSupply(_: ActionState, fd: FormData): Promise<Act
 }
 
 export async function adjustCraftSupply(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const [it] = await db.select().from(inventoryItems).where(and(eq(inventoryItems.id, String(fd.get("id"))), eq(inventoryItems.familyId, viewer.family.id), eq(inventoryItems.location, "craft")));
   if (!it) return;
   await db.update(inventoryItems).set({ quantity: String(Math.max(0, Number(it.quantity) + (Number(fd.get("delta")) || 0))) }).where(eq(inventoryItems.id, it.id));
@@ -224,14 +224,14 @@ export async function adjustCraftSupply(fd: FormData) {
 }
 
 export async function deleteCraftSupply(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   await db.delete(inventoryItems).where(and(eq(inventoryItems.id, String(fd.get("id"))), eq(inventoryItems.familyId, viewer.family.id), eq(inventoryItems.location, "craft")));
   revalidateCraft();
 }
 
 /** Put supplies onto the main shopping list (skips ones already there). */
 export async function shopForSupplies(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit the shopping list.");
   const ids = f.list(fd, "ids").flatMap((s) => s.split(","));
   if (!ids.length) return;
@@ -266,12 +266,13 @@ export async function saveSabbatSetting(_: ActionState, fd: FormData): Promise<A
 
 export async function saveCelebration(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("witchcraft", "edit");
+    const viewer = await requireModule("witchcraft", "use");
     const { values, errors } = parseFields(fd, CELEBRATION_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
     const [old] = id ? await db.select().from(celebrations).where(and(eq(celebrations.id, id), eq(celebrations.familyId, viewer.family.id))) : [];
     if (id && !old) throw new AuthorizationError("Not found.");
+    if (old && !viewer.can("witchcraft", "edit") && !canChangeItem(viewer, old.createdByMemberId)) throw new AuthorizationError("Only the person who planned this celebration (or a parent) can change it.");
     const image = await saveUpload(viewer, fd.get("image"));
     const row = {
       ...(values as Record<string, unknown>),
@@ -313,8 +314,9 @@ export async function saveCelebration(_: ActionState, fd: FormData): Promise<Act
 }
 
 export async function deleteCelebration(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const [c] = await db.select().from(celebrations).where(and(eq(celebrations.id, String(fd.get("id"))), eq(celebrations.familyId, viewer.family.id)));
+  if (c && !viewer.can("witchcraft", "edit") && !canChangeItem(viewer, c.createdByMemberId)) throw new AuthorizationError("Only the person who planned this celebration (or a parent) can delete it.");
   if (!c) return;
   if (c.calendarEventId) await db.delete(calendarEvents).where(eq(calendarEvents.id, c.calendarEventId));
   await db.delete(celebrations).where(eq(celebrations.id, c.id));
@@ -326,7 +328,7 @@ export async function deleteCelebration(fd: FormData) {
 
 /** Send the celebration's supplies to its own shopping list (created once, reused after). */
 export async function celebrationShoppingList(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit shopping lists.");
   const [c] = await db.select().from(celebrations).where(and(eq(celebrations.id, String(fd.get("id"))), eq(celebrations.familyId, viewer.family.id)));
   if (!c) return;
@@ -350,7 +352,7 @@ export async function celebrationShoppingList(fd: FormData) {
 
 export async function recordCelebrationExpense(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("witchcraft", "edit");
+    const viewer = await requireModule("witchcraft", "use");
     if (!viewer.can("budget", "edit")) return fail("You can't edit the budget.");
     const [c] = await db.select().from(celebrations).where(and(eq(celebrations.id, String(fd.get("id"))), eq(celebrations.familyId, viewer.family.id)));
     if (!c) return fail("Not found.");
@@ -367,7 +369,7 @@ export async function recordCelebrationExpense(_: ActionState, fd: FormData): Pr
 
 export async function saveGrimoireEntry(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("witchcraft", "edit");
+    const viewer = await requireModule("witchcraft", "use");
     const body = f.str(fd, "body");
     if (!body) return fail("Write something first.", "body");
     const { visibility, memberIds } = visibilityFromForm(fd);
@@ -403,7 +405,7 @@ export async function saveGrimoireEntry(_: ActionState, fd: FormData): Promise<A
 }
 
 export async function toggleGrimoireFavorite(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const [e] = await db.select().from(journalEntries).where(and(eq(journalEntries.id, String(fd.get("id"))), eq(journalEntries.familyId, viewer.family.id), eq(journalEntries.book, "grimoire")));
   if (!e || e.authorMemberId !== viewer.member.id) return;
   await db.update(journalEntries).set({ isFavorite: !e.isFavorite }).where(eq(journalEntries.id, e.id));
@@ -411,7 +413,7 @@ export async function toggleGrimoireFavorite(fd: FormData) {
 }
 
 export async function deleteGrimoireEntry(fd: FormData) {
-  const viewer = await requireModule("witchcraft", "edit");
+  const viewer = await requireModule("witchcraft", "use");
   const [e] = await db.select().from(journalEntries).where(and(eq(journalEntries.id, String(fd.get("id"))), eq(journalEntries.familyId, viewer.family.id), eq(journalEntries.book, "grimoire")));
   if (!e || e.authorMemberId !== viewer.member.id) throw new AuthorizationError("Only the author can delete this entry.");
   await db.delete(journalEntries).where(eq(journalEntries.id, e.id));

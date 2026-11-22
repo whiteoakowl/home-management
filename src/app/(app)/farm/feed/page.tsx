@@ -54,7 +54,7 @@ export default async function FarmFeedPage({ searchParams }: PageProps<"/farm/fe
         description="Feed we need to buy, by when, and who sees it. Open orders also show on the shopping list."
         actions={
           <>
-            {viewer.can("farm", "edit") && <FeedModal animals={opts} />}
+            {viewer.can("farm", "use") && <FeedModal animals={opts} />}
             {canAdd && <FeedOrderModal members={members} today={today} defaultOpen={sp.new === "1"} />}
           </>
         }

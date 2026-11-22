@@ -16,7 +16,7 @@ const MOODS_SERVER = ["happy", "calm", "grateful", "excited", "tired", "sad", "f
 
 export async function saveJournalEntry(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("journal", "edit");
+    const viewer = await requireModule("journal", "use");
     const body = f.str(fd, "body");
     if (!body) return fail("Write something first.", "body");
     const id = f.str(fd, "id");
@@ -65,7 +65,7 @@ export async function saveJournalEntry(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function deleteJournalEntry(fd: FormData) {
-  const viewer = await requireModule("journal", "edit");
+  const viewer = await requireModule("journal", "use");
   const id = String(fd.get("id"));
   const [e] = await db.select().from(journalEntries).where(and(eq(journalEntries.id, id), eq(journalEntries.familyId, viewer.family.id)));
   if (!e || e.authorMemberId !== viewer.member.id) throw new AuthorizationError("Only the author can delete this entry.");
@@ -77,7 +77,7 @@ export async function deleteJournalEntry(fd: FormData) {
 }
 
 export async function removeJournalPhoto(fd: FormData) {
-  const viewer = await requireModule("journal", "edit");
+  const viewer = await requireModule("journal", "use");
   const entryId = String(fd.get("entryId"));
   const fileId = String(fd.get("fileId"));
   const [e] = await db.select().from(journalEntries).where(and(eq(journalEntries.id, entryId), eq(journalEntries.familyId, viewer.family.id)));

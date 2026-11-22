@@ -26,8 +26,8 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/mainte
       (!sp.expiring || (d.expiresOn && d.expiresOn <= soon)) &&
       (!q || `${d.title} ${d.applianceName} ${d.notes}`.toLowerCase().includes(q)),
   );
-  const canEdit = viewer.can("maintenance", "edit");
-  const add = canEdit ? <DocModal rooms={rooms} projects={projects} members={members} /> : undefined;
+  const canAdd = viewer.can("maintenance", "use");
+  const add = canAdd ? <DocModal rooms={rooms} projects={projects} members={members} /> : undefined;
   const sel = "h-10 rounded-full border border-line-strong bg-surface px-3 text-sm";
   return (
     <>
@@ -60,7 +60,7 @@ export default async function DocumentsPage({ searchParams }: PageProps<"/mainte
         <Card>
           <ul className="divide-y divide-line">
             {shown.map((d) => (
-              <DocRow key={d.id} d={d} rooms={rooms} projects={projects} members={members} canEdit={canEdit && canChangeItem(viewer, d.createdByMemberId)} today={today} />
+              <DocRow key={d.id} d={d} rooms={rooms} projects={projects} members={members} canEdit={canAdd && canChangeItem(viewer, d.createdByMemberId)} today={today} />
             ))}
           </ul>
         </Card>

@@ -20,6 +20,15 @@ import { f, familyMemberIdOrNull, saveRecordAccess, visibilityFromForm } from "@
 type V = Awaited<ReturnType<typeof requireModule>>;
 const edit = () => requireModule("maintenance", "edit");
 /**
+ * "Use" adds new repairs, documents, home inventory items and service providers;
+ * changing ones already there needs Add & edit (documents: whoever added them).
+ */
+const addOrManage = async (fd: FormData) => {
+  const viewer = await requireModule("maintenance", "use");
+  if (fd.get("id") && !viewer.can("maintenance", "edit")) throw new AuthorizationError("Only parents (or Add & edit) can change existing ones.");
+  return viewer;
+};
+/**
  * House (remodeling) projects have their own permission area. A family member may also
  * have "My Home Projects" (private_projects): their own projects that only they ever see.
  */
@@ -279,7 +288,7 @@ export async function deleteHomePhoto(fd: FormData) {
 
 export async function saveRepair(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await addOrManage(fd);
     const { values, errors } = parseFields(fd, REPAIR_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
@@ -326,7 +335,7 @@ export async function deleteRepair(fd: FormData) {
 
 export async function saveHomeDocument(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await requireModule("maintenance", "use");
     const { values, errors } = parseFields(fd, DOC_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
@@ -361,7 +370,7 @@ export async function saveHomeDocument(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function deleteHomeDocument(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await requireModule("maintenance", "use");
   const [old] = await db.select().from(homeDocuments).where(and(eq(homeDocuments.id, String(fd.get("id"))), eq(homeDocuments.familyId, viewer.family.id)));
   if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
   assertCanChange(viewer, old.createdByMemberId, "this document");
@@ -394,7 +403,7 @@ export async function logMaintenanceCost(_: ActionState, fd: FormData): Promise<
 
 export async function createHomeTodoList(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await requireModule("maintenance", "use");
     if (!viewer.can("lists", "edit")) return fail("You can't create lists.");
     const title = f.str(fd, "title");
     if (!title) return fail("Name the list.", "title");
@@ -412,7 +421,7 @@ export async function createHomeTodoList(_: ActionState, fd: FormData): Promise<
 
 export async function saveHomeItem(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await addOrManage(fd);
     const { values, errors } = parseFields(fd, ITEM_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
@@ -449,7 +458,7 @@ export async function deleteHomeItem(fd: FormData) {
 
 export async function saveVendor(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await edit();
+    const viewer = await addOrManage(fd);
     const { values, errors } = parseFields(fd, VENDOR_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const row = { ...(values as Record<string, unknown>), rating: values.rating ? Number(values.rating) : null, familyId: viewer.family.id } as typeof vendors.$inferInsert;
@@ -462,7 +471,7 @@ export async function saveVendor(_: ActionState, fd: FormData): Promise<ActionSt
 }
 
 export async function toggleVendorFavorite(fd: FormData) {
-  const viewer = await edit();
+  const viewer = await requireModule("maintenance", "use");
   const [v] = await db.select().from(vendors).where(and(eq(vendors.id, String(fd.get("id"))), eq(vendors.familyId, viewer.family.id)));
   if (!v) return;
   await db.update(vendors).set({ isFavorite: !v.isFavorite }).where(eq(vendors.id, v.id));

@@ -42,7 +42,7 @@ export default async function ProductionPage({ searchParams }: PageProps<"/farm/
           return { label: wk[0]!.label, values: [wk.reduce((s, d) => s + d.value, 0)] };
         })
       : series.map((d) => ({ label: d.label, values: [d.value] }));
-  const canEdit = viewer.can("farm", "edit");
+  const canEdit = viewer.can("farm", "use");
 
   return (
     <>

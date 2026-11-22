@@ -33,7 +33,8 @@ export default async function PetPage({ params }: PageProps<"/pets/[id]">) {
   const pet = await getPet(viewer, id);
   if (!pet) notFound();
   const today = todayIn(viewer.family.timezone);
-  const canEdit = viewer.can("pets", "edit");
+  const canEdit = viewer.can("pets", "use");
+  const canRemove = viewer.can("pets", "edit");
   const canChores = viewer.can("chores", "edit");
   const [members, records, prevs, supplies, notes, photos, memories, choreRows, occ, rooms, cats] = await Promise.all([
     memberOptions(viewer),
@@ -92,7 +93,7 @@ export default async function PetPage({ params }: PageProps<"/pets/[id]">) {
           {canEdit && (
             <div className="flex flex-wrap gap-2">
               <PetModal members={members} pet={pet} />
-              <DeleteButton action={deletePet} fields={{ id: pet.id }} what={pet.name} />
+              {canRemove && <DeleteButton action={deletePet} fields={{ id: pet.id }} what={pet.name} />}
             </div>
           )}
           <DetailList fields={PET_FIELDS} values={{ ...pet, caretakerMemberId: null }} skip={["name", "species", "breed", "status"]} className="mt-2" />

@@ -35,8 +35,9 @@ export default async function CraftItemPage({ params }: PageProps<"/spiritual/it
   const kind = it.kind as CraftKind;
   const meta = CRAFT_META[kind];
   const own = it.familyId === viewer.family.id;
-  const canEdit = viewer.can("witchcraft", "edit");
-  const canChange = canEdit && own && (viewer.isParent || it.createdByMemberId === viewer.member.id || it.visibility === "family");
+  const canEdit = viewer.can("witchcraft", "use");
+  // Change: whoever added it, or a parent.
+  const canChange = canEdit && own && (viewer.isParent || it.createdByMemberId === viewer.member.id);
   const isSpellish = kind === "spell" || kind === "ritual";
   const [members, linked, allSupplies, plantRows, coll, entries] = await Promise.all([
     memberOptions(viewer),
@@ -104,7 +105,7 @@ export default async function CraftItemPage({ params }: PageProps<"/spiritual/it
               </ActionButton>
             )}
             {canEdit && (kind === "crystal" || kind === "tool") && <CollectionModal itemId={it.id} />}
-            {herbSafety && canEdit && viewer.can("garden", "edit") && it.category !== "toxic" && (
+            {herbSafety && canEdit && viewer.can("garden", "use") && it.category !== "toxic" && (
               <ActionButton action={addHerbToGarden} fields={{ id: it.id }} className="h-10 rounded-full border border-line-strong px-4 text-sm font-medium hover:bg-sunken">
                 <Sprout className="size-4" /> {it.plantId ? "Open in garden" : "Add to our garden plants"}
               </ActionButton>

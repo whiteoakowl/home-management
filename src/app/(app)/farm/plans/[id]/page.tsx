@@ -28,7 +28,8 @@ export default async function FarmPlanPage({ params }: PageProps<"/farm/plans/[i
   if (!plan) notFound();
   const [members, access] = await Promise.all([memberOptions(viewer), getRecordAccess("farm_plan", [id])]);
   const mayShare = canChangeItem(viewer, plan.createdByMemberId);
-  const canEdit = viewer.can("farm", "edit");
+  // Your own maps (or any, for parents / Add & edit).
+  const canEdit = viewer.can("farm", "edit") || (viewer.can("farm", "use") && canChangeItem(viewer, plan.createdByMemberId));
   return (
     <div className="flex flex-col gap-4">
       <Link href="/farm" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">

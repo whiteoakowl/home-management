@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { calendarEvents, eventAttendees, familyMembers } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
-import { AuthorizationError, requireModule } from "@/lib/dal";
+import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
 import { zonedToUtc } from "@/lib/dates";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
 import { MEDICAL_FIELDS, MEDICAL_KINDS, type MedicalKind } from "@/lib/medical-config";
@@ -27,9 +27,15 @@ function revalidateMedical() {
 }
 
 /** Create or update any medical record type (config-driven). */
+/** "Use" looks after only their own medical information; Add & edit (and parents) anyone's they can see. */
+function assertMedicalFor(viewer: Viewer, memberId: string | null) {
+  if (viewer.isParent || viewer.can("medical", "edit")) return;
+  if (memberId !== viewer.member.id) throw new AuthorizationError("You can only add or change your own medical information.");
+}
+
 export async function saveMedicalRecord(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("medical", "edit");
+    const viewer = await requireModule("medical", "use");
     const kind = kindOf(fd);
     const table = medTable(kind);
     const { values, errors } = parseFields(fd, MEDICAL_FIELDS[kind]);
@@ -41,6 +47,7 @@ export async function saveMedicalRecord(_: ActionState, fd: FormData): Promise<A
     if (id && !existing) throw new AuthorizationError("Record not found.");
     const memberId = existing ? existing.memberId : await familyMemberIdOrNull(viewer.family.id, f.str(fd, "memberId"));
     if (!memberId) return fail("Choose who this record is for.", "memberId");
+    assertMedicalFor(viewer, memberId);
     if (kind === "document" && !existing && !(fd.get("file") instanceof File && (fd.get("file") as File).size)) {
       return fail("Attach the document (PDF or image).", "file");
     }
@@ -78,11 +85,12 @@ export async function saveMedicalRecord(_: ActionState, fd: FormData): Promise<A
 }
 
 export async function deleteMedicalRecord(fd: FormData) {
-  const viewer = await requireModule("medical", "edit");
+  const viewer = await requireModule("medical", "use");
   const kind = kindOf(fd);
   const table = medTable(kind);
   const existing = await getMedicalRecord(viewer, kind, String(fd.get("id")));
   if (!existing) throw new AuthorizationError("Record not found.");
+  assertMedicalFor(viewer, existing.memberId);
   await db.delete(table).where(and(eq(table.id, existing.id), eq(table.familyId, viewer.family.id)));
   if ("fileId" in existing && existing.fileId) await deleteFamilyFile(viewer.family.id, existing.fileId as string);
   revalidateMedical();
@@ -90,12 +98,13 @@ export async function deleteMedicalRecord(fd: FormData) {
 
 /** Remove only the attached file of an allergy / document. */
 export async function removeMedicalFile(fd: FormData) {
-  const viewer = await requireModule("medical", "edit");
+  const viewer = await requireModule("medical", "use");
   const kind = kindOf(fd);
   if (kind !== "allergy" && kind !== "document") return;
   const table = medTable(kind);
   const existing = await getMedicalRecord(viewer, kind, String(fd.get("id")));
   if (!existing || !("fileId" in existing) || !existing.fileId) return;
+  assertMedicalFor(viewer, existing.memberId);
   await db.update(table).set({ fileId: null }).where(eq(table.id, existing.id));
   await deleteFamilyFile(viewer.family.id, existing.fileId as string);
   revalidateMedical();
@@ -103,9 +112,10 @@ export async function removeMedicalFile(fd: FormData) {
 
 /** Mark a refill as picked up: decrements refills and moves the next refill date. */
 export async function recordRefill(fd: FormData) {
-  const viewer = await requireModule("medical", "edit");
+  const viewer = await requireModule("medical", "use");
   const m = await getMedicalRecord(viewer, "medication", String(fd.get("id")));
   if (!m) throw new AuthorizationError("Medication not found.");
+  assertMedicalFor(viewer, m.memberId);
   const days = Math.min(365, Math.max(1, f.int(fd, "days") ?? 30));
   const next = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
   await db
@@ -122,12 +132,13 @@ export async function recordRefill(fd: FormData) {
  */
 export async function saveMedicalAppointment(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("medical", "edit");
+    const viewer = await requireModule("medical", "use");
     const tz = viewer.family.timezone;
     const title = f.str(fd, "title");
     const date = f.date(fd, "date");
     const memberId = await familyMemberIdOrNull(viewer.family.id, f.str(fd, "memberId"));
     if (!title) return fail("What is the appointment?", "title");
+    assertMedicalFor(viewer, memberId);
     if (!date) return fail("Pick a date.", "date");
     if (!memberId) return fail("Who is the appointment for?", "memberId");
     const time = f.str(fd, "time") ?? "09:00";
@@ -175,7 +186,7 @@ export async function saveMedicalAppointment(_: ActionState, fd: FormData): Prom
 }
 
 export async function deleteMedicalAppointment(fd: FormData) {
-  const viewer = await requireModule("medical", "edit");
+  const viewer = await requireModule("medical", "use");
   const id = String(fd.get("id"));
   const [old] = await db.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id), eq(calendarEvents.source, "medical")));
   if (!old) return;

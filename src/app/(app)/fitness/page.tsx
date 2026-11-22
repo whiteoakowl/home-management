@@ -36,7 +36,7 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
     recordsFor(subject.id),
     viewer.can("goals") ? listGoals(viewer, { kind: "fitness", ownerId: subject.id }) : Promise.resolve([]),
   ]);
-  const canEdit = viewer.can("fitness", "edit") && canEditFitness(viewer, subject);
+  const canEdit = viewer.can("fitness", "use") && canEditFitness(viewer, subject);
   const allWorkouts = plans.flatMap((p) => p.workouts.map((w) => ({ ...w, plan: p.name })));
   const workoutOpts = allWorkouts.map((w) => ({ id: w.id, name: w.name, template: templateFor(w.exercises) }));
   const thisWeek = logs.filter((l) => l.date >= monday);
@@ -213,7 +213,7 @@ export default async function FitnessPage({ searchParams }: PageProps<"/fitness"
               <CardHeader
                 title="Fitness goals"
                 icon={<Target className="size-4" />}
-                action={viewer.can("goals", "edit") && canEdit ? <GoalFormModal members={members} me={subject.id} isParent={viewer.isParent} defaultKind="fitness" triggerLabel="Add" /> : undefined}
+                action={viewer.can("goals", "use") && canEdit ? <GoalFormModal members={members} me={subject.id} isParent={viewer.isParent} defaultKind="fitness" triggerLabel="Add" /> : undefined}
               />
               {goals.length === 0 ? (
                 <p className="text-sm text-muted">Exercise consistently, build strength, run a 5K…</p>

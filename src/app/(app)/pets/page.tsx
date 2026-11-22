@@ -19,7 +19,7 @@ export default async function PetsDashboard({ searchParams }: PageProps<"/pets">
   const viewer = await petsViewer();
   const sp = await searchParams;
   const today = todayIn(viewer.family.timezone);
-  const canEdit = viewer.can("pets", "edit");
+  const canEdit = viewer.can("pets", "use");
   const [members, list] = await Promise.all([memberOptions(viewer), listPets(viewer)]);
   const ids = list.map((p) => p.id);
   const [prevs, supplies, care] = await Promise.all([

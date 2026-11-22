@@ -37,7 +37,7 @@ export default async function GardenPage({ searchParams }: PageProps<"/garden">)
   const growing = plantings.filter((p) => ["sown", "growing", "harvesting"].includes(p.status));
   const toPlant = plantings.filter((p) => p.status === "planned");
   const harvests = plantings.filter((p) => p.expectedHarvestOn && p.expectedHarvestOn >= today && p.expectedHarvestOn <= addDays(today, 30)).sort((a, b) => a.expectedHarvestOn!.localeCompare(b.expectedHarvestOn!));
-  const canEdit = viewer.can("garden", "edit");
+  const canEdit = viewer.can("garden", "use");
   const year = Number(today.slice(0, 4));
   const latestSoil = plans.find((p) => p.notes)?.notes;
   const plantingOpts = plantings.filter((p) => p.status !== "finished").map((p) => ({ id: p.id, label: `${p.plantName}${p.planName ? ` · ${p.planName}` : ""}` }));

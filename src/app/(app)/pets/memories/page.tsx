@@ -15,7 +15,7 @@ export default async function PetMemoriesPage() {
   const viewer = await petsViewer();
   const today = todayIn(viewer.family.timezone);
   const [members, list, memories] = await Promise.all([memberOptions(viewer), listPets(viewer, { includePast: true }), petMemories(viewer)]);
-  const canEdit = viewer.can("pets", "edit");
+  const canEdit = viewer.can("pets", "use");
   const name = (id: string | null) => list.find((p) => p.id === id)?.name;
   return (
     <>

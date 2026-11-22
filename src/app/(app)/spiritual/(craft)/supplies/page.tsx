@@ -28,7 +28,7 @@ const FIELDS: FieldDef[] = [
 export default async function SuppliesPage() {
   const viewer = await craftViewer();
   const rows = await db.select().from(inventoryItems).where(and(eq(inventoryItems.familyId, viewer.family.id), eq(inventoryItems.location, "craft"))).orderBy(asc(inventoryItems.name));
-  const canEdit = viewer.can("witchcraft", "edit");
+  const canEdit = viewer.can("witchcraft", "use");
   const isLow = (r: (typeof rows)[number]) => Number(r.quantity) <= 0 || (r.lowStockThreshold !== null && Number(r.quantity) <= Number(r.lowStockThreshold));
   const low = rows.filter(isLow);
   const add = canEdit ? <RecordModal title="Add supply" action={saveCraftSupply} fields={FIELDS} defaults={{ quantity: 1 }} size="md" /> : undefined;

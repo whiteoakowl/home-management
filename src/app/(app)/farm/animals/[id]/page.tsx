@@ -42,7 +42,7 @@ export default async function AnimalPage({ params }: PageProps<"/farm/animals/[i
     db.select().from(feedLogs).where(eq(feedLogs.animalId, id)).orderBy(desc(feedLogs.date)).limit(20),
     animalOptions(viewer),
   ]);
-  const canEdit = viewer.can("farm", "edit");
+  const canEdit = viewer.can("farm", "use");
   const photo = fileUrl(a.imageFileId);
   const facts: [string, string | null][] = [
     ["Type", a.headCount > 1 ? `${a.headCount} × ${a.species}` : a.species],
@@ -72,9 +72,11 @@ export default async function AnimalPage({ params }: PageProps<"/farm/animals/[i
               canEdit ? (
                 <>
                   <AnimalFormModal defaults={{ ...a, imageUrl: photo }} triggerContent={<><Pencil className="size-4" /> Edit</>} />
-                  <ActionButton action={deleteAnimal} fields={{ id }} confirm={`Delete ${a.name} and all records?`} label="Delete" className="size-9 rounded-lg text-muted hover:bg-wine-50 hover:text-wine-500">
-                    <Trash2 className="size-4" />
-                  </ActionButton>
+                  {viewer.can("farm", "edit") && (
+                    <ActionButton action={deleteAnimal} fields={{ id }} confirm={`Delete ${a.name} and all records?`} label="Delete" className="size-9 rounded-lg text-muted hover:bg-wine-50 hover:text-wine-500">
+                      <Trash2 className="size-4" />
+                    </ActionButton>
+                  )}
                 </>
               ) : undefined
             }

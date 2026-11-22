@@ -58,7 +58,7 @@ export default async function FarmPage({ searchParams }: PageProps<"/farm">) {
   const mainKind = kinds[0]?.kind ?? "eggs";
   const series = await productionSeries(viewer, mainKind, today, 14);
   const weekTotal = series.slice(-7).reduce((s, d) => s + d.value, 0);
-  const canEdit = viewer.can("farm", "edit");
+  const canEdit = viewer.can("farm", "use");
   const canKitchen = viewer.can("kitchen", "add");
   const recent = await db.select().from(productionLogs).where(eq(productionLogs.familyId, fid)).orderBy(desc(productionLogs.date), desc(productionLogs.createdAt)).limit(1);
 

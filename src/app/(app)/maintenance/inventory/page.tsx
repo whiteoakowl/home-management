@@ -33,8 +33,9 @@ export default async function InventoryPage({ searchParams }: PageProps<"/mainte
   const items = all.filter((i) => (!sp.room || i.roomId === sp.room) && (!sp.category || i.category === sp.category) && (!q || `${i.name} ${i.brand} ${i.model} ${i.serialNumber}`.toLowerCase().includes(q)));
   const value = (i: Item) => (i.currentValueCents ?? i.purchasePriceCents ?? 0) * i.quantity;
   const total = items.reduce((s, i) => s + value(i), 0);
+  const canAdd = viewer.can("maintenance", "use");
   const canEdit = viewer.can("maintenance", "edit");
-  const add = canEdit ? <RecordModal title="Add an item" triggerLabel="Add item" action={saveHomeItem} fields={fields} defaults={{ category: "appliance", quantity: 1, roomId: sp.room ?? null }} defaultOpen={sp.new === "1"} /> : undefined;
+  const add = canAdd ? <RecordModal title="Add an item" triggerLabel="Add item" action={saveHomeItem} fields={fields} defaults={{ category: "appliance", quantity: 1, roomId: sp.room ?? null }} defaultOpen={sp.new === "1"} /> : undefined;
   const byRoom = Map.groupBy(items, (i) => rooms.find((r) => r.value === i.roomId)?.label ?? "No room");
   const sel = "h-10 rounded-full border border-line-strong bg-surface px-3 text-sm";
   return (

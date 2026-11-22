@@ -33,7 +33,7 @@ async function editableGoal(viewer: Viewer, id: string) {
 
 export async function saveGoal(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("goals", "edit");
+    const viewer = await requireModule("goals", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name your goal.", "name");
     const kind = f.str(fd, "kind") as (typeof KINDS)[number];
@@ -41,6 +41,8 @@ export async function saveGoal(_: ActionState, fd: FormData): Promise<ActionStat
     const ownerRaw = f.str(fd, "ownerMemberId");
     let owner = ownerRaw === "family" ? null : await familyMemberIdOrNull(viewer.family.id, ownerRaw);
     if (!viewer.isParent && owner !== viewer.member.id && owner !== null) owner = viewer.member.id;
+    // With Use (not Add & edit), a member's new goals are their own.
+    if (!viewer.isParent && !viewer.can("goals", "edit")) owner = viewer.member.id;
     const money = kind === "savings";
     const { visibility, memberIds } = visibilityFromForm(fd);
     const values = {
@@ -98,7 +100,7 @@ export async function saveGoal(_: ActionState, fd: FormData): Promise<ActionStat
 }
 
 export async function deleteGoal(fd: FormData) {
-  const viewer = await requireModule("goals", "edit");
+  const viewer = await requireModule("goals", "use");
   const g = await editableGoal(viewer, String(fd.get("id")));
   await db.delete(goals).where(eq(goals.id, g.id));
   revalidateGoals();
@@ -106,7 +108,7 @@ export async function deleteGoal(fd: FormData) {
 }
 
 export async function setGoalStatus(fd: FormData) {
-  const viewer = await requireModule("goals", "edit");
+  const viewer = await requireModule("goals", "use");
   const g = await editableGoal(viewer, String(fd.get("id")));
   const status = String(fd.get("status"));
   if (!["active", "achieved", "paused", "abandoned"].includes(status)) return;
@@ -121,7 +123,7 @@ export async function setGoalStatus(fd: FormData) {
  */
 export async function contributeToGoal(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("goals", "edit");
+    const viewer = await requireModule("goals", "use");
     const g = await editableGoal(viewer, String(fd.get("goalId")));
     const amount = f.num(fd, "amount");
     if (amount === null || amount === 0) return fail("Enter an amount.", "amount");
@@ -133,7 +135,7 @@ export async function contributeToGoal(_: ActionState, fd: FormData): Promise<Ac
 
 export async function saveMilestone(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("goals", "edit");
+    const viewer = await requireModule("goals", "use");
     const g = await editableGoal(viewer, String(fd.get("goalId")));
     const title = f.str(fd, "title");
     if (!title) return fail("Name the milestone.", "title");
@@ -146,7 +148,7 @@ export async function saveMilestone(_: ActionState, fd: FormData): Promise<Actio
 }
 
 export async function toggleMilestone(fd: FormData) {
-  const viewer = await requireModule("goals", "edit");
+  const viewer = await requireModule("goals", "use");
   const [m] = await db
     .select({ m: goalMilestones })
     .from(goalMilestones)
@@ -159,7 +161,7 @@ export async function toggleMilestone(fd: FormData) {
 }
 
 export async function deleteMilestone(fd: FormData) {
-  const viewer = await requireModule("goals", "edit");
+  const viewer = await requireModule("goals", "use");
   const [m] = await db
     .select({ id: goalMilestones.id, goalId: goalMilestones.goalId })
     .from(goalMilestones)
@@ -172,7 +174,7 @@ export async function deleteMilestone(fd: FormData) {
 }
 
 export async function deleteContribution(fd: FormData) {
-  const viewer = await requireModule("goals", "edit");
+  const viewer = await requireModule("goals", "use");
   const [c] = await db
     .select({ c: goalContributions, kind: goals.kind })
     .from(goalContributions)

@@ -16,7 +16,7 @@ export default async function PetProfilesPage() {
   const past = list.filter((p) => p.status !== "active");
   return (
     <>
-      <PageHeader eyebrow="Pets" title="Pet profiles" actions={viewer.can("pets", "edit") && <PetModal members={members} />} />
+      <PageHeader eyebrow="Pets" title="Pet profiles" actions={viewer.can("pets", "use") && <PetModal members={members} />} />
       <PetsTabs active="profiles" />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {active.map((p) => (

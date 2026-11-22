@@ -57,7 +57,7 @@ export default async function SpiritualDashboard() {
   const now = new Date();
   const moon = moonFor(viewer, today);
   const waxWane = moon.waxing ? "waxing" : "waning";
-  const canEdit = viewer.can("witchcraft", "edit");
+  const canEdit = viewer.can("witchcraft", "use");
 
   const [saved, sabbats, cels, own, favs, collection, herbCount, supplies, entries] = await Promise.all([
     db.select().from(sectionLayouts).where(and(eq(sectionLayouts.memberId, viewer.member.id), eq(sectionLayouts.section, "spiritual"))),

@@ -42,7 +42,7 @@ export default async function MedicalCalendarPage({ searchParams }: PageProps<"/
         eyebrow="Medical"
         title="Medical calendar"
         description="Appointments, follow-ups, refills and expirations. Appointments also appear on the family calendar for the people allowed to see them."
-        actions={viewer.can("medical", "edit") && <AppointmentModal members={members} defaultOpen={sp.new === "1"} />}
+        actions={viewer.can("medical", "use") && <AppointmentModal members={viewer.isParent || viewer.can("medical", "edit") ? members : members.filter((m) => m.id === viewer.member.id)} defaultOpen={sp.new === "1"} />}
       />
       <MedicalTabs active="calendar" />
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">

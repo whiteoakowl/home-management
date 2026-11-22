@@ -1,5 +1,8 @@
 "use server";
 
+// Pets are shared: anyone with Pets "Use" adds and updates them and their records (whoever
+// added them). Removing a pet altogether needs Add & edit.
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
@@ -33,7 +36,7 @@ async function ownPet(viewer: Awaited<ReturnType<typeof requireModule>>, id: str
 
 export async function savePet(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("pets", "edit");
+    const viewer = await requireModule("pets", "use");
     const { values, errors } = parseFields(fd, PET_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const id = f.str(fd, "id");
@@ -71,7 +74,7 @@ export async function deletePet(fd: FormData) {
 
 export async function addPetPhotos(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("pets", "edit");
+    const viewer = await requireModule("pets", "use");
     const p = await ownPet(viewer, f.str(fd, "petId"));
     const ids: string[] = [];
     for (const file of fd.getAll("photos").slice(0, 12)) {
@@ -86,7 +89,7 @@ export async function addPetPhotos(_: ActionState, fd: FormData): Promise<Action
 }
 
 export async function deletePetPhoto(fd: FormData) {
-  const viewer = await requireModule("pets", "edit");
+  const viewer = await requireModule("pets", "use");
   const r = await petRecordOwned(viewer, "photo", String(fd.get("id")));
   if (!r) return;
   await db.delete(petPhotos).where(eq(petPhotos.id, r.r.id));
@@ -98,7 +101,7 @@ export async function deletePetPhoto(fd: FormData) {
 
 export async function savePetRecord(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("pets", "edit");
+    const viewer = await requireModule("pets", "use");
     const p = await ownPet(viewer, f.str(fd, "petId"));
     const { values, errors } = parseFields(fd, PET_RECORD_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
@@ -125,7 +128,7 @@ export async function savePetRecord(_: ActionState, fd: FormData): Promise<Actio
 
 export async function savePreventative(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("pets", "edit");
+    const viewer = await requireModule("pets", "use");
     const p = await ownPet(viewer, f.str(fd, "petId"));
     const { values, errors } = parseFields(fd, PREVENTATIVE_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
@@ -151,7 +154,7 @@ export async function savePreventative(_: ActionState, fd: FormData): Promise<Ac
 
 /** "Given today": logs it to health history and moves the next due date. */
 export async function markPreventativeGiven(fd: FormData) {
-  const viewer = await requireModule("pets", "edit");
+  const viewer = await requireModule("pets", "use");
   const r = await petRecordOwned(viewer, "preventative", String(fd.get("id")));
   if (!r) return;
   const pv = r.r;
@@ -164,7 +167,7 @@ export async function markPreventativeGiven(fd: FormData) {
 
 export async function saveCareNote(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("pets", "edit");
+    const viewer = await requireModule("pets", "use");
     const p = await ownPet(viewer, f.str(fd, "petId"));
     const { values, errors } = parseFields(fd, CARE_NOTE_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
@@ -182,7 +185,7 @@ export async function saveCareNote(_: ActionState, fd: FormData): Promise<Action
 const TABLES = { medical: petMedicalRecords, preventative: petPreventatives, care: petCareNotes } as const;
 
 export async function deletePetRecord(fd: FormData) {
-  const viewer = await requireModule("pets", "edit");
+  const viewer = await requireModule("pets", "use");
   const kind = String(fd.get("kind")) as keyof typeof TABLES;
   if (!(kind in TABLES)) return;
   const r = await petRecordOwned(viewer, kind, String(fd.get("id")));
@@ -198,7 +201,7 @@ export async function deletePetRecord(fd: FormData) {
 
 export async function savePetSupply(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("pets", "edit");
+    const viewer = await requireModule("pets", "use");
     const { values, errors } = parseFields(fd, SUPPLY_FIELDS);
     if (Object.keys(errors).length) return { ok: false, errors };
     const petIdRaw = f.str(fd, "petId");
@@ -241,7 +244,7 @@ export async function savePetSupply(_: ActionState, fd: FormData): Promise<Actio
 
 /** Quick +/- on hand (e.g. opened a new bag). */
 export async function adjustPetSupply(fd: FormData) {
-  const viewer = await requireModule("pets", "edit");
+  const viewer = await requireModule("pets", "use");
   const r = await petSupplyOwned(viewer, String(fd.get("id")));
   if (!r) return;
   const delta = Number(fd.get("delta")) || 0;
@@ -252,7 +255,7 @@ export async function adjustPetSupply(fd: FormData) {
 }
 
 export async function deletePetSupply(fd: FormData) {
-  const viewer = await requireModule("pets", "edit");
+  const viewer = await requireModule("pets", "use");
   const r = await petSupplyOwned(viewer, String(fd.get("id")));
   if (!r) return;
   await db.delete(inventoryItems).where(eq(inventoryItems.id, r.item.id)); // cascades the pet_supplies link
@@ -261,7 +264,7 @@ export async function deletePetSupply(fd: FormData) {
 }
 
 export async function shopForPetSupply(fd: FormData) {
-  const viewer = await requireModule("pets", "edit");
+  const viewer = await requireModule("pets", "use");
   if (!viewer.can("shopping", "add")) throw new AuthorizationError("You can't edit the shopping list.");
   const r = await petSupplyOwned(viewer, String(fd.get("id")));
   if (!r) return;
@@ -282,7 +285,7 @@ export async function shopForPetSupply(fd: FormData) {
 
 export async function savePetMemory(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("pets", "edit");
+    const viewer = await requireModule("pets", "use");
     const p = await ownPet(viewer, f.str(fd, "petId"));
     const body = f.str(fd, "body");
     if (!body) return fail("Write a few words about the memory.", "body");
@@ -324,7 +327,7 @@ export async function savePetMemory(_: ActionState, fd: FormData): Promise<Actio
 }
 
 export async function deletePetMemory(fd: FormData) {
-  const viewer = await requireModule("pets", "edit");
+  const viewer = await requireModule("pets", "use");
   const id = String(fd.get("id"));
   const [e] = await db.select().from(journalEntries).where(and(eq(journalEntries.id, id), eq(journalEntries.familyId, viewer.family.id), eq(journalEntries.book, "pet")));
   if (!e || e.authorMemberId !== viewer.member.id) throw new AuthorizationError("Only the author can delete this memory.");

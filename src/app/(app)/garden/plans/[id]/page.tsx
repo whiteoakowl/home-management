@@ -29,7 +29,8 @@ export default async function GardenPlanPage({ params }: PageProps<"/garden/plan
   if (!plan) notFound();
   const [plantings, plants, members, access] = await Promise.all([plantingsWithPlants(viewer, { planId: id }), plantOptions(viewer), memberOptions(viewer), getRecordAccess("garden_plan", [id])]);
   const mayShare = canChangeItem(viewer, plan.createdByMemberId);
-  const canEdit = viewer.can("garden", "edit");
+  // Your own plans (or any, for parents / Add & edit).
+  const canEdit = viewer.can("garden", "edit") || (viewer.can("garden", "use") && canChangeItem(viewer, plan.createdByMemberId));
 
   return (
     <div className="flex flex-col gap-4">

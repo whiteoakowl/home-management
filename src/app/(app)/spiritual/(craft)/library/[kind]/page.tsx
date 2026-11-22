@@ -25,7 +25,7 @@ export default async function LibraryPage({ params, searchParams }: PageProps<"/
   const sp = (await searchParams) as { q?: string; category?: string; fav?: string; moon?: string; mine?: string; new?: string };
   const viewer = await craftViewer();
   const meta = CRAFT_META[kind];
-  const canEdit = viewer.can("witchcraft", "edit");
+  const canEdit = viewer.can("witchcraft", "use");
   const [members, rowsAll, supplies, plantRows] = await Promise.all([
     memberOptions(viewer),
     listCraft(viewer, kind, { q: sp.q, category: sp.category, favorites: sp.fav === "1", moon: sp.moon }),

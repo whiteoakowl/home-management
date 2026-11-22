@@ -19,7 +19,9 @@ import { sabbatByKey } from "@/lib/sabbats";
 import { CelebrationModal } from "../../celebrations/celebration-modal";
 import { craftViewer } from "../../shared";
 
-export async function generateMetadata({ params }: PageProps<"/spiritual/wheel/[key]">): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps<"/spiritual/wheel/[key]">): Promise<Metadata> {
   const { key } = await params;
   return { title: sabbatByKey(key)?.name ?? "Sabbat" };
 }
@@ -27,7 +29,9 @@ export async function generateMetadata({ params }: PageProps<"/spiritual/wheel/[
 function List({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <h3 className="mb-1.5 text-xs font-semibold tracking-[0.12em] text-muted uppercase">{title}</h3>
+      <h3 className="mb-1.5 text-xs font-semibold tracking-[0.12em] text-muted uppercase">
+        {title}
+      </h3>
       <ul className="flex flex-wrap gap-1.5">
         {items.map((i) => (
           <li key={i} className="rounded-full bg-sunken px-3 py-1 text-sm">
@@ -39,7 +43,9 @@ function List({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-export default async function SabbatPage({ params }: PageProps<"/spiritual/wheel/[key]">) {
+export default async function SabbatPage({
+  params,
+}: PageProps<"/spiritual/wheel/[key]">) {
   const { key } = await params;
   const s = sabbatByKey(key);
   if (!s) notFound();
@@ -49,16 +55,36 @@ export default async function SabbatPage({ params }: PageProps<"/spiritual/wheel
   const [{ wheel, settings }, next, related, cels] = await Promise.all([
     familyWheel(viewer, year),
     familyWheel(viewer, year + 1),
-    db.select().from(craftItems).where(and(craftVisible(viewer), eq(craftItems.sabbat, s.key))).orderBy(asc(craftItems.name)),
-    db.select().from(celebrations).where(and(eq(celebrations.familyId, viewer.family.id), eq(celebrations.sabbat, s.key))).orderBy(asc(celebrations.date)),
+    db
+      .select()
+      .from(craftItems)
+      .where(and(craftVisible(viewer), eq(craftItems.sabbat, s.key)))
+      .orderBy(asc(craftItems.name)),
+    db
+      .select()
+      .from(celebrations)
+      .where(
+        and(
+          eq(celebrations.familyId, viewer.family.id),
+          eq(celebrations.sabbat, s.key),
+        ),
+      )
+      .orderBy(asc(celebrations.date)),
   ]);
   const thisYear = wheel.find((w) => w.key === s.key)!;
-  const date = thisYear.date >= today ? thisYear : next.wheel.find((w) => w.key === s.key)!;
+  const date =
+    thisYear.date >= today
+      ? thisYear
+      : next.wheel.find((w) => w.key === s.key)!;
   const setting = settings.find((x) => x.key === s.key);
-  const canEdit = viewer.can("witchcraft", "edit");
+  const canEdit = viewer.can("witchcraft", "use");
+  const canSettings = viewer.can("witchcraft", "edit");
   return (
     <article className="mx-auto flex max-w-5xl flex-col gap-6">
-      <Link href="/spiritual/wheel" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink">
+      <Link
+        href="/spiritual/wheel"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
+      >
         <ArrowLeft className="size-4" /> Wheel of the Year
       </Link>
       <CraftTabs active="wheel" />
@@ -69,29 +95,53 @@ export default async function SabbatPage({ params }: PageProps<"/spiritual/wheel
           </span>
           <div className="flex-1">
             <p className="text-sm text-[#e8d5e4]">{s.also}</p>
-            <h1 className="text-[34px] leading-tight font-semibold text-white">{s.name}</h1>
+            <h1 className="text-[34px] leading-tight font-semibold text-white">
+              {s.name}
+            </h1>
             <p className="mt-1 text-white/85">
               {fmtDate(date.date)}
-              {date.exact && ` · exact ${s.kind === "solar" ? "moment" : ""} ${date.exact.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: viewer.family.timezone })}`}
+              {date.exact &&
+                ` · exact ${s.kind === "solar" ? "moment" : ""} ${date.exact.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: viewer.family.timezone })}`}
               {date.overridden && " · your family's date"}
             </p>
           </div>
           {canEdit && (
             <div className="flex flex-wrap gap-2">
-              <CelebrationModal defaults={{ name: `${s.name} celebration`, sabbat: s.key, date: date.date, decorations: s.altar.join("\n"), activities: s.family.join("\n") }} />
-              <FormModal
-                title={`${s.name} settings`}
-                action={saveSabbatSetting}
-                triggerVariant="secondary"
-                triggerIcon={<Settings2 className="size-4" />}
-                triggerLabel="Date & notes"
-                size="md"
-                description="Override the date if your tradition celebrates on a different day (for example Imbolc on Feb 2)."
-              >
-                <input type="hidden" name="key" value={s.key} />
-                <TextField name="monthDay" label="Celebrate on (MM-DD)" defaultValue={setting?.monthDay ?? ""} placeholder="Leave blank for the traditional date" pattern="\d{2}-\d{2}" />
-                <TextAreaField name="notes" label="Family notes & traditions" rows={4} defaultValue={setting?.notes ?? ""} />
-              </FormModal>
+              <CelebrationModal
+                defaults={{
+                  name: `${s.name} celebration`,
+                  sabbat: s.key,
+                  date: date.date,
+                  decorations: s.altar.join("\n"),
+                  activities: s.family.join("\n"),
+                }}
+              />
+              {canSettings && (
+                <FormModal
+                  title={`${s.name} settings`}
+                  action={saveSabbatSetting}
+                  triggerVariant="secondary"
+                  triggerIcon={<Settings2 className="size-4" />}
+                  triggerLabel="Date & notes"
+                  size="md"
+                  description="Override the date if your tradition celebrates on a different day (for example Imbolc on Feb 2)."
+                >
+                  <input type="hidden" name="key" value={s.key} />
+                  <TextField
+                    name="monthDay"
+                    label="Celebrate on (MM-DD)"
+                    defaultValue={setting?.monthDay ?? ""}
+                    placeholder="Leave blank for the traditional date"
+                    pattern="\d{2}-\d{2}"
+                  />
+                  <TextAreaField
+                    name="notes"
+                    label="Family notes & traditions"
+                    rows={4}
+                    defaultValue={setting?.notes ?? ""}
+                  />
+                </FormModal>
+              )}
             </div>
           )}
         </div>
@@ -146,7 +196,10 @@ export default async function SabbatPage({ params }: PageProps<"/spiritual/wheel
           <ul className="divide-y divide-line">
             {cels.map((c) => (
               <li key={c.id}>
-                <Link href={`/spiritual/celebrations/${c.id}`} className="flex justify-between py-2.5 hover:text-primary-700">
+                <Link
+                  href={`/spiritual/celebrations/${c.id}`}
+                  className="flex justify-between py-2.5 hover:text-primary-700"
+                >
                   <span className="font-medium">{c.name}</span>
                   <span className="text-sm text-muted">
                     {fmtDate(c.date)} {c.date < today && <Badge>Past</Badge>}
@@ -156,13 +209,17 @@ export default async function SabbatPage({ params }: PageProps<"/spiritual/wheel
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted">No {s.name} celebrations planned yet.</p>
+          <p className="text-sm text-muted">
+            No {s.name} celebrations planned yet.
+          </p>
         )}
       </Card>
 
       {related.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Spells, rituals &amp; practices for {s.name}</h2>
+          <h2 className="mb-3 text-lg font-semibold">
+            Spells, rituals &amp; practices for {s.name}
+          </h2>
           <div className="grid gap-3 md:grid-cols-2">
             {related.map((i) => (
               <CraftCard key={i.id} it={i} />

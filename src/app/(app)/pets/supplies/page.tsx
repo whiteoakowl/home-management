@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Pet food & supplies" };
 export default async function PetSuppliesPage() {
   const viewer = await petsViewer();
   const [list, supplies] = await Promise.all([listPets(viewer), petSuppliesFor(viewer)]);
-  const canEdit = viewer.can("pets", "edit");
+  const canEdit = viewer.can("pets", "use");
   return (
     <>
       <PageHeader

@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Crystal & tool collection" };
 export default async function CollectionPage() {
   const viewer = await craftViewer();
   const rows = await collectionFor(viewer);
-  const canEdit = viewer.can("witchcraft", "edit");
+  const canEdit = viewer.can("witchcraft", "use");
   return (
     <>
       <PageHeader eyebrow="Spiritual" title="Our collection" description="The crystals and tools your family owns or wishes for. Add pieces from any crystal or tool page." />

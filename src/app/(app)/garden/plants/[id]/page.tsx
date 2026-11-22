@@ -39,7 +39,7 @@ export default async function PlantPage({ params }: PageProps<"/garden/plants/[i
     db.select().from(gardenLogs).where(and(eq(gardenLogs.plantId, id), eq(gardenLogs.familyId, viewer.family.id))).orderBy(desc(gardenLogs.date)).limit(20),
   ]);
   const harvested = logs.filter((l) => l.kind === "harvest");
-  const canEdit = viewer.can("garden", "edit");
+  const canEdit = viewer.can("garden", "use");
   const photo = fileUrl(p.imageFileId);
   const { createdAt: _c, updatedAt: _u, ...rest } = p;
   const defaults = { ...rest, photoUrl: photo };

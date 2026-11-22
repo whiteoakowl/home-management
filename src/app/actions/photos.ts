@@ -16,11 +16,11 @@ const PATHS: Record<Kind, (id: string) => string> = { animal: (id) => `/farm/ani
 async function assertCanEdit(viewer: Viewer, kind: Kind, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Not found.");
   if (kind === "animal") {
-    if (!viewer.can("farm", "edit")) throw new AuthorizationError("You can't add farm photos.");
+    if (!viewer.can("farm", "use")) throw new AuthorizationError("You can't add farm photos.");
     const [a] = await db.select({ id: animals.id }).from(animals).where(and(eq(animals.id, id), eq(animals.familyId, viewer.family.id)));
     if (!a) throw new AuthorizationError("Animal not found.");
   } else if (kind === "plant") {
-    if (!viewer.can("garden", "edit")) throw new AuthorizationError("You can't add garden photos.");
+    if (!viewer.can("garden", "use")) throw new AuthorizationError("You can't add garden photos.");
     const [p] = await db.select({ id: plants.id }).from(plants).where(and(eq(plants.id, id), or(eq(plants.familyId, viewer.family.id), isNull(plants.familyId))));
     if (!p) throw new AuthorizationError("Plant not found.");
   } else {
@@ -92,7 +92,7 @@ export async function saveMainPhoto(_: ActionState, fd: FormData): Promise<Actio
     if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("Not found.");
     const table = kind === "pet" ? pets : kind === "animal" ? animals : null;
     if (!table) return fail("Unknown kind.");
-    if (!viewer.can(kind === "pet" ? "pets" : "farm", "edit")) throw new AuthorizationError("You can't change this photo.");
+    if (!viewer.can(kind === "pet" ? "pets" : "farm", "use")) throw new AuthorizationError("You can't change this photo.");
     const [row] = await db.select({ id: table.id, old: table.imageFileId }).from(table).where(and(eq(table.id, id), eq(table.familyId, viewer.family.id)));
     if (!row) return fail("Not found.");
     const remove = fd.get("removeImage") === "1";

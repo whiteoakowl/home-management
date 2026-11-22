@@ -36,8 +36,11 @@ export async function MedicalKindPage({
   sp: { member?: string; q?: string; category?: string; status?: string };
 }) {
   const viewer = await medicalViewer();
-  const canEdit = viewer.can("medical", "edit");
-  const [members, rowsAll, medDefault] = await Promise.all([memberOptions(viewer), listMedical(viewer, kind), newEntryVisibility(viewer.member.id, "medical", "parents")]);
+  const canEdit = viewer.can("medical", "use");
+  const manager = viewer.isParent || viewer.can("medical", "edit");
+  const [allMembers, rowsAll, medDefault] = await Promise.all([memberOptions(viewer), listMedical(viewer, kind), newEntryVisibility(viewer.member.id, "medical", "parents")]);
+  // With Use, forms are for yourself only.
+  const members = manager ? allMembers : allMembers.filter((m) => m.id === viewer.member.id);
   const q = (sp.q ?? "").trim().toLowerCase();
   const rows = rowsAll.filter(({ r }) => {
     const rec = r as Record<string, unknown>;
@@ -54,7 +57,7 @@ export async function MedicalKindPage({
       title={`Add ${label.toLowerCase()}`}
       action={saveMedicalRecord}
       fields={[forField(members), ...MEDICAL_FIELDS[kind]]}
-      defaults={{ memberId: sp.member ?? null, active: true }}
+      defaults={{ memberId: manager ? (sp.member ?? null) : viewer.member.id, active: true }}
       hidden={{ kind }}
       members={members}
       visibility={{ ...MEDICAL_VISIBILITY, defaultValue: medDefault.visibility, selected: medDefault.sharedWith }}
@@ -78,7 +81,7 @@ export async function MedicalKindPage({
         </label>
         <select name="member" defaultValue={sp.member ?? ""} aria-label="Family member" className="h-10 rounded-full border border-line-strong bg-surface px-3 text-sm">
           <option value="">Everyone</option>
-          {members.map((m) => (
+          {allMembers.map((m) => (
             <option key={m.id} value={m.id}>
               {m.displayName}
             </option>
@@ -116,7 +119,7 @@ export async function MedicalKindPage({
               r={r as never}
               member={{ displayName: memberName, color: memberColor }}
               members={members}
-              canEdit={canEdit}
+              canEdit={canEdit && (manager || (r as { memberId: string }).memberId === viewer.member.id)}
               sharedWith={access.get(r.id) ?? []}
             />
           ))}

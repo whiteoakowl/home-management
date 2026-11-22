@@ -33,7 +33,7 @@ const STATUS = animalStatus.enumValues;
 
 export async function saveAnimal(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("farm", "edit");
+    const viewer = await requireModule("farm", "use");
     const name = f.str(fd, "name");
     const species = f.str(fd, "species");
     if (!name) return fail("Give it a name (or a flock/herd name).", "name");
@@ -84,7 +84,7 @@ export async function deleteAnimal(fd: FormData) {
 
 export async function saveHealthRecord(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("farm", "edit");
+    const viewer = await requireModule("farm", "use");
     const a = await ownAnimal(viewer, String(fd.get("animalId")));
     const kind = f.str(fd, "kind");
     if (!kind) return fail("What kind of record?", "kind");
@@ -102,7 +102,7 @@ export async function saveHealthRecord(_: ActionState, fd: FormData): Promise<Ac
 }
 
 export async function deleteHealthRecord(fd: FormData) {
-  const viewer = await requireModule("farm", "edit");
+  const viewer = await requireModule("farm", "use");
   const [r] = await db
     .select({ id: animalHealthRecords.id })
     .from(animalHealthRecords)
@@ -114,7 +114,7 @@ export async function deleteHealthRecord(fd: FormData) {
 
 export async function logFeed(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("farm", "edit");
+    const viewer = await requireModule("farm", "use");
     const feed = f.str(fd, "feed");
     const quantity = f.num(fd, "quantity");
     if (!feed) return fail("What feed?", "feed");
@@ -143,7 +143,7 @@ const KITCHEN_NAME: Record<string, string> = { eggs: "Eggs", milk: "Milk", honey
 /** Record production (eggs, milk…) and optionally add it to the kitchen. */
 export async function logProduction(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("farm", "edit");
+    const viewer = await requireModule("farm", "use");
     const kind = f.str(fd, "kind") as (typeof KINDS)[number];
     if (!KINDS.includes(kind)) return fail("What was produced?", "kind");
     const quantity = f.num(fd, "quantity");
@@ -188,7 +188,7 @@ export async function logProduction(_: ActionState, fd: FormData): Promise<Actio
 }
 
 export async function deleteProduction(fd: FormData) {
-  const viewer = await requireModule("farm", "edit");
+  const viewer = await requireModule("farm", "use");
   await db.delete(productionLogs).where(and(eq(productionLogs.id, String(fd.get("id"))), eq(productionLogs.familyId, viewer.family.id)));
   revalidateFarm();
 }
@@ -197,7 +197,7 @@ export async function deleteProduction(fd: FormData) {
 
 export async function createFarmPlan(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("farm", "edit");
+    const viewer = await requireModule("farm", "use");
     const name = f.str(fd, "name");
     if (!name) return fail("Name your farm map.", "name");
     const { visibility, memberIds } = visibilityFromForm(fd);
@@ -215,6 +215,13 @@ export async function createFarmPlan(_: ActionState, fd: FormData): Promise<Acti
   });
 }
 
+/** A farm map the viewer may change: their own, or any if they're a parent / have Add & edit. */
+async function changeableFarmPlan(viewer: Viewer, id: string) {
+  const p = await visibleFarmPlan(viewer, id);
+  if (!viewer.can("farm", "edit") && !canChangeItem(viewer, p.createdByMemberId)) throw new AuthorizationError("Only the person who made this map (or a parent) can change it.");
+  return p;
+}
+
 /** A farm map the viewer can see (else "not found"). */
 async function visibleFarmPlan(viewer: Viewer, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Plan not found.");
@@ -226,8 +233,8 @@ async function visibleFarmPlan(viewer: Viewer, id: string) {
 /** Rename a farm map and choose who sees it (who-sees is for its creator or a parent). */
 export async function updateFarmPlan(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("farm", "edit");
-    const plan = await visibleFarmPlan(viewer, String(fd.get("id")));
+    const viewer = await requireModule("farm", "use");
+    const plan = await changeableFarmPlan(viewer, String(fd.get("id")));
     const name = f.str(fd, "name");
     if (!name) return fail("Name your farm map.", "name");
     const mayShare = canChangeItem(viewer, plan.createdByMemberId);
@@ -242,8 +249,8 @@ export async function updateFarmPlan(_: ActionState, fd: FormData): Promise<Acti
 }
 
 export async function saveFarmLayout(planId: string, layout: BlueprintLayout) {
-  const viewer = await requireModule("farm", "edit");
-  const p = await visibleFarmPlan(viewer, planId).catch(() => null);
+  const viewer = await requireModule("farm", "use");
+  const p = await changeableFarmPlan(viewer, planId).catch(() => null);
   if (!p) return { ok: false, message: "Plan not found." };
   const parsed = LayoutSchema.safeParse(layout);
   if (!parsed.success) return { ok: false, message: "That layout couldn't be saved." };
@@ -253,8 +260,8 @@ export async function saveFarmLayout(planId: string, layout: BlueprintLayout) {
 }
 
 export async function deleteFarmPlan(fd: FormData) {
-  const viewer = await requireModule("farm", "edit");
-  const plan = await visibleFarmPlan(viewer, String(fd.get("id")));
+  const viewer = await requireModule("farm", "use");
+  const plan = await changeableFarmPlan(viewer, String(fd.get("id")));
   await db.delete(farmPlans).where(eq(farmPlans.id, plan.id));
   revalidateFarm();
   redirect("/farm");
@@ -263,7 +270,7 @@ export async function deleteFarmPlan(fd: FormData) {
 /** Care instructions and the step-by-step routine for one animal (for the family and sitters). */
 export async function saveAnimalCare(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    const viewer = await requireModule("farm", "edit");
+    const viewer = await requireModule("farm", "use");
     const a = await ownAnimal(viewer, String(fd.get("id")));
     const steps = (f.str(fd, "careSteps") ?? "")
       .split(/\r?\n/)

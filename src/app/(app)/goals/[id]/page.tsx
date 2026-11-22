@@ -27,7 +27,7 @@ export default async function GoalPage({ params }: PageProps<"/goals/[id]">) {
   const today = todayIn(viewer.family.timezone);
   const p = progressOf(g);
   const eta = projectedDate(today, p.monthsLeft);
-  const canEdit = viewer.can("goals", "edit") && (viewer.isParent || g.ownerMemberId === viewer.member.id);
+  const canEdit = viewer.can("goals", "use") && (viewer.isParent || g.ownerMemberId === viewer.member.id);
   const [members, access] = await Promise.all([memberOptions(viewer), getRecordAccess("goal", [id])]);
   const fmt = (n: number) => (p.money ? formatCents(n * 100) : `${Math.round(n * 100) / 100} ${g.unit ?? ""}`);
   // Cumulative progress over time.

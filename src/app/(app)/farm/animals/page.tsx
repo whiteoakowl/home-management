@@ -25,7 +25,7 @@ export default async function AnimalsPage({ searchParams }: PageProps<"/farm/ani
   const rows = await db.select().from(animals).where(eq(animals.familyId, viewer.family.id)).orderBy(asc(animals.species), asc(animals.name));
   const kinds = [...new Set(rows.map((r) => r.species))];
   const shown = rows.filter((r) => species === "all" || r.species === species);
-  const canEdit = viewer.can("farm", "edit");
+  const canEdit = viewer.can("farm", "use");
   const add = <AnimalFormModal defaultOpen={sp.new === "1"} />;
   return (
     <>
