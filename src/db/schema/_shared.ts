@@ -48,6 +48,7 @@ export const MODULES = [
   "plans",
   "parties",
   "baby",
+  "sounds",
   "messages",
   "contacts",
   "photos",

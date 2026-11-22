@@ -11,7 +11,7 @@ import type { Module } from "@/db/schema/_shared";
 export type PlanTier = "premium" | "trial" | "free";
 
 /** Always free: the daily family hub. */
-export const FREE_MODULES: readonly Module[] = ["calendar", "shopping", "chores", "lists", "messages", "contacts", "info"];
+export const FREE_MODULES: readonly Module[] = ["calendar", "shopping", "chores", "lists", "messages", "contacts", "info", "sounds"];
 
 /** Everything else is Premium. */
 export const isPremiumModule = (m: Module) => !FREE_MODULES.includes(m);
@@ -47,6 +47,7 @@ export const FREE_FEATURES = [
   `Up to ${FREE_LIMITS.members} family members, each with their own login`,
   "Phone notifications",
   "Personal Health, Food Journal and Mental Wellness",
+  "Sleep Sounds: white & brown noise, rain, ocean and fan, with a sleep timer and favorites",
   "Download all your information",
 ];
 
@@ -58,6 +59,7 @@ export const PREMIUM_FEATURES = [
   "Garden and farm",
   "Sports, dance and work schedules",
   "Travel, party plans and the baby tracker",
+  "Every Sleep Sound, the mixer, saved and shared mixes, presets, all timers and fade-out",
   "Calendar sync, event templates and timed reminders",
   "Automations",
   "Spiritual & faith tabs",
@@ -89,9 +91,10 @@ export function capForPlan<L extends string>(m: Module, level: L, premium: boole
 }
 
 /** Website Features page: which sections are free, and the Premium tabs inside free sections. */
-export const FREE_SECTION_NAMES = ["Home", "Calendar", "Family Chat", "Family", "Contacts", "House", "Lists", "Grocery Shopping", "Personal Health", "Mental Wellness", "Account settings", "Notifications", "Feedback & feature ideas"];
+export const FREE_SECTION_NAMES = ["Sleep Sounds", "Home", "Calendar", "Family Chat", "Family", "Contacts", "House", "Lists", "Grocery Shopping", "Personal Health", "Mental Wellness", "Account settings", "Notifications", "Feedback & feature ideas"];
 export const PREMIUM_TABS: Record<string, string[]> = {
   Calendar: ["Event templates", "Reminders", "Sync"],
   House: ["Overview", "Rewards", "Cleaning"],
   "Personal Health": ["Period tracker"],
+  "Sleep Sounds": ["Mixer & my mixes", "Favorites, recents & presets"],
 };

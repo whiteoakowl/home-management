@@ -5,6 +5,7 @@ import { calendarImports, families } from "@/db/schema";
 import { refreshImport } from "@/lib/calendar-sync";
 import { cleanupOldRows, cleanupOrphanFiles } from "@/lib/housekeeping";
 import { sendEventReminders } from "@/lib/event-reminders";
+import { sendSoundReminders } from "@/lib/sounds/reminders";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
 import { familyAccess } from "@/lib/billing";
@@ -29,6 +30,12 @@ export async function POST(req: Request) {
     reminders = (await sendEventReminders()).sent;
   } catch (e) {
     console.error("Event reminders failed:", e);
+  }
+  // Optional Sleep Sounds reminders people set for themselves.
+  try {
+    await sendSoundReminders();
+  } catch (e) {
+    console.error("Sleep Sounds reminders failed:", e);
   }
   const all = await db.select().from(families);
   let ran = 0,

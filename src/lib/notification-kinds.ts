@@ -14,6 +14,7 @@ export const NOTIFICATION_KINDS = [
   { key: "pet_care", label: "Pet care", description: "Preventatives, vet visits and pet supplies" },
   { key: "craft_reminder", label: "Moon & sabbat reminders", description: "Upcoming sabbats, full and new moons, celebrations" },
   { key: "wellness_reminder", label: "Wellness check-ins", description: "Gentle reminders you set in Mental Wellness" },
+  { key: "sound_reminder", label: "Sleep Sounds reminders", description: "Bedtime or relaxation reminders you set in Sleep Sounds" },
   { key: "wellness_support", label: "Family support", description: "When a family member asks to talk" },
   { key: "maintenance_due", label: "Home maintenance", description: "Maintenance due, warranties expiring, project dates" },
 ] as const;

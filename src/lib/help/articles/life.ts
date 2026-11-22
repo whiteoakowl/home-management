@@ -437,6 +437,27 @@ export const LIFE: HelpArticle[] = [
     ],
   },
   {
+    slug: "sleep-sounds",
+    category: "trips",
+    title: "Using Sleep Sounds",
+    summary: "Play relaxing and background sounds, set a sleep timer and make your own mixes.",
+    keywords: ["sleep", "sounds", "white noise", "brown noise", "rain", "ocean", "fan", "timer", "mix", "focus", "meditation", "relax"],
+    modules: ["sounds"],
+    openIn: { label: "Open Sleep Sounds", href: "/sounds" },
+    steps: [
+      "Open **Sleep Sounds** and tap **Play** on any sound.",
+      "Pick a **Sleep timer** in the player and choose **Fade out** or **Stop immediately**.",
+      "Tap **+ Mix** on other sounds to layer them, set each volume in the **Mixer**, then **Save as my mix**.",
+      "Tick **Share with household** on a mix so others can play it. They can't change it unless you allow it.",
+      "Keep using the app: the mini-player at the bottom lets you pause or stop from any page.",
+    ],
+    sections: [
+      { heading: "Free and Premium", body: "Free includes white and brown noise, rain, ocean and fan, 15/30/60-minute timers and favorites. Premium adds every sound, the mixer, saved and shared mixes, presets, all timers and fade-out." },
+      { heading: "Screen off", body: "Whether sound keeps playing with the screen locked depends on your phone and browser. If it stops, leave the app open with the screen on low." },
+      { heading: "Listening safely", body: "Use comfortable volumes and keep devices away from a sleeping child's bed." },
+    ],
+  },
+  {
     slug: "baby",
     category: "trips",
     title: "Using the baby tracker",

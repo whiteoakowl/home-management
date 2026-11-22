@@ -19,6 +19,8 @@ import { runDailyAutomation } from "@/lib/automation";
 import { themeStyle } from "@/lib/theme";
 import { PlanBanner, type LockedArea } from "@/components/billing/plan-banner";
 import { PlanProvider } from "@/components/billing/plan-context";
+import { SoundPlayerProvider } from "@/components/sounds/player";
+import { SoundMiniPlayer } from "@/components/sounds/mini-player";
 import { MODULE_META } from "@/lib/modules";
 import { isPremiumModule } from "@/lib/plan-tiers";
 import { fileUrl } from "@/lib/files";
@@ -85,7 +87,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           )}
           {unverifiedEmail && <VerifyEmailBanner email={unverifiedEmail} />}
-          <PlanProvider premium={viewer.premium}>{children}</PlanProvider>
+          <PlanProvider premium={viewer.premium}>
+            {viewer.can("sounds") ? (
+              <SoundPlayerProvider>
+                {children}
+                <SoundMiniPlayer />
+              </SoundPlayerProvider>
+            ) : (
+              children
+            )}
+          </PlanProvider>
           <LegalFooter brand={await getBrand()} className="mt-12 print:hidden" />
         </main>
       </div>

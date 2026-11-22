@@ -380,6 +380,18 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "Birthday parties and celebrations: guest list and RSVPs, to-dos, food, decorations, budget and the day's schedule.",
     highlights: ["Guest list & RSVPs", "Checklist with due dates", "Budget, gifts & thank-you notes"],
   },
+  sounds: {
+    id: "sounds",
+    label: "Sleep Sounds",
+    href: "/sounds",
+    icon: "AudioLines",
+    group: "Personal",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "use",
+    tagline: "Relaxing and background sounds for sleep, focus, reading and quiet time, with a sleep timer and your own mixes.",
+    highlights: ["Rain, ocean, fan, white and brown noise", "Sleep timer with fade-out", "Your own mixes, shared if you like"],
+  },
   baby: {
     id: "baby",
     label: "Baby Tracker",

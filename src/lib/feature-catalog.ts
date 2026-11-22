@@ -96,6 +96,18 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         ],
       },
       {
+        name: "Sleep Sounds",
+        icon: "AudioLines",
+        summary: "Relaxing and background sounds for the whole household: sleep, naps, focus, reading, meditation and quiet time. Made right in the app, so there's nothing to download.",
+        tabs: [
+          { name: "Sound library", does: "White, pink and brown noise, rain, thunderstorms, ocean, river, waterfall, fireplace, campfire, fan, air conditioner, wind, forest, birds, crickets, night sounds, a soft heartbeat-style rhythm and calm ambient tones." },
+          { name: "Sleep timer", does: "5 minutes to 4 hours (or your own time), then a gentle fade-out or an immediate stop." },
+          { name: "Mixer & my mixes", does: "Layer sounds with their own volumes, save your mixes, and share any of them with the household." },
+          { name: "Favorites, recents & presets", does: "Star what you love, replay recent sounds in one tap, or start from mixes like Deep Sleep, Rainy Night and Focus." },
+          { name: "Plays while you browse", does: "A mini-player stays on screen while you use the rest of the app." },
+        ],
+      },
+      {
         name: "Baby Tracker",
         icon: "Baby",
         summary: "Everything about the baby's day in one place, shared by parents, grandparents and sitters.",
