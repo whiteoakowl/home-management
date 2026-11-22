@@ -1,4 +1,5 @@
 import "server-only";
+import { isPantryLocation, storagePlace } from "./storage-places";
 import { memberNameSql, seesKidNames } from "./names";
 import { and, eq, ilike, inArray, isNull, or, sql, notInArray } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
@@ -149,7 +150,7 @@ export async function globalSearch(viewer: Viewer, raw: string): Promise<SearchG
         .from(inventoryItems)
         .where(and(eq(inventoryItems.familyId, fid), mineOrFamily(inventoryItems.ownerMemberId, "kitchen"), isNull(inventoryItems.archivedAt), ilike(inventoryItems.name, like)))
         .limit(LIMIT)
-        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${Number(x.qty)} ${x.unit ?? ""} · ${x.location}`, href: `/kitchen?view=${["pantry", "fridge", "freezer", "supplies", "pets", "craft", "home"].includes(x.location) ? x.location : "all"}${x.owner ? "&space=mine" : ""}` }))),
+        .then((r) => r.map((x) => ({ id: x.id, title: x.title, subtitle: `${Number(x.qty)} ${x.unit ?? ""} · ${x.location}`, href: isPantryLocation(x.location) || x.owner ? `/kitchen?view=${isPantryLocation(x.location) ? x.location : "all"}${x.owner ? "&space=mine" : ""}` : storagePlace(x.location).href }))),
     );
   }
 

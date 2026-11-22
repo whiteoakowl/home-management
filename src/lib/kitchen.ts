@@ -7,7 +7,7 @@ import { mainShoppingListId } from "./automation";
 import { checkIngredients, formatQty, normalizeName } from "./ingredients";
 
 /** Locations that hold food or kitchen supplies (pet food, craft and home supplies never count for recipes). */
-export const FOOD_LOCATIONS = ["pantry", "fridge", "freezer", "supplies", "farm", "garden", "other"] as const;
+export const FOOD_LOCATIONS = ["pantry", "fridge", "freezer", "supplies", "canning", "farm", "garden", "other"] as const;
 
 /** Food on hand in one space: the family's (owner null) or a member's private pantry. */
 export async function activeInventory(familyId: string, owner: string | null = null) {

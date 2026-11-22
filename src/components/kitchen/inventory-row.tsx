@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Gift, Minus, MoreHorizontal, Plus, RefreshCw, Trash, Utensils } from "lucide-react";
 import { adjustInventory, deleteInventoryItem, disposeInventory } from "@/app/actions/kitchen";
 import { Badge } from "@/components/ui/display";
+import { storagePlace } from "@/lib/storage-places";
 import { cn } from "@/lib/utils";
 import { InventoryFormModal, type InventoryDefaults } from "./inventory-form";
 
@@ -17,7 +18,7 @@ export type InventoryRowData = InventoryDefaults & {
   thumbUrl: string | null;
 };
 
-const LOC_LABEL: Record<string, string> = { pantry: "Pantry", fridge: "Fridge", freezer: "Freezer", supplies: "Supplies", farm: "Farm", garden: "Garden", other: "Other" };
+
 
 function expiryBadge(days: number | null) {
   if (days === null) return null;
@@ -28,7 +29,19 @@ function expiryBadge(days: number | null) {
   return null;
 }
 
-export function InventoryRow({ item, categories, canEdit, showLocation }: { item: InventoryRowData; categories: { id: string; name: string }[]; canEdit: boolean; showLocation: boolean }) {
+export function InventoryRow({
+  item,
+  categories,
+  canEdit,
+  showLocation,
+  locations,
+}: {
+  item: InventoryRowData;
+  categories: { id: string; name: string }[];
+  canEdit: boolean;
+  showLocation: boolean;
+  locations?: { value: string; label: string }[];
+}) {
   const [menu, setMenu] = useState(false);
   const [pending, start] = useTransition();
   const run = (fn: (fd: FormData) => Promise<void>, fields: Record<string, string>) =>
@@ -55,7 +68,7 @@ export function InventoryRow({ item, categories, canEdit, showLocation }: { item
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-medium">{item.name}</span>
         <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
-          {showLocation && <span>{LOC_LABEL[item.location] ?? item.location}</span>}
+          {showLocation && <span>{storagePlace(item.location).short}</span>}
           {item.spot && <span>{item.spot}</span>}
           {item.categoryName && <span>{item.categoryName}</span>}
         </span>
@@ -102,6 +115,7 @@ export function InventoryRow({ item, categories, canEdit, showLocation }: { item
               <InventoryFormModal
                 categories={categories}
                 defaults={item}
+                locations={locations}
                 triggerContent={<>Edit details</>}
                 triggerClassName="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-sunken"
               />

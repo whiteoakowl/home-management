@@ -1,17 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { families, inventoryEvents, inventoryItems, listItems, products, storageLocation } from "@/db/schema";
+import { categories, families, inventoryEvents, inventoryItems, listItems, products, storageLocation } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { addLowStockToShopping } from "@/lib/automation";
 import { AuthorizationError, getViewer, requireModule, type Viewer } from "@/lib/dal";
-import { assertChange, canOpenFood, hasPrivateFood, ownerForNew } from "@/lib/food-space";
+import { canOpenFood, hasPrivateFood, ownerForNew } from "@/lib/food-space";
 import { todayIn } from "@/lib/dates";
 import { logActivity } from "@/lib/family";
 import { deleteFamilyFile, saveUpload } from "@/lib/files";
-import { addToInventory, FOOD_LOCATIONS } from "@/lib/kitchen";
+import { addToInventory } from "@/lib/kitchen";
+import { assertChangeStorage, canAddStorage, canSeeStorage, storageArea } from "@/lib/storage-areas";
+import { isPantryLocation } from "@/lib/storage-places";
 import { itemVisible, loadList } from "@/lib/lists";
 import { locationForCategory } from "@/lib/shopping-category";
 import { ownedCategoryId } from "@/lib/queries";
@@ -26,6 +29,10 @@ function revalidateKitchen() {
   revalidatePath("/recipes", "layout");
   revalidatePath("/shopping", "layout");
   revalidatePath("/");
+  revalidatePath("/house/storage", "layout");
+  revalidatePath("/farm/storage");
+  revalidatePath("/garden/storage");
+  revalidatePath("/maintenance/supplies");
 }
 
 export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -37,11 +44,14 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
     if (quantity < 0) return fail("Quantity can't be negative.", "quantity");
     const id = f.str(fd, "id");
     const old = id ? await ownItem(viewer, id) : null;
-    if (old) assertChange(viewer, "kitchen", old);
-    const owner = old ? old.ownerMemberId : ownerForNew(viewer, "kitchen", fd);
+    if (old) assertChangeStorage(viewer, old);
     const loc = (f.str(fd, "location") ?? "pantry") as Loc;
-    // Private pantries hold food only; pet, craft and home supplies stay with the family.
-    const location = LOCATIONS.includes(loc) && (!owner || (FOOD_LOCATIONS as readonly string[]).includes(loc)) ? loc : "pantry";
+    const isPrivate = old ? !!old.ownerMemberId : fd.get("space") === "mine";
+    // Private pantries hold kitchen things only; farm, garden, pet, craft and home supplies stay with the family.
+    const location: Loc = LOCATIONS.includes(loc) && (!isPrivate || isPantryLocation(loc)) ? loc : "pantry";
+    const owner = old ? old.ownerMemberId : isPantryLocation(location) ? ownerForNew(viewer, "kitchen", fd) : null;
+    if (!owner && (!old || old.location !== location) && !canAddStorage(viewer, location)) throw new AuthorizationError("You can't add to that storage area.");
+    const area = location === "other" && f.str(fd, "storageAreaId") ? await storageArea(viewer.family.id, f.str(fd, "storageAreaId")!) : null;
     const barcode = f.str(fd, "barcode")?.replace(/\D/g, "") || null;
 
     // Cache the product so the next scan is instant.
@@ -63,6 +73,7 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
       unit: f.str(fd, "unit"),
       location,
       spot: f.str(fd, "spot"),
+      storageAreaId: area?.id ?? null,
       categoryId: await ownedCategoryId(viewer, "inventory", f.str(fd, "categoryId")),
       purchasedOn: f.date(fd, "purchasedOn"),
       expiresOn: f.date(fd, "expiresOn"),
@@ -103,7 +114,7 @@ export async function saveInventoryItem(_: ActionState, fd: FormData): Promise<A
 async function ownItem(viewer: Viewer, id: string) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new AuthorizationError("Item not found.");
   const [item] = await db.select().from(inventoryItems).where(and(eq(inventoryItems.id, id), eq(inventoryItems.familyId, viewer.family.id)));
-  if (!item || (item.ownerMemberId && item.ownerMemberId !== viewer.member.id) || (!item.ownerMemberId && !viewer.can("kitchen"))) throw new AuthorizationError("Item not found.");
+  if (!item || (item.ownerMemberId && item.ownerMemberId !== viewer.member.id) || (!item.ownerMemberId && !canSeeStorage(viewer, item.location))) throw new AuthorizationError("Item not found.");
   return item;
 }
 
@@ -111,7 +122,7 @@ async function ownItem(viewer: Viewer, id: string) {
 async function changeableItem(id: string) {
   const viewer = await getViewer();
   const item = await ownItem(viewer, id);
-  assertChange(viewer, "kitchen", item);
+  assertChangeStorage(viewer, item);
   return { viewer, item };
 }
 
@@ -286,4 +297,37 @@ export async function removeSynonymGroup(fd: FormData) {
   });
   revalidatePath("/kitchen", "layout");
   revalidatePath("/recipes", "layout");
+}
+
+// ─── Storage areas (House → Storage) ─────────────────────────────────────────
+
+/** Add (Use) or rename (parents / Add & edit) one of the family's own storage areas. */
+export async function saveStorageArea(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("house", "use");
+    const name = f.str(fd, "name");
+    if (!name) return fail("What do you call this storage area?", "name");
+    const id = f.str(fd, "id");
+    if (id) {
+      if (!viewer.isParent && !viewer.can("house", "edit")) throw new AuthorizationError("Only parents can rename storage areas.");
+      const area = await storageArea(viewer.family.id, id);
+      if (!area) throw new AuthorizationError("Storage area not found.");
+      await db.update(categories).set({ name }).where(eq(categories.id, area.id));
+    } else {
+      await db.insert(categories).values({ familyId: viewer.family.id, domain: "storage", name, sortOrder: 999 });
+    }
+    revalidateKitchen();
+    return ok(id ? "Saved." : `${name} added.`);
+  });
+}
+
+/** Remove a storage area. Its items stay, under Other storage. */
+export async function deleteStorageArea(fd: FormData) {
+  const viewer = await requireModule("house", "use");
+  if (!viewer.isParent && !viewer.can("house", "edit")) throw new AuthorizationError("Only parents can remove storage areas.");
+  const area = await storageArea(viewer.family.id, String(fd.get("id")));
+  if (!area) return;
+  await db.delete(categories).where(eq(categories.id, area.id));
+  revalidateKitchen();
+  redirect("/house/storage");
 }

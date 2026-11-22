@@ -14,6 +14,10 @@ export type NavItem = {
 
 /** Submenus for the larger areas (shown under the active item in the sidebar). */
 export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
+  "/house": [
+    { href: "/house", label: "Overview" },
+    { href: "/house/storage", label: "Storage" },
+  ],
   "/medical": [
     { href: "/medical", label: "Dashboard" },
     { href: "/medical/members", label: "Family members" },
@@ -48,6 +52,7 @@ export const SUBMENUS: Record<string, { href: string; label: string }[]> = {
     { href: "/maintenance/todo", label: "To-do lists" },
     { href: "/maintenance/documents", label: "Documents & warranties" },
     { href: "/maintenance/inventory", label: "Home inventory" },
+    { href: "/maintenance/supplies", label: "Supplies" },
     { href: "/maintenance/vendors", label: "Service providers" },
     { href: "/maintenance/manual", label: "Household manual" },
     { href: "/maintenance/calendar", label: "Calendar" },

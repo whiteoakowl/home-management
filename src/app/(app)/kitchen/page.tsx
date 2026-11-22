@@ -1,8 +1,9 @@
 import { cloneElement } from "react";
+import { PANTRY_LOCATIONS } from "@/lib/storage-places";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { AlarmClock, ChefHat, Receipt, Refrigerator, ScanBarcode, ShoppingBasket, Tags } from "lucide-react";
 import { db } from "@/db";
 import { categories, inventoryItems } from "@/db/schema";
@@ -29,13 +30,11 @@ const VIEWS = [
   { key: "pantry", label: "Pantry" },
   { key: "fridge", label: "Refrigerator" },
   { key: "freezer", label: "Freezer" },
-  { key: "supplies", label: "Supplies" },
-  { key: "pets", label: "Pet supplies", optional: true },
-  { key: "craft", label: "Craft supplies", optional: true },
-  { key: "home", label: "Home supplies", optional: true },
+  { key: "supplies", label: "Kitchen supplies" },
+  { key: "canning", label: "Canning" },
   { key: "expiring", label: "Expiring" },
 ];
-const LOCATION_VIEWS = ["pantry", "fridge", "freezer", "supplies", "pets", "craft", "home"];
+const LOCATION_VIEWS: string[] = [...PANTRY_LOCATIONS];
 
 const EMPTY_COPY: Record<string, { title: string; desc: string; example: string }> = {
   all: { title: "No food has been added yet.", desc: "Add what's in your pantry, fridge and freezer and we'll keep an eye on expiry dates.", example: "Scan a barcode, or add “Eggs: 12, fridge”" },
@@ -43,6 +42,7 @@ const EMPTY_COPY: Record<string, { title: string; desc: string; example: string 
   fridge: { title: "Nothing in the fridge yet", desc: "Track milk, eggs, produce and leftovers.", example: "Milk · 1 gal · Expires Friday" },
   freezer: { title: "Nothing in the freezer yet", desc: "Track meat, frozen veggies and batch-cooked meals.", example: "Ground beef · 2 lb" },
   supplies: { title: "No kitchen supplies tracked", desc: "Cleaning supplies, paper products, storage bags and more.", example: "Paper towels · 6 rolls · alert at 2" },
+  canning: { title: "No canning yet", desc: "Home-canned jars and canning supplies: lids, rings, pectin and jars.", example: "Strawberry jam · 8 pint jars" },
   expiring: { title: "Nothing expiring soon", desc: "Items expiring in the next 30 days will show up here.", example: "" },
 };
 
@@ -53,7 +53,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
   const space = await resolveSpace(viewer, sp.space);
   if (space.kind === "family" && !viewer.can("kitchen")) redirect("/kitchen?space=mine");
   const isPrivate = space.kind === "private";
-  const view = VIEWS.some((v) => v.key === sp.view && !(isPrivate && "optional" in v)) ? String(sp.view) : "all";
+  const view = VIEWS.some((v) => v.key === sp.view) ? String(sp.view) : "all";
   const today = todayIn(viewer.family.timezone);
   const canEdit = canAddIn(viewer, "kitchen", space);
   const owner = inSpace(inventoryItems.ownerMemberId, space);
@@ -69,6 +69,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
           eq(inventoryItems.familyId, viewer.family.id),
           owner,
           isNull(inventoryItems.archivedAt),
+          inArray(inventoryItems.location, [...PANTRY_LOCATIONS]),
           LOCATION_VIEWS.includes(view) ? eq(inventoryItems.location, view as "pantry") : undefined,
           view === "expiring" ? sql`${inventoryItems.expiresOn} <= ${today}::date + 30` : undefined,
         ),
@@ -77,7 +78,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
     db
       .select({ location: inventoryItems.location, n: sql<number>`count(*)::int`, expiring: sql<number>`count(*) filter (where ${inventoryItems.expiresOn} <= ${today}::date + 7)::int` })
       .from(inventoryItems)
-      .where(and(eq(inventoryItems.familyId, viewer.family.id), owner, isNull(inventoryItems.archivedAt)))
+      .where(and(eq(inventoryItems.familyId, viewer.family.id), owner, isNull(inventoryItems.archivedAt), inArray(inventoryItems.location, [...PANTRY_LOCATIONS])))
       .groupBy(inventoryItems.location),
   ]);
 
@@ -138,7 +139,7 @@ export default async function KitchenPage({ searchParams }: PageProps<"/kitchen"
       />
       <FoodSpaceNav viewer={viewer} active="kitchen" space={space} others={others} />
       <PrivateSpaceNote space={space} viewer={viewer} />
-      <LinkTabs active={view} tabs={VIEWS.filter((v) => !(isPrivate && "optional" in v) && (!("optional" in v) || countFor(v.key) > 0 || v.key === view)).map((v) => ({ key: v.key, href: withSpace(`/kitchen?view=${v.key}`, space), label: v.label, count: countFor(v.key) }))} />
+      <LinkTabs active={view} tabs={VIEWS.map((v) => ({ key: v.key, href: withSpace(`/kitchen?view=${v.key}`, space), label: v.label, count: countFor(v.key) }))} />
 
       {lowCount > 0 && !isPrivate && viewer.can("shopping", "add") && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-olive-100 bg-olive-50 px-4 py-3">

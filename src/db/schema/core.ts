@@ -30,6 +30,7 @@ export const categoryDomain = pgEnum("category_domain", [
   "household",
   "inventory",
   "book",
+  "storage",
 ]);
 export const entityType = pgEnum("entity_type", [
   "event",

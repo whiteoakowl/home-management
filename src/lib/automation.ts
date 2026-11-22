@@ -481,7 +481,7 @@ type ShoppingCat = "frozen" | "household" | "pantry" | "farm" | "garden" | "othe
 export function shoppingCategoryFor(location: string): ShoppingCat {
   if (location === "freezer") return "frozen";
   if (location === "farm" || location === "garden") return location;
-  if (["supplies", "pets", "craft", "home"].includes(location)) return "household";
+  if (["supplies", "pets", "craft", "home", "other"].includes(location)) return "household";
   return "pantry";
 }
 

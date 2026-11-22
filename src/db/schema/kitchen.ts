@@ -18,6 +18,7 @@ export const storageLocation = pgEnum("storage_location", [
   "fridge",
   "freezer",
   "supplies",
+  "canning",
   "farm",
   "garden",
   "pets",
@@ -77,6 +78,8 @@ export const inventoryItems = pgTable(
     /** Sub-location, e.g. "Top shelf", "Chest freezer". */
     spot: text("spot"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+    /** A family-made storage area (House → Storage: "Garage shelves", "Basement closet"…). */
+    storageAreaId: uuid("storage_area_id").references(() => categories.id, { onDelete: "set null" }),
     purchasedOn: date("purchased_on"),
     expiresOn: date("expires_on"),
     lowStockThreshold: numeric("low_stock_threshold"),

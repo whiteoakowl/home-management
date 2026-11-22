@@ -9,6 +9,7 @@ export function GardenTabs({ active }: { active: string }) {
         { key: "log", href: "/garden/log", label: "Plantings & log" },
         { key: "plants", href: "/garden/plants", label: "Plant database" },
         { key: "seeds", href: "/garden/seeds", label: "Seeds" },
+        { key: "storage", href: "/garden/storage", label: "Root cellar" },
       ]}
     />
   );

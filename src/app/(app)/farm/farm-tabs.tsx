@@ -10,6 +10,7 @@ export function FarmTabs({ active }: { active: string }) {
         { key: "animals", href: "/farm/animals", label: "Animals" },
         { key: "feed", href: "/farm/feed", label: "Feed" },
         { key: "production", href: "/farm/production", label: "Production" },
+        { key: "storage", href: "/farm/storage", label: "Storage" },
       ]}
     />
   );

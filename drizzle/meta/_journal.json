@@ -449,6 +449,13 @@
       "when": 1795285182490,
       "tag": "0063_premium_price",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1795376962273,
+      "tag": "0064_storage_areas",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,7 @@ export function MaintenanceTabs({ active }: { active: string }) {
         { key: "todo", href: "/maintenance/todo", label: "To-do lists" },
         { key: "documents", href: "/maintenance/documents", label: "Documents & warranties" },
         { key: "inventory", href: "/maintenance/inventory", label: "Home inventory" },
+        { key: "supplies", href: "/maintenance/supplies", label: "Supplies" },
         { key: "vendors", href: "/maintenance/vendors", label: "Service providers" },
         { key: "manual", href: "/maintenance/manual", label: "Household manual" },
         { key: "calendar", href: "/maintenance/calendar", label: "Calendar" },

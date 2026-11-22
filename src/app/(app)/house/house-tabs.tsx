@@ -24,6 +24,7 @@ export function HouseTabs({ active, viewer }: { active: string; viewer: Viewer }
     viewer.can("pool") && { key: "pool", href: "/pool", label: "Pool" },
     viewer.family.enabledModules.includes("info") && { key: "info", href: "/house/info", label: "Important info" },
     viewer.can("maintenance") && { key: "documents", href: "/maintenance/documents", label: "Documents" },
+    viewer.can("house") && { key: "storage", href: "/house/storage", label: "Storage" },
   ].filter(Boolean) as { key: string; href: string; label: string }[];
   return tabs.length > 1 ? <LinkTabs tabs={tabs} active={active} /> : null;
 }
