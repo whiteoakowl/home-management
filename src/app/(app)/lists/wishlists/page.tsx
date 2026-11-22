@@ -88,11 +88,11 @@ export default async function WishlistsPage({ searchParams }: PageProps<"/lists/
           const editable = mine || canAll;
           return (
             <Card key={m.id} className={cn(mine && "ring-2 ring-primary-200")}>
-              <div className="mb-3 flex items-center gap-3">
+              <div className="mb-3 flex items-center gap-2 sm:gap-3">
                 <Avatar name={m.displayName} color={m.color} photoUrl={fileUrl(m.avatarFileId, true)} size="md" />
                 <div className="min-w-0 flex-1">
-                  <h2 className="font-semibold">{mine ? "My wishlist" : `${m.displayName.split(" ")[0]}'s wishlist`}</h2>
-                  <p className="text-sm text-muted">
+                  <h2 className="truncate font-semibold">{mine ? "My wishlist" : `${m.displayName.split(" ")[0]}'s wishlist`}</h2>
+                  <p className="truncate text-sm text-muted">
                     {wants.length} wish{wants.length === 1 ? "" : "es"}
                     {!mine && wants.length > 0 && ` · ${wants.filter((i) => i.claimedByMemberId).length} covered`}
                   </p>
@@ -112,9 +112,9 @@ export default async function WishlistsPage({ searchParams }: PageProps<"/lists/
                     const claimed = !!i.claimedByMemberId;
                     return (
                       <li key={i.id} className={cn("flex flex-col gap-1.5 py-3", !mine && claimed && !claimedByMe && "opacity-60")}>
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-start gap-1">
                           <div className="min-w-0 flex-1">
-                            <p className={cn("font-medium", !mine && i.purchased && "line-through decoration-olive-500")}>{i.title}</p>
+                            <p title={i.title} className={cn("truncate font-medium", !mine && i.purchased && "line-through decoration-olive-500")}>{i.title}</p>
                             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
                               <Badge tone={i.priority === 1 ? "wine" : i.priority === 2 ? "primary" : "neutral"}>{PRIORITY[i.priority] ?? "Would love"}</Badge>
                               {i.priceCents != null && <span className="tabular-nums">~{usd(i.priceCents)}</span>}
@@ -128,14 +128,14 @@ export default async function WishlistsPage({ searchParams }: PageProps<"/lists/
                             {i.details && <p className="mt-0.5 text-sm whitespace-pre-line text-ink-soft">{i.details}</p>}
                           </div>
                           {editable && (
-                            <span className="flex shrink-0 items-center">
+                            <span className="-mr-1 flex shrink-0 items-center">
                               {mine && (
-                                <ActionButton action={toggleReceived} fields={{ id: i.id }} label="I got this" className="size-9 rounded-full text-muted hover:bg-olive-50 hover:text-olive-700">
-                                  <PackageCheck className="size-4" />
+                                <ActionButton action={toggleReceived} fields={{ id: i.id }} label="I got this" className="size-8 rounded-full text-muted hover:bg-olive-50 hover:text-olive-700">
+                                  <PackageCheck className="size-3.5" />
                                 </ActionButton>
                               )}
                               <WishModal item={{ id: i.id, title: i.title, link: i.link, priceCents: i.priceCents, priority: i.priority, details: i.details, occasion: i.occasion }} />
-                              <DeleteButton action={deleteWishlistItem} fields={{ id: i.id }} what={i.title} />
+                              <DeleteButton action={deleteWishlistItem} fields={{ id: i.id }} what={i.title} className="size-8 [&_svg]:size-3.5" />
                             </span>
                           )}
                         </div>

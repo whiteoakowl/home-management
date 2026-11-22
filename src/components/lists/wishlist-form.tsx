@@ -13,13 +13,13 @@ export function WishModal({ item, forMember, members, occasion }: { item?: WishD
   return (
     <FormModal
       title={item ? "Edit wish" : `Add to ${whose} wishlist`}
-      triggerLabel={forMember ? `Add for ${forMember.displayName.split(" ")[0]}` : "Add a wish"}
+      triggerLabel={forMember ? "Add" : "Add a wish"}
+      triggerAriaLabel={item ? `Edit ${item.title}` : forMember ? `Add a wish for ${forMember.displayName.split(" ")[0]}` : undefined}
       triggerIcon={<Gift className="size-4" />}
       triggerVariant={forMember ? "secondary" : "primary"}
       triggerSize={forMember ? "sm" : "md"}
-      triggerContent={item ? <Pencil className="mx-auto size-4" /> : undefined}
-      triggerAriaLabel={item ? `Edit ${item.title}` : undefined}
-      triggerClassName={item ? "size-9 rounded-full text-muted hover:bg-sunken" : undefined}
+      triggerContent={item ? <Pencil className="mx-auto size-3.5" /> : undefined}
+      triggerClassName={item ? "size-8 rounded-full text-muted hover:bg-sunken" : undefined}
       action={saveWishlistItem}
       size="sm"
     >
