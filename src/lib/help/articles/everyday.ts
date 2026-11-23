@@ -311,6 +311,7 @@ export const EVERYDAY: HelpArticle[] = [
       { heading: "Cook mode", body: "Open a recipe and select **Cook mode** for big step-by-step text and **Timers**. Use **Fewer servings** / **More servings** to scale ingredients." },
       { heading: "Plan it", body: "On a recipe, select **Plan it** to add it to a meal plan and add missing ingredients to the shopping list." },
       { heading: "Collections & recipe books", body: "Group recipes in **Collections** and **Print recipe book**." },
+      { heading: "Add many to a collection at once", steps: ["On **Family Recipes**, select **Select**.", "Tick the recipes (or **Select all**).", "Select **Add to collection**, tick one or more collections or type a name for a new one, then **Add to collection**. Use **Remove from these** to take them out again."] },
     ],
     related: ["meal-plan", "shopping-list"],
   },

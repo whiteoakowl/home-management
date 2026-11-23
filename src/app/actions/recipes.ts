@@ -263,3 +263,56 @@ export async function importRecipe(_: ActionState, fd: FormData): Promise<Action
     redirect(`/recipes/${recipeId}?imported=1`);
   });
 }
+
+/**
+ * Select → Add to collection: put several recipes into (or take them out of)
+ * one or more collections, optionally creating a new collection first. Each
+ * recipe is checked like a single edit, and only collections in the same
+ * space (family, or the same private space) as the recipe are used.
+ */
+export async function collectRecipes(input: { ids: string[]; collectionIds: string[]; newName?: string; remove?: boolean }): Promise<{ ok: boolean; message: string }> {
+  try {
+    const viewer = await getViewer();
+    const ids = [...new Set(Array.isArray(input?.ids) ? input.ids : [])].filter((x) => typeof x === "string").slice(0, 500);
+    const recs: (typeof recipes.$inferSelect)[] = [];
+    let skipped = 0;
+    for (const id of ids) {
+      try {
+        const r = await ownRecipe(viewer, id);
+        assertChange(viewer, "recipes", r);
+        recs.push(r);
+      } catch {
+        skipped++;
+      }
+    }
+    if (!recs.length) return { ok: false, message: "Pick recipes you can change." };
+    const owner = recs[0]!.ownerMemberId;
+    const wanted = [...new Set(Array.isArray(input.collectionIds) ? input.collectionIds : [])].filter((x) => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 50);
+    const cols = wanted.length ? await db.select().from(recipeCollections).where(and(inArray(recipeCollections.id, wanted), eq(recipeCollections.familyId, viewer.family.id), sameSpace(owner))) : [];
+    const name = typeof input.newName === "string" ? input.newName.trim().slice(0, 80) : "";
+    if (name && !input.remove) {
+      // Reuse a collection of the same name in this space rather than making a duplicate.
+      const [same] = await db.select().from(recipeCollections).where(and(eq(recipeCollections.familyId, viewer.family.id), sameSpace(owner), eq(recipeCollections.name, name)));
+      cols.push(same ?? (await db.insert(recipeCollections).values({ familyId: viewer.family.id, name, ownerMemberId: owner }).returning())[0]!);
+    }
+    if (!cols.length) return { ok: false, message: "Choose a collection, or type a name for a new one." };
+    const inSpace = recs.filter((r) => r.ownerMemberId === owner);
+    skipped += recs.length - inSpace.length;
+    const rIds = inSpace.map((r) => r.id);
+    const cIds = [...new Set(cols.map((c) => c.id))];
+    if (input.remove) {
+      await db.delete(recipeCollectionItems).where(and(inArray(recipeCollectionItems.collectionId, cIds), inArray(recipeCollectionItems.recipeId, rIds)));
+    } else {
+      await db
+        .insert(recipeCollectionItems)
+        .values(cIds.flatMap((collectionId) => rIds.map((recipeId, i) => ({ collectionId, recipeId, position: i }))))
+        .onConflictDoNothing();
+    }
+    revalidateRecipes();
+    const names = cols.map((c) => c.name).join(", ");
+    const n = rIds.length;
+    return { ok: true, message: `${input.remove ? "Removed" : "Added"} ${n} recipe${n === 1 ? "" : "s"} ${input.remove ? "from" : "to"} ${names}.${skipped ? ` ${skipped} skipped.` : ""}` };
+  } catch (e) {
+    return { ok: false, message: e instanceof AuthorizationError ? e.message : "That didn't work. Check your connection and try again." };
+  }
+}

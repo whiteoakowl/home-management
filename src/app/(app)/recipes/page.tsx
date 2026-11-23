@@ -89,7 +89,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/recipes"
           />
         </Card>
       ) : (
-        <RecipeGrid items={items} deletable={items.filter((r) => canChange(viewer, "recipes", r)).map((r) => r.id)} />
+        <RecipeGrid items={items} deletable={items.filter((r) => canChange(viewer, "recipes", r)).map((r) => r.id)} collections={cols.map((c) => ({ id: c.id, name: c.name }))} />
       )}
     </>
   );
