@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Archive, ArchiveRestore, ArrowLeft, Lock, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, Lock, Pencil, Plus, Printer, Trash2, Users } from "lucide-react";
 import { archiveList, clearChecked, deleteList, quickAddItem } from "@/app/actions/lists";
 import { ActionButton } from "@/components/forms/inline";
 import { Card } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import { ListView } from "./list-view";
 const KIND_LABEL = { checklist: "Checklist", bullet: "Bullet list", numbered: "Numbered list", todo: "To-do list", shopping: "Shopping list" };
 
 /** Shared detail page for /lists/[id] and /shopping/[id]. */
-export async function ListDetail({ viewer, id, backHref, extraActions, aside }: { viewer: Viewer; id: string; backHref: string; extraActions?: ReactNode; aside?: ReactNode }) {
+export async function ListDetail({ viewer, id, backHref, extraActions, aside, printHref }: { viewer: Viewer; id: string; backHref: string; extraActions?: ReactNode; aside?: ReactNode; printHref?: string }) {
   const list = await loadList(viewer, id).catch(() => null);
   if (!list) notFound();
   const mod = listModule(list.kind);
@@ -68,8 +68,15 @@ export async function ListDetail({ viewer, id, backHref, extraActions, aside }: 
         title={list.title}
         description={`${items.length - checked} open · ${checked} done`}
         actions={
-          canEdit ? (
+          canEdit || printHref ? (
             <>
+              {printHref && (
+                <Link href={printHref} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-ink-soft hover:bg-sunken">
+                  <Printer className="size-4" /> Print
+                </Link>
+              )}
+              {canEdit && (
+              <>
               {extraActions}
               <ListFormModal
                 members={members}
@@ -93,6 +100,8 @@ export async function ListDetail({ viewer, id, backHref, extraActions, aside }: 
               <ActionButton action={deleteList} fields={{ id: list.id }} confirm="Delete this list and all its items?" label="Delete list" className="size-9 rounded-lg text-muted hover:bg-wine-50 hover:text-wine-500">
                 <Trash2 className="size-4" />
               </ActionButton>
+              </>
+              )}
             </>
           ) : undefined
         }

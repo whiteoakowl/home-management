@@ -18,6 +18,7 @@ import {
 import { CheckCircle } from "@/components/forms/inline";
 import { VoiceAddButton } from "./voice-add";
 import { Avatar, Badge } from "@/components/ui/display";
+import { sectionFor, SHOPPING_SECTIONS } from "@/lib/shopping-category";
 import { cn } from "@/lib/utils";
 
 export type ListKind = "checklist" | "bullet" | "numbered" | "todo" | "shopping";
@@ -48,18 +49,7 @@ export type ItemView = {
 /** Personal items on a family shopping list. */
 export type PersonalItems = { isParent: boolean; viewerId: string; onlyPersonal: boolean };
 
-export const SHOPPING_CATEGORIES = [
-  { value: "produce", label: "Produce" },
-  { value: "meat", label: "Meat" },
-  { value: "dairy", label: "Dairy" },
-  { value: "pantry", label: "Pantry" },
-  { value: "frozen", label: "Frozen" },
-  { value: "household", label: "Household" },
-  { value: "personal", label: "Personal" },
-  { value: "garden", label: "Garden" },
-  { value: "farm", label: "Farm" },
-  { value: "other", label: "Other" },
-];
+export const SHOPPING_CATEGORIES = SHOPPING_SECTIONS.map((c) => ({ value: c.value, label: c.label }));
 
 const SOURCE_LABEL: Record<string, string> = { recipe: "From recipe", meal_plan: "Meal plan", low_stock: "Low stock" };
 
@@ -92,7 +82,7 @@ function ItemFields({ kind, item, members }: { kind: ListKind; item?: ItemView; 
         <FormRow>
           <NumberField name="quantity" label="Quantity" min={0} defaultValue={item?.quantity ?? ""} />
           <TextField name="unit" label="Unit" defaultValue={item?.unit ?? ""} placeholder="lb, dozen, box…" />
-          <SelectField name="shoppingCategory" label="Aisle" defaultValue={item?.shoppingCategory ?? ""} placeholder="Auto" options={SHOPPING_CATEGORIES} />
+          <SelectField name="shoppingCategory" label="Section" defaultValue={item?.shoppingCategory ?? ""} placeholder="Auto" options={SHOPPING_CATEGORIES} />
           <TextField name="store" label="Store" defaultValue={item?.store ?? ""} />
           <NumberField name="price" label="Price ($)" min={0} step="0.01" defaultValue={item?.priceCents != null ? item.priceCents / 100 : ""} />
         </FormRow>
@@ -304,7 +294,7 @@ function AddBar({ listId, kind, members, personal }: { listId: string; kind: Lis
             <FormRow cols={4}>
               <NumberField name="quantity" label="Qty" min={0} />
               <TextField name="unit" label="Unit" placeholder="lb" />
-              <SelectField name="shoppingCategory" label="Aisle" placeholder="Auto" options={SHOPPING_CATEGORIES} />
+              <SelectField name="shoppingCategory" label="Section" placeholder="Auto" options={SHOPPING_CATEGORIES} />
               <TextField name="store" label="Store" />
               <NumberField name="price" label="Price ($)" min={0} step="0.01" hint="Remembered for next time" />
             </FormRow>
@@ -348,7 +338,7 @@ export function ListView({
     kind === "shopping" && groupBy !== "none"
       ? [
           { key: "personal-items", label: personal?.isParent ? "Personal items · only parents see these" : "My personal items · only parents see these", items: personalOpen },
-          ...SHOPPING_CATEGORIES.map((c) => ({ key: c.value, label: c.label, items: sharedOpen.filter((i) => (i.shoppingCategory ?? "other") === c.value) })),
+          ...SHOPPING_SECTIONS.map((c) => ({ key: c.value, label: `${c.emoji} ${c.label}`, items: sharedOpen.filter((i) => sectionFor(i) === c.value) })),
         ].filter((g) => g.items.length)
       : [{ key: "all", label: "", items: kind === "todo" ? [...open].sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")) : open }];
 

@@ -32,6 +32,17 @@ export const shoppingCategory = pgEnum("shopping_category", [
   "garden",
   "farm",
   "other",
+  "bakery",
+  "deli",
+  "seafood",
+  "breakfast",
+  "canned",
+  "baking",
+  "condiments",
+  "snacks",
+  "beverages",
+  "baby",
+  "pet",
 ]);
 export const listItemSource = pgEnum("list_item_source", [
   "manual",

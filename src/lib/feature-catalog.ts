@@ -301,7 +301,8 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         icon: "ShoppingBasket",
         summary: "Smart shopping lists.",
         tabs: [
-          { name: "Lists", does: "Grouped by aisle, with prices, totals and quick 'buy again'." },
+          { name: "Lists", does: "Sorted into store sections (produce, bakery, meat, dairy, frozen and more) in walking order, with prices, totals and quick 'buy again'." },
+          { name: "Print", does: "The whole list on one page, by section, with checkboxes." },
           { name: "Speak to add", does: "Say \"milk, eggs and two loaves of bread\" and each item lands on the list." },
         ],
       },

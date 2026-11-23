@@ -32,6 +32,7 @@ export default async function ShoppingListPage({ params }: PageProps<"/shopping/
       id={id}
       aside={list.ownerMemberId ? undefined : <FeedNeeded viewer={viewer} />}
       backHref={list.ownerMemberId ? (own ? "/shopping?space=mine&all=1" : `/shopping?space=${list.ownerMemberId}&all=1`) : "/shopping?all=1"}
+      printHref={`/shopping/${id}/print`}
       extraActions={
         <>
           {(list.ownerMemberId ? own : viewer.can("kitchen", "add")) && n > 0 && (

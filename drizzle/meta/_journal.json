@@ -498,6 +498,13 @@
       "when": 1795412261396,
       "tag": "0070_work_patterns",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795458289367,
+      "tag": "0071_shopping_sections",
+      "breakpoints": true
     }
   ]
 }
