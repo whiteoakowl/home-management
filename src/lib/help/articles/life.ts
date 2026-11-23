@@ -71,12 +71,22 @@ export const LIFE: HelpArticle[] = [
     slug: "work-schedules",
     category: "activities",
     title: "Work schedules",
-    summary: "Add work shifts and choose who sees them.",
-    keywords: ["work", "shift", "schedule", "job"],
+    summary: "A regular weekly schedule, extra shifts, time off, and who sees them.",
+    keywords: ["work", "shift", "schedule", "job", "9 to 5", "regular schedule", "repeat", "time off", "vacation", "sick day", "pto", "holiday", "day off"],
     modules: ["work"],
     openIn: { label: "Open Work", href: "/work" },
-    steps: ["Open **Work** and select **Add shifts**.", "Choose the day(s), **Start** and **End** times, and **Job / place**.", "Save. Use **Copy last week** to repeat a week."],
-    sections: [{ heading: "Privacy", body: "Use **Who sees my work schedule** to choose who can see your shifts." }],
+    steps: [
+      "Open **Work** and select **Regular schedule**.",
+      "Tick the days you work (Mon–Fri is picked for you), set **Start** and **End**, and **Job / place**. Leave **Until** blank to keep it going every week.",
+      "For vacations, sick days and holidays, select **Time off**, choose the type and the dates. Your regular shifts are skipped on those days, here and on the family calendar.",
+      "Not working just one day? Tap the 📅 button next to that day's shift (**Not working this day**).",
+      "For extra or irregular shifts, select **Add shifts** and pick the days. Use **Copy last week** to repeat last week's extra shifts.",
+    ],
+    sections: [
+      { heading: "Changing or ending a regular schedule", body: "Tap the pencil next to the schedule on your card to change days or times. **End** stops it from today; past weeks stay as they were." },
+      { heading: "Upcoming time off", body: "Each person's card lists their next days off. Edit or delete them there." },
+      { heading: "Privacy", body: "Use **Who sees my work schedule** to choose who can see your shifts and time off." },
+    ],
   },
 
   // ─── Home & household ──────────────────────────────────────────────────────

@@ -70,7 +70,11 @@ export const FEATURE_CATALOG: CatalogGroup[] = [
         name: "Work",
         icon: "Briefcase",
         summary: "Everyone's work shifts, week by week, on the family calendar.",
-        tabs: [{ name: "Shifts", does: "Add one-off or repeating shifts so everyone knows who's home when." }],
+        tabs: [
+          { name: "Regular schedule", does: "Set a normal week once (like Mon–Fri, 9 to 5) and it repeats every week until you change it." },
+          { name: "Shifts", does: "Add extra or irregular shifts, or copy last week, so everyone knows who's home when." },
+          { name: "Time off", does: "Vacation, sick days and holidays skip the regular schedule and show on the family calendar." },
+        ],
       },
       {
         name: "Travel",

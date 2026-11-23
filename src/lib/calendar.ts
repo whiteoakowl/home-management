@@ -36,7 +36,6 @@ import {
   sportGames,
   sportPractices,
   sportTeams,
-  workShifts,
   planItems,
   vehicles,
 } from "@/db/schema";
@@ -49,7 +48,8 @@ import { occurrencesBetween, type Rule } from "./recurrence";
 import { classDates, fmtTime, minutesOf } from "./dance";
 import { pointeSummary } from "./pointe";
 import { nextBirthday } from "./hub";
-import { visibleWorkers } from "./work";
+import { workBetween } from "./work";
+import { timeOffEmoji, timeOffLabel } from "./work-schedule";
 import { listPlans } from "./trips";
 import { listParties } from "./parties";
 import { addMonths as vAddMonths, loanStatus } from "./vehicles";
@@ -349,15 +349,18 @@ export async function getCalendarItems(
 
   // Work shifts.
   if (want("work") && viewer.can("work")) {
-    const seeWork = await visibleWorkers(viewer);
-    const shifts = (await db.select().from(workShifts).where(and(eq(workShifts.familyId, fid), gte(workShifts.date, from), lte(workShifts.date, to), subject ? eq(workShifts.memberId, subject) : undefined))).filter((s) => seeWork.has(s.memberId));
+    // One-off shifts plus regular weekly schedules, skipping days off.
+    const { shifts, timeOff } = await workBetween(viewer, from, to, subject);
     const colorOf = await memberColorMap(fid);
     const names = new Map((await db.select({ id: familyMembers.id, name: memberNameSql(viewer, familyMembers) }).from(familyMembers).where(eq(familyMembers.familyId, fid))).map((m) => [m.id, m.name.split(" ")[0]!]));
     for (const s of shifts) {
       const start = minutesOf(s.startTime)!;
       const end = minutesOf(s.endTime)!;
-      out.push({ key: `ws:${s.id}`, id: s.id, layer: "work", title: `${names.get(s.memberId) ?? ""} works${s.job ? `: ${s.job}` : ""}`, date: s.date, startMin: start, endMin: end > start ? end : 24 * 60, color: colorOf.get(s.memberId) ?? "slate", href: `/work?week=${s.date}`, people: [s.memberId], type: "work", description: s.notes });
+      out.push({ key: `ws:${s.id}`, id: s.patternId ?? s.id, layer: "work", title: `${names.get(s.memberId) ?? ""} works${s.job ? `: ${s.job}` : ""}`, date: s.date, startMin: start, endMin: end > start ? end : 24 * 60, color: colorOf.get(s.memberId) ?? "slate", href: `/work?week=${s.date}`, people: [s.memberId], type: "work", description: s.notes, recurring: !!s.patternId });
     }
+    for (const o of timeOff)
+      for (let d = o.startDate > from ? o.startDate : from; d <= o.endDate && d <= to; d = addDays(d, 1))
+        out.push({ key: `wo:${o.id}:${d}`, id: o.id, layer: "work", title: `${timeOffEmoji(o.kind)} ${names.get(o.memberId) ?? ""} off: ${timeOffLabel(o)}`, date: d, startMin: null, endMin: null, color: colorOf.get(o.memberId) ?? "slate", href: `/work?week=${d}`, people: [o.memberId], type: "work", description: o.notes });
   }
 
   // Vehicles: paperwork deadlines, loan payments and (estimated) maintenance due dates.

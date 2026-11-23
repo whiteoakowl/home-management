@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
-import { familyMembers, workShifts } from "@/db/schema";
+import { familyMembers, workPatterns, workShifts, workTimeOff } from "@/db/schema";
 import { fail, guard, ok, type ActionState } from "@/lib/action-state";
 import { AuthorizationError, requireModule, type Viewer } from "@/lib/dal";
-import { addDays } from "@/lib/dates";
+import { addDays, daysBetween, todayIn } from "@/lib/dates";
 import { f, saveRecordAccess, visibilityFromForm } from "@/lib/records";
 
 /**
@@ -94,4 +94,88 @@ export async function saveWorkSharing(_: ActionState, fd: FormData): Promise<Act
     revalidateWork();
     return ok("Saved.");
   });
+}
+
+// ─── Regular weekly schedule ────────────────────────────────────────────────
+
+/** A schedule that repeats every week ("Mon–Fri, 9–5") from a start date, for good or until an end date. */
+export async function savePattern(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("work", "use");
+    const memberId = await worker(viewer, f.str(fd, "memberId"));
+    const weekdays = [...new Set(fd.getAll("weekdays").map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort();
+    if (!weekdays.length) return fail("Pick the days they work.", "weekdays");
+    const startTime = time(fd, "startTime");
+    const endTime = time(fd, "endTime");
+    if (!startTime || !endTime) return fail("Add the start and end time.", "startTime");
+    const startsOn = f.date(fd, "startsOn") ?? todayIn(viewer.family.timezone);
+    const endsOn = f.date(fd, "endsOn");
+    if (endsOn && endsOn < startsOn) return fail("The end date is before the start date.", "endsOn");
+    const values = { memberId, weekdays, startTime, endTime, job: f.str(fd, "job")?.slice(0, 60) ?? null, notes: f.str(fd, "notes")?.slice(0, 300) ?? null, startsOn, endsOn };
+    const id = f.str(fd, "id");
+    if (id) {
+      const [old] = await db.select().from(workPatterns).where(and(eq(workPatterns.id, id), eq(workPatterns.familyId, viewer.family.id)));
+      if (!old) throw new AuthorizationError("Not found.");
+      await worker(viewer, old.memberId);
+      await db.update(workPatterns).set(values).where(eq(workPatterns.id, old.id));
+    } else await db.insert(workPatterns).values({ ...values, familyId: viewer.family.id });
+    revalidateWork();
+    return ok("Regular schedule saved.");
+  });
+}
+
+/** Stop a regular schedule. Past weeks stay as they were; it ends yesterday (or is removed if it hadn't started). */
+export async function endPattern(fd: FormData) {
+  const viewer = await requireModule("work", "use");
+  const [old] = await db.select().from(workPatterns).where(and(eq(workPatterns.id, String(fd.get("id"))), eq(workPatterns.familyId, viewer.family.id)));
+  if (!old) return;
+  await worker(viewer, old.memberId);
+  const today = todayIn(viewer.family.timezone);
+  if (old.startsOn >= today) await db.delete(workPatterns).where(eq(workPatterns.id, old.id));
+  else await db.update(workPatterns).set({ endsOn: addDays(today, -1) }).where(eq(workPatterns.id, old.id));
+  revalidateWork();
+}
+
+// ─── Time off ───────────────────────────────────────────────────────────────
+
+export async function saveTimeOff(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const viewer = await requireModule("work", "use");
+    const memberId = await worker(viewer, f.str(fd, "memberId"));
+    const startDate = f.date(fd, "startDate");
+    if (!startDate) return fail("Pick the first day off.", "startDate");
+    const endDate = f.date(fd, "endDate") ?? startDate;
+    if (endDate < startDate) return fail("The last day is before the first day.", "endDate");
+    if (daysBetween(startDate, endDate) > 366) return fail("Time off can be up to a year at a time.", "endDate");
+    const kind = (["vacation", "sick", "holiday", "personal", "other"] as const).find((k) => k === fd.get("kind")) ?? "vacation";
+    const values = { memberId, kind, title: f.str(fd, "title")?.slice(0, 80) ?? null, startDate, endDate, notes: f.str(fd, "notes")?.slice(0, 300) ?? null };
+    const id = f.str(fd, "id");
+    if (id) {
+      const [old] = await db.select().from(workTimeOff).where(and(eq(workTimeOff.id, id), eq(workTimeOff.familyId, viewer.family.id)));
+      if (!old) throw new AuthorizationError("Not found.");
+      await worker(viewer, old.memberId);
+      await db.update(workTimeOff).set(values).where(eq(workTimeOff.id, old.id));
+    } else await db.insert(workTimeOff).values({ ...values, familyId: viewer.family.id });
+    revalidateWork();
+    return ok("Time off saved.");
+  });
+}
+
+export async function deleteTimeOff(fd: FormData) {
+  const viewer = await requireModule("work", "use");
+  const [old] = await db.select().from(workTimeOff).where(and(eq(workTimeOff.id, String(fd.get("id"))), eq(workTimeOff.familyId, viewer.family.id)));
+  if (!old) return;
+  await worker(viewer, old.memberId);
+  await db.delete(workTimeOff).where(eq(workTimeOff.id, old.id));
+  revalidateWork();
+}
+
+/** "Not working this day": one day off from the regular schedule. */
+export async function skipWorkDay(fd: FormData) {
+  const viewer = await requireModule("work", "use");
+  const memberId = await worker(viewer, String(fd.get("memberId") ?? ""));
+  const date = String(fd.get("date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  await db.insert(workTimeOff).values({ familyId: viewer.family.id, memberId, kind: "other", startDate: date, endDate: date });
+  revalidateWork();
 }

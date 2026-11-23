@@ -183,6 +183,55 @@ export const workShifts = pgTable(
   (t) => [index("work_shifts_family_date_idx").on(t.familyId, t.date)],
 );
 
+/**
+ * A regular weekly schedule ("Mon–Fri, 9–5") that repeats every week from
+ * startsOn until endsOn (or for good). Shown alongside one-off shifts; skipped
+ * on days off (workTimeOff).
+ */
+export const workPatterns = pgTable(
+  "work_patterns",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    /** 0 = Sunday … 6 = Saturday. */
+    weekdays: smallint("weekdays").array().notNull(),
+    startTime: time("start_time").notNull(),
+    endTime: time("end_time").notNull(),
+    job: text("job"),
+    notes: text("notes"),
+    startsOn: date("starts_on").notNull(),
+    endsOn: date("ends_on"),
+    ...timestamps,
+  },
+  (t) => [index("work_patterns_family_idx").on(t.familyId, t.memberId)],
+);
+
+/** Vacation, sick days, holidays: the regular schedule is skipped on these days. */
+export const workTimeOff = pgTable(
+  "work_time_off",
+  {
+    id: id(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => familyMembers.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<"vacation" | "sick" | "holiday" | "personal" | "other">().notNull().default("vacation"),
+    title: text("title"),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    notes: text("notes"),
+    ...timestamps,
+  },
+  (t) => [index("work_time_off_family_idx").on(t.familyId, t.startDate)],
+);
+
 // ─── Sports ───────────────────────────────────────────────────────────────────
 
 /** A family member's team for a season (several per athlete). */
