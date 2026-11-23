@@ -56,17 +56,17 @@ export function InventoryRow({
   const low = item.lowStockThreshold != null && qty <= Number(item.lowStockThreshold);
 
   return (
-    <li className={cn("flex items-center gap-3 rounded-2xl border border-line bg-surface p-2.5 pr-2 sm:p-3", pending && "opacity-60")}>
+    <li className={cn("flex items-center gap-2 rounded-2xl border border-line bg-surface py-2 pr-1 pl-3 sm:gap-3 sm:p-3 sm:pr-2", pending && "opacity-60")}>
       {item.thumbUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.thumbUrl} alt="" className="size-11 shrink-0 rounded-xl object-cover" />
+        <img src={item.thumbUrl} alt="" className="size-9 shrink-0 rounded-xl object-cover sm:size-11" />
       ) : (
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sunken text-sm font-semibold text-muted" aria-hidden>
+        <span className="hidden size-11 shrink-0 items-center justify-center rounded-xl bg-sunken text-sm font-semibold text-muted sm:flex" aria-hidden>
           {item.name.slice(0, 2).toUpperCase()}
         </span>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate font-medium">{item.name}</span>
+        <span className="font-medium leading-snug [overflow-wrap:anywhere] sm:truncate">{item.name}</span>
         <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
           {showLocation && <span>{storagePlace(item.location).short}</span>}
           {item.spot && <span>{item.spot}</span>}
@@ -78,26 +78,26 @@ export function InventoryRow({
         {expiryBadge(item.daysLeft)}
       </div>
       {canEdit ? (
-        <div className="flex items-center rounded-full border border-line">
-          <button type="button" aria-label={`One less ${item.name}`} onClick={() => run(adjustInventory, { delta: "-1" })} disabled={qty <= 0} className="size-9 rounded-l-full text-muted hover:bg-sunken disabled:opacity-40">
-            <Minus className="mx-auto size-4" />
+        <div className="flex shrink-0 items-center rounded-full border border-line">
+          <button type="button" aria-label={`One less ${item.name}`} onClick={() => run(adjustInventory, { delta: "-1" })} disabled={qty <= 0} className="size-7 rounded-l-full text-muted hover:bg-sunken disabled:opacity-40 sm:size-9">
+            <Minus className="mx-auto size-3.5 sm:size-4" />
           </button>
-          <span className="min-w-12 px-1 text-center text-sm font-semibold tabular-nums">
+          <span className="min-w-7 max-w-14 px-0.5 text-center text-sm font-semibold tabular-nums sm:min-w-12 sm:max-w-none sm:px-1">
             {qty % 1 ? qty.toFixed(2).replace(/0+$/, "") : qty}
-            {item.unit && <span className="block text-[10px] leading-none font-normal text-muted">{item.unit}</span>}
+            {item.unit && <span className="block truncate text-[10px] leading-none font-normal text-muted">{item.unit}</span>}
           </span>
-          <button type="button" aria-label={`One more ${item.name}`} onClick={() => run(adjustInventory, { delta: "1" })} className="size-9 rounded-r-full text-muted hover:bg-sunken">
-            <Plus className="mx-auto size-4" />
+          <button type="button" aria-label={`One more ${item.name}`} onClick={() => run(adjustInventory, { delta: "1" })} className="size-7 rounded-r-full text-muted hover:bg-sunken sm:size-9">
+            <Plus className="mx-auto size-3.5 sm:size-4" />
           </button>
         </div>
       ) : (
-        <span className="text-sm font-semibold">
+        <span className="shrink-0 text-sm font-semibold">
           {qty} {item.unit}
         </span>
       )}
       {canEdit && (
-        <div className="relative">
-          <button type="button" onClick={() => setMenu((m) => !m)} aria-label={`Actions for ${item.name}`} aria-expanded={menu} className="size-9 rounded-full text-muted hover:bg-sunken">
+        <div className="relative shrink-0">
+          <button type="button" onClick={() => setMenu((m) => !m)} aria-label={`Actions for ${item.name}`} aria-expanded={menu} className="size-8 rounded-full text-muted hover:bg-sunken sm:size-9">
             <MoreHorizontal className="mx-auto size-4" />
           </button>
           {menu && (
