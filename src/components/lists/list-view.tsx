@@ -16,6 +16,7 @@ import {
   type MemberOption,
 } from "@/components/forms/fields";
 import { CheckCircle } from "@/components/forms/inline";
+import { VoiceAddButton } from "./voice-add";
 import { Avatar, Badge } from "@/components/ui/display";
 import { cn } from "@/lib/utils";
 
@@ -214,7 +215,7 @@ function AddBar({ listId, kind, members, personal }: { listId: string; kind: Lis
   return (
     <ActionForm action={addItem} onSuccess={() => inputRef.current?.focus()} className="gap-3 rounded-2xl border border-line bg-surface p-3">
       <input type="hidden" name="listId" value={listId} />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {/* One row that grows: Enter adds, Shift+Enter or pasting adds several lines. */}
         <textarea
           ref={inputRef}
@@ -229,7 +230,22 @@ function AddBar({ listId, kind, members, personal }: { listId: string; kind: Lis
               e.currentTarget.form?.requestSubmit();
             }
           }}
-          className="max-h-48 min-h-11 min-w-0 flex-1 resize-none rounded-[var(--radius-control)] border border-line-strong bg-surface px-3.5 py-2.5 text-[15px] [field-sizing:content] focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none"
+          className="max-h-48 min-h-11 min-w-0 flex-1 basis-40 resize-none rounded-[var(--radius-control)] border border-line-strong bg-surface px-3.5 py-2.5 text-[15px] [field-sizing:content] focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:outline-none"
+        />
+        <VoiceAddButton
+          split={kind === "shopping" || kind === "checklist" || kind === "bullet"}
+          onItems={(items) => {
+            // Add what was heard to the box, one per line, skipping ones already there.
+            const box = inputRef.current;
+            if (!box) return 0;
+            const have = box.value.split("\n").map((x) => x.trim()).filter(Boolean);
+            const lower = new Set(have.map((x) => x.toLowerCase()));
+            const fresh = items.filter((i) => !lower.has(i.toLowerCase()));
+            if (!fresh.length) return 0;
+            box.value = [...have, ...fresh].join("\n");
+            box.focus();
+            return fresh.length;
+          }}
         />
         <button type="submit" className="inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-control)] bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700">
           <Plus className="size-4" /> Add
