@@ -55,7 +55,7 @@ export async function saveBaby(_: ActionState, fd: FormData): Promise<ActionStat
       birthDate: f.date(fd, "birthDate") ?? member?.birthday ?? null,
       volumeUnit: fd.get("volumeUnit") === "ml" ? ("ml" as const) : ("oz" as const),
       weightUnit: fd.get("weightUnit") === "kg" ? ("kg" as const) : ("lb" as const),
-      notes: f.str(fd, "notes"),
+      notes: f.str(fd, "notes")?.slice(0, 4000) ?? null,
       allergies: f.str(fd, "allergies")?.slice(0, 500) ?? null,
       conditions: f.str(fd, "conditions")?.slice(0, 500) ?? null,
       doctorName: f.str(fd, "doctorName")?.slice(0, 120) ?? null,
@@ -184,7 +184,7 @@ export async function saveBabyLog(_: ActionState, fd: FormData): Promise<ActionS
     if (["note", "caregiver", "development", "journal"].includes(kind) && !f.str(fd, "notes") && !data.title) return fail("Write a few words.", "notes");
     const image = await saveUpload(viewer, fd.get("image"));
     if (kind === "photo" && !image && !old?.imageFileId) return fail("Choose a photo.", "image");
-    const values = { kind, startedAt, endedAt, amount: amount !== null ? String(amount) : null, data, notes: f.str(fd, "notes"), ...(image ? { imageFileId: image } : {}) };
+    const values = { kind, startedAt, endedAt, amount: amount !== null ? String(amount) : null, data, notes: f.str(fd, "notes")?.slice(0, 4000) ?? null, ...(image ? { imageFileId: image } : {}) };
     if (old) {
       await db.update(babyLogs).set(values).where(eq(babyLogs.id, old.id));
       if (image && old.imageFileId) await deleteFamilyFile(viewer.family.id, old.imageFileId);
@@ -395,7 +395,7 @@ export async function saveBabySupply(_: ActionState, fd: FormData): Promise<Acti
       location: kind === "milk" ? (place ?? "fridge") : null,
       pumpedAt,
       expiresOn: kind === "milk" && pumpedAt ? milkExpiry(place ?? "fridge", place === "thawed" ? new Date() : pumpedAt).toISOString().slice(0, 10) : f.date(fd, "expiresOn"),
-      notes: f.str(fd, "notes"),
+      notes: f.str(fd, "notes")?.slice(0, 4000) ?? null,
     };
     if (old) await db.update(babySupplies).set(values).where(eq(babySupplies.id, old.id));
     else await db.insert(babySupplies).values({ ...values, familyId: viewer.family.id, createdByMemberId: viewer.member.id });

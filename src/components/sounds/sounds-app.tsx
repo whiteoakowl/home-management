@@ -206,7 +206,7 @@ export function SoundsApp({ premium, prefs, mixes, upgradeHref }: { premium: boo
         {(cat === "favorites" || (cat === "all" && !query && (favSounds.length > 0 || favMixes.length > 0))) && (
           <Section title="Favorites">
             {favSounds.length || favMixes.length ? (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {favSounds.map((id) => soundById(id)).filter((s): s is SoundDef => !!s).map((s) => (
                   <SoundCard key={s.id} s={s} active={isNow("sound", s.id) || isPlayingSound(p.now, p.status, s.id)} fav locked={locked(s.id)} premium={premium} onPlay={() => playSound(s)} onFav={() => toggleFav(s.id)} onMix={() => void p.addItem(s.id)} />
                 ))}
@@ -234,7 +234,7 @@ export function SoundsApp({ premium, prefs, mixes, upgradeHref }: { premium: boo
                 )}
               </p>
             ) : mine.length ? (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {mine.map((m) => (
                   <MixCard
                     key={m.id}
@@ -258,7 +258,7 @@ export function SoundsApp({ premium, prefs, mixes, upgradeHref }: { premium: boo
             {shared.length > 0 && (
               <>
                 <h3 className="mt-5 mb-2 font-semibold">Shared by your household</h3>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                   {shared.map((m) => (
                     <MixCard key={m.id} m={m} active={isNow("mix", m.id)} fav={favMixes.includes(m.id)} onPlay={() => playMix(m)} onFav={() => toggleFavMix(m.id)} onDuplicate={premium ? () => act(() => duplicateSoundMix({ mixId: m.id })) : undefined} />
                   ))}
@@ -270,7 +270,7 @@ export function SoundsApp({ premium, prefs, mixes, upgradeHref }: { premium: boo
 
         {cat !== "favorites" && cat !== "mixes" && presets.length > 0 && (
           <Section title="Ready-made mixes">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               {presets.map((m) => (
                 <PresetCard
                   key={m.id}
@@ -288,7 +288,7 @@ export function SoundsApp({ premium, prefs, mixes, upgradeHref }: { premium: boo
         {cat !== "favorites" && cat !== "mixes" && (
           <Section title={query ? `Sounds matching “${query}”` : "Sounds"}>
             {filtered.length ? (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {filtered.map((s) => (
                   <SoundCard key={s.id} s={s} active={isNow("sound", s.id) || isPlayingSound(p.now, p.status, s.id)} fav={favSounds.includes(s.id)} locked={locked(s.id)} premium={premium} onPlay={() => playSound(s)} onFav={() => toggleFav(s.id)} onMix={() => void p.addItem(s.id)} />
                 ))}

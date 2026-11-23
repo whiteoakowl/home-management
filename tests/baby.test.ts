@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { babyAge, dayTotals, duration, monthsOld, nextScheduled, nextSide, since } from "../src/lib/baby-kinds";
+import { babyAge, dayTotals, duration, logSummary, milkExpiry, monthsOld, napWindow, nextScheduled, nextSide, periodReport, pottyStats, predictNextFeed, reportSummary, since, sleepType, suggestActivities, wakeWindowFor } from "../src/lib/baby-kinds";
 
 test("babyAge reads naturally", () => {
   assert.equal(babyAge("2026-11-20", "2026-11-22"), "2 days");
@@ -74,4 +74,73 @@ test("nextSide alternates", () => {
   assert.equal(nextSide("left"), "right");
   assert.equal(nextSide("right"), "left");
   assert.equal(nextSide(undefined), null);
+});
+
+
+test("wake windows and the next nap window by age", () => {
+  assert.equal(wakeWindowFor(0)!.max, 60);
+  assert.equal(wakeWindowFor(6)!.min, 120);
+  assert.equal(wakeWindowFor(null), null);
+  const woke = new Date("2026-11-22T13:00:00Z");
+  const w = napWindow(woke, 4)!;
+  assert.equal(w.from.toISOString(), "2026-11-22T14:15:00.000Z");
+  assert.equal(w.to.toISOString(), "2026-11-22T15:00:00.000Z");
+  assert.equal(napWindow(null, 4), null);
+});
+
+test("next feed estimate from the recent rhythm (long night gaps ignored)", () => {
+  const t = (h: number, m = 0) => new Date(Date.UTC(2026, 10, 22, h, m));
+  const feeds = [t(0), t(7), t(10), t(13, 10), t(16)]; // 7 h night gap ignored; ~3 h rhythm
+  const p = predictNextFeed(feeds)!;
+  assert.equal(p.everyMinutes, 180);
+  assert.equal(p.at.toISOString(), "2026-11-22T19:00:00.000Z");
+  assert.equal(predictNextFeed([t(1), t(4)]), null);
+});
+
+test("sleep type: what the person chose, else 3+ hours from evening is overnight", () => {
+  const s = new Date("2026-11-22T20:00:00Z");
+  assert.equal(sleepType({ startedAt: s, endedAt: new Date("2026-11-23T04:00:00Z"), data: {} }, 20, s), "night");
+  assert.equal(sleepType({ startedAt: s, endedAt: new Date("2026-11-22T21:00:00Z"), data: {} }, 20, s), "nap");
+  assert.equal(sleepType({ startedAt: s, endedAt: null, data: { type: "nap" } }, 20, s), "nap");
+});
+
+test("potty progress", () => {
+  const logs = ["pee", "poop", "tried", "accident", "both", "tried"].map((r) => ({ data: { result: r } }));
+  assert.deepEqual(pottyStats(logs), { tries: 5, wins: 3, accidents: 1, rate: 60 });
+  assert.equal(pottyStats([]).rate, null);
+});
+
+test("breast milk keeps: fridge 4 days, freezer ~6 months, room 4 hours", () => {
+  const p = new Date("2026-11-22T08:00:00Z");
+  assert.equal(milkExpiry("fridge", p).toISOString(), "2026-11-26T08:00:00.000Z");
+  assert.equal(milkExpiry("room", p).toISOString(), "2026-11-22T12:00:00.000Z");
+  assert.equal(milkExpiry("freezer", p).toISOString().slice(0, 10), "2027-05-21");
+});
+
+test("reports total up days and compare with the period before", () => {
+  const day = (feeds: number, sleep: number) => ({ feeds, nursingMinutes: 0, bottles: feeds, bottleAmount: feeds * 4, diapers: 6, wet: 4, dirty: 2, sleepMinutes: sleep, naps: 3, tummyMinutes: 10 });
+  const cur = periodReport([day(8, 840), day(8, 900)], [4, 3]);
+  assert.equal(cur.feedsPerDay, 8);
+  assert.equal(cur.bottleAmount, 64);
+  assert.equal(cur.pumpTotal, 7);
+  const prev = periodReport([day(6, 780), day(6, 780)], []);
+  const text = reportSummary(cur, prev, "oz");
+  assert.match(text, /About 8 feeds a day/);
+  assert.match(text, /Sleep is up 1 h/);
+  assert.match(text, /More feeds than before/);
+  assert.match(reportSummary(periodReport([], []), null, "oz"), /Not much logged/);
+});
+
+test("activity ideas fit the age and favour what hasn't been done", () => {
+  const ideas = suggestActivities(5, ["Toy just out of reach", "Rattle reach"], "2026-11-22", 3);
+  assert.equal(ideas.length, 3);
+  for (const a of ideas) assert.ok(a.from <= 5 && 5 < a.to);
+  assert.ok(!ideas.some((a) => a.category === "tummy"));
+});
+
+test("log summaries for pumping and potty", () => {
+  const now = new Date("2026-11-22T12:00:00Z");
+  const u = { volume: "oz", weight: "lb" };
+  assert.equal(logSummary({ kind: "pump", startedAt: new Date("2026-11-22T11:00:00Z"), endedAt: new Date("2026-11-22T11:20:00Z"), amount: "5", data: { side: "both", stored: "freezer" } }, u, now), "5 oz · both · 20 min · stored in the freezer");
+  assert.equal(logSummary({ kind: "potty", startedAt: now, endedAt: null, amount: null, data: { result: "pee", where: "potty", prompted: true } }, u, now), "Pee in the potty · potty · prompted");
 });

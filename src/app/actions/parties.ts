@@ -74,7 +74,7 @@ export async function saveParty(_: ActionState, fd: FormData): Promise<ActionSta
       endTime: time(fd, "endTime"),
       venue: f.str(fd, "venue"),
       address: f.str(fd, "address"),
-      description: f.str(fd, "description"),
+      description: f.str(fd, "description")?.slice(0, 4000) ?? null,
       rsvpBy: f.date(fd, "rsvpBy"),
       budgetCents: f.cents(fd, "budget"),
       visibility,
@@ -128,13 +128,13 @@ export async function savePartyGuest(_: ActionState, fd: FormData): Promise<Acti
     const names = id ? [f.str(fd, "name")].filter(Boolean) as string[] : String(fd.get("name") ?? "").split(/\n|,/).map((s) => s.trim()).filter(Boolean);
     if (!names.length) return fail("Who's invited?", "name");
     const values = {
-      contact: f.str(fd, "contact"),
+      contact: f.str(fd, "contact")?.slice(0, 200) ?? null,
       adults: Math.max(0, Math.round(f.num(fd, "adults") ?? 1)),
       kids: Math.max(0, Math.round(f.num(fd, "kids") ?? 0)),
       rsvp: RSVPS.find((r) => r === fd.get("rsvp")) ?? "invited",
-      gift: f.str(fd, "gift"),
+      gift: f.str(fd, "gift")?.slice(0, 300) ?? null,
       thankYouSent: f.bool(fd, "thankYouSent"),
-      notes: f.str(fd, "notes"),
+      notes: f.str(fd, "notes")?.slice(0, 2000) ?? null,
     };
     if (id) await db.update(partyGuests).set({ ...values, name: names[0]!.slice(0, 120) }).where(eq(partyGuests.id, id));
     else await db.insert(partyGuests).values(names.slice(0, 100).map((n) => ({ ...values, partyId: p.id, name: n.slice(0, 120) })));
@@ -192,7 +192,7 @@ export async function savePartyItem(_: ActionState, fd: FormData): Promise<Actio
       quantity: f.str(fd, "quantity"),
       costCents: f.cents(fd, "cost"),
       assignedMemberId: await familyMemberOrNull(viewer.family.id, f.str(fd, "assignedMemberId")),
-      notes: f.str(fd, "notes"),
+      notes: f.str(fd, "notes")?.slice(0, 2000) ?? null,
       ...(fd.has("done") ? { done: f.bool(fd, "done") } : {}),
     };
     if (id) await db.update(partyItems).set(values).where(eq(partyItems.id, id));

@@ -13,7 +13,8 @@
     "typecheck": "next typegen >/dev/null && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "db:setup": "node scripts/db-setup.mjs",
-    "db:remove-demo": "node scripts/remove-demo-data.mjs"
+    "db:remove-demo": "node scripts/remove-demo-data.mjs",
+    "test:db": "tsx --tsconfig tests/db/tsconfig.json --test tests/db/*.test.ts"
   },
   "dependencies": {
     "@netlify/blobs": "^8.2.0",
