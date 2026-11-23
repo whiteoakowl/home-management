@@ -380,6 +380,18 @@ export const MODULE_META: Record<Module, ModuleMeta> = {
     tagline: "Birthday parties and celebrations: guest list and RSVPs, to-dos, food, decorations, budget and the day's schedule.",
     highlights: ["Guest list & RSVPs", "Checklist with due dates", "Budget, gifts & thank-you notes"],
   },
+  pregnancy: {
+    id: "pregnancy",
+    label: "Pregnancy Tracker",
+    href: "/pregnancy",
+    icon: "Flower2",
+    group: "Personal",
+    phase: 5,
+    inNav: true,
+    defaultMemberAccess: "use",
+    tagline: "Week-by-week pregnancy guide, appointments, symptoms, kick counter, contraction timer, journal, checklists and birth preferences, private unless you share it.",
+    highlights: ["Week-by-week baby development", "Appointments on the family calendar", "Kick counter & contraction timer"],
+  },
   sounds: {
     id: "sounds",
     label: "Sleep Sounds",

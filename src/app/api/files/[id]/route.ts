@@ -2,6 +2,7 @@ import { getMembership, getViewer } from "@/lib/dal";
 import { canReadMedicalFile } from "@/lib/medical";
 import { bigFileLink, readFamilyFile } from "@/lib/files";
 import { canReadJournalFile } from "@/lib/wellness-data";
+import { canReadPregnancyFile } from "@/lib/pregnancy/data";
 
 /** Serves uploaded files to members of the owning family only. */
 export async function GET(request: Request, { params }: RouteContext<"/api/files/[id]">) {
@@ -10,7 +11,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/files
   if (!family || !/^[0-9a-f-]{36}$/i.test(id)) return new Response("Not found", { status: 404 });
   // Medical attachments are private to whoever may see the record.
   const viewer = await getViewer();
-  if (!(await canReadMedicalFile(viewer, id)) || !(await canReadJournalFile(viewer, id))) return new Response("Not found", { status: 404 });
+  if (!(await canReadMedicalFile(viewer, id)) || !(await canReadJournalFile(viewer, id)) || !(await canReadPregnancyFile(viewer, id))) return new Response("Not found", { status: 404 });
   const thumb = new URL(request.url).searchParams.has("thumb");
   const download = new URL(request.url).searchParams.has("download");
   // Big files (large PDFs) go straight from storage with a 5-minute private link: the

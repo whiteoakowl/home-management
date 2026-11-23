@@ -25,6 +25,7 @@ const firstNames = (i: CalendarItem, members: Member[]) =>
 export const TYPE_LABEL: Record<string, string> = {
   event: "Event",
   medical: "Medical appointment",
+  pregnancy: "Pregnancy appointment",
   celebration: "Celebration",
   pet: "Pet care",
   chore: "Chore",

@@ -15,6 +15,7 @@ export const NOTIFICATION_KINDS = [
   { key: "craft_reminder", label: "Moon & sabbat reminders", description: "Upcoming sabbats, full and new moons, celebrations" },
   { key: "wellness_reminder", label: "Wellness check-ins", description: "Gentle reminders you set in Mental Wellness" },
   { key: "baby_reminder", label: "Baby tracker reminders", description: "Feeds, naps, medicine, diapers, pumping and appointments" },
+  { key: "pregnancy_reminder", label: "Pregnancy reminders", description: "New week, kick counts, medicines, water, questions before appointments, preparation" },
   { key: "sound_reminder", label: "Sleep Sounds reminders", description: "Bedtime or relaxation reminders you set in Sleep Sounds" },
   { key: "wellness_support", label: "Family support", description: "When a family member asks to talk" },
   { key: "maintenance_due", label: "Home maintenance", description: "Maintenance due, warranties expiring, project dates" },

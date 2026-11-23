@@ -40,7 +40,7 @@ test("Free plan caps Premium sections to view-only; free sections and no-access 
 });
 
 test("the free hub is exactly the agreed sections", () => {
-  assert.deepEqual([...FREE_MODULES].sort(), ["calendar", "chores", "contacts", "info", "lists", "messages", "shopping", "sounds"]);
+  assert.deepEqual([...FREE_MODULES].sort(), ["calendar", "chores", "contacts", "info", "lists", "messages", "pregnancy", "shopping", "sounds"]);
   for (const m of MODULES) assert.equal(isPremiumModule(m), !FREE_MODULES.includes(m));
 });
 

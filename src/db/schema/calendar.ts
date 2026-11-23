@@ -26,6 +26,7 @@ export const eventSource = pgEnum("event_source", [
   "pet",
   "celebration",
   "maintenance",
+  "pregnancy",
 ]);
 
 export const calendarEvents = pgTable(

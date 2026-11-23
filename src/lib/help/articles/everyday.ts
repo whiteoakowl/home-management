@@ -245,7 +245,10 @@ export const EVERYDAY: HelpArticle[] = [
     modules: ["lists"],
     openIn: { label: "Open Lists", href: "/lists" },
     steps: ["Open **Lists**.", "Select **New list**, give it a **Name** and **Category**.", "In **Who can see this**, choose who can see it.", "Save, then type items in **Add an item…** and press Enter.", "Tick items off as you go. Use the arrows to reorder."],
-    sections: [{ heading: "Archive", body: "Finished lists can be archived; see them under **Archived**." }],
+    sections: [
+      { heading: "Speak to add", body: "Tap the **microphone** next to **Add an item…** and say your items, like \"milk, eggs and bread\". Each one is added separately. It works in browsers that support speech recognition (Chrome, Edge, Safari)." },
+      { heading: "Archive", body: "Finished lists can be archived; see them under **Archived**." },
+    ],
     related: ["wishlists", "shopping-list"],
   },
   {
@@ -273,6 +276,7 @@ export const EVERYDAY: HelpArticle[] = [
     sections: [
       { heading: "Buy again", body: "Things you've bought before appear under **Buy again** so you can add them back in one tap. Prices you enter are remembered for next time." },
       { heading: "Added automatically", body: "Missing recipe ingredients, meal plan items and low-stock pantry items can be added for you." },
+      { heading: "Speak to add", body: "Tap the **microphone** next to **Add an item…** and say what you need, like \"two loaves of bread and bananas\"." },
     ],
     related: ["pantry", "meal-plan", "recipes"],
   },
@@ -318,12 +322,29 @@ export const EVERYDAY: HelpArticle[] = [
     openIn: { label: "Open Family Pantry", href: "/kitchen" },
     steps: ["Open **Family Pantry**.", "Select **Add Food**, or **Scan** a barcode with your phone's camera.", "Enter the **Item**, **Quantity**, **Where** it's kept, and when it **Expires**.", "Set a **Low-stock alert at** amount to add it to the shopping list when you're running low."],
     sections: [
-      { heading: "Tabs", body: "**Everything**, **Pantry**, **Refrigerator**, **Freezer**, **Supplies** and **Expiring** show what you have and what to use first." },
+      { heading: "Tabs", body: "**Everything**, **Pantry**, **Refrigerator**, **Freezer**, **Kitchen supplies**, **Canning** and **Expiring** show what you have and what to use first." },
+      { heading: "Other supplies", body: "Garden and root cellar items live in **Garden**, farm supplies in **Farm**, pet supplies in **Pets** and home maintenance supplies in **Home Maintenance**. **House → Storage** shows every storage area together." },
       { heading: "What can I cook?", body: "Shows recipes you have everything for, and ones you're almost ready to make." },
       { heading: "Keyword bank", body: "Teach the app which words mean the same thing (for example \"chicken\" and \"chicken breasts\") so recipes match your pantry." },
     ],
-    related: ["receipt-import", "shopping-list", "private-food-space"],
+    related: ["receipt-import", "shopping-list", "private-food-space", "home-storage"],
+  },  {
+    slug: "home-storage",
+    category: "home",
+    title: "Seeing every storage area (House → Storage)",
+    summary: "The pantry, garden, farm, pet, home maintenance and craft supplies in one place, plus your own storage areas.",
+    keywords: ["storage", "supplies", "craft supplies", "root cellar", "canning", "garage", "basement", "storage area", "where is"],
+    modules: ["kitchen"],
+    openIn: { label: "Open Storage", href: "/house/storage" },
+    steps: [
+      "Open **House** and select the **Storage** tab.",
+      "Tap any area to see what's stored there, with how many items it holds.",
+      "Select **Add storage area** to add your own (like Garage shelves or Basement), then add items to it.",
+    ],
+    sections: [{ heading: "Craft supplies", body: "Craft supplies now live here under Storage." }],
+    related: ["pantry"],
   },
+
   {
     slug: "receipt-import",
     category: "food",

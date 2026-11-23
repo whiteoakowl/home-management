@@ -27,3 +27,4 @@ export * from "./memories";
 export * from "./parties";
 export * from "./baby";
 export * from "./sounds";
+export * from "./pregnancy";

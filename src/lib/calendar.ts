@@ -170,7 +170,7 @@ export async function getCalendarItems(
           endMin: e.allDay ? null : Math.min(24 * 60, start.minutes + durMin),
           color,
           location: e.location,
-          href: `/calendar/event/${e.id}${rule ? `?on=${date}` : ""}`,
+          href: e.source === "pregnancy" && e.sourceId ? `/pregnancy/${e.sourceId}/appointments` : `/calendar/event/${e.id}${rule ? `?on=${date}` : ""}`,
           recurring: !!rule,
           people: ids,
           categoryId: e.categoryId,

@@ -8,6 +8,7 @@ import { sendEventReminders } from "@/lib/event-reminders";
 import { sendSoundReminders } from "@/lib/sounds/reminders";
 import { sendWellnessTimedReminders } from "@/lib/wellness-reminders";
 import { sendBabyReminders } from "@/lib/baby-reminders";
+import { sendPregnancyReminders } from "@/lib/pregnancy/reminders";
 import { runDailyAutomation } from "@/lib/automation";
 import { todayIn } from "@/lib/dates";
 import { familyAccess } from "@/lib/billing";
@@ -48,6 +49,11 @@ export async function POST(req: Request) {
     await sendBabyReminders();
   } catch (e) {
     console.error("Baby reminders failed:", e);
+  }
+  try {
+    await sendPregnancyReminders();
+  } catch (e) {
+    console.error("Pregnancy reminders failed:", e instanceof Error ? e.message : "unknown error");
   }
   const all = await db.select().from(families);
   let ran = 0,

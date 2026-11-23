@@ -93,6 +93,9 @@ export default async function AdminPage() {
               <Link href="/admin/feedback" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline">
                 <MessageSquareHeart className="size-4" /> Feedback{newFeedback?.n ? ` (${newFeedback.n} new)` : ""}
               </Link>
+              <Link href="/admin/pregnancy" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-700 hover:underline">
+                🤰 Pregnancy content
+              </Link>
             </span>
           }
         />

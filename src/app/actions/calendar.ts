@@ -67,6 +67,7 @@ export async function saveEvent(_: ActionState, fd: FormData): Promise<ActionSta
         const [old] = await tx.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id)));
         if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) throw new AuthorizationError("Event not found.");
         if (!viewer.isParent && old.createdByMemberId !== viewer.member.id) throw new AuthorizationError("Only the person who created this event (or a parent) can change it.");
+        if (old.source === "pregnancy") throw new AuthorizationError("Change this appointment in the Pregnancy Tracker.");
         const ruleId = await upsertRule(tx, viewer.family.id, rule, old.recurrenceRuleId);
         await tx.update(calendarEvents).set({ ...values, recurrenceRuleId: ruleId }).where(eq(calendarEvents.id, id));
         await tx.delete(eventAttendees).where(eq(eventAttendees.eventId, id));
@@ -95,6 +96,7 @@ export async function deleteEventOccurrence(fd: FormData) {
   const [old] = await db.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id)));
   if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
   if (!viewer.isParent && old.createdByMemberId !== viewer.member.id) throw new AuthorizationError("Only the creator or a parent can delete this.");
+  if (old.source === "pregnancy") throw new AuthorizationError("Delete this appointment in the Pregnancy Tracker.");
   if (!old.recurrenceRuleId) {
     await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
   } else {
@@ -112,6 +114,7 @@ export async function deleteEvent(fd: FormData) {
   const [old] = await db.select().from(calendarEvents).where(and(eq(calendarEvents.id, id), eq(calendarEvents.familyId, viewer.family.id)));
   if (!old || isOthersPrivate(viewer, { visibility: old.visibility, author: old.createdByMemberId })) return;
   if (!viewer.isParent && old.createdByMemberId !== viewer.member.id) throw new AuthorizationError("Only the creator or a parent can delete this.");
+  if (old.source === "pregnancy") throw new AuthorizationError("Delete this appointment in the Pregnancy Tracker.");
   await db.delete(calendarEvents).where(eq(calendarEvents.id, id));
   revalidatePath("/calendar", "layout");
   revalidatePath("/");

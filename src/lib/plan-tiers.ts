@@ -11,7 +11,7 @@ import type { Module } from "@/db/schema/_shared";
 export type PlanTier = "premium" | "trial" | "free";
 
 /** Always free: the daily family hub. */
-export const FREE_MODULES: readonly Module[] = ["calendar", "shopping", "chores", "lists", "messages", "contacts", "info", "sounds"];
+export const FREE_MODULES: readonly Module[] = ["calendar", "shopping", "chores", "lists", "messages", "contacts", "info", "sounds", "pregnancy"];
 
 /** Everything else is Premium. */
 export const isPremiumModule = (m: Module) => !FREE_MODULES.includes(m);
@@ -48,6 +48,8 @@ export const FREE_FEATURES = [
   "Phone notifications",
   "Personal Health, Food Journal and Mental Wellness",
   "Sleep Sounds: white & brown noise, rain, ocean and fan, with a sleep timer and favorites",
+  "Pregnancy Tracker: week by week, appointments, symptoms, mood, weight, kick counter and contraction timer",
+  "Speak to add items to lists and the grocery list",
   "Download all your information",
 ];
 
@@ -66,6 +68,7 @@ export const PREMIUM_FEATURES = [
   "Journal, Book Library and Fitness",
   "Memories, milestones and photo albums",
   "Period Tracker",
+  "Pregnancy journal, bump photos, documents, baby names, checklists, birth plan and timeline",
   "Unlimited family members and lists",
 ];
 
@@ -91,10 +94,11 @@ export function capForPlan<L extends string>(m: Module, level: L, premium: boole
 }
 
 /** Website Features page: which sections are free, and the Premium tabs inside free sections. */
-export const FREE_SECTION_NAMES = ["Sleep Sounds", "Home", "Calendar", "Family Chat", "Family", "Contacts", "House", "Lists", "Grocery Shopping", "Personal Health", "Mental Wellness", "Account settings", "Notifications", "Feedback & feature ideas"];
+export const FREE_SECTION_NAMES = ["Sleep Sounds", "Home", "Calendar", "Family Chat", "Family", "Contacts", "House", "Lists", "Grocery Shopping", "Personal Health", "Mental Wellness", "Pregnancy Tracker", "Account settings", "Notifications", "Feedback & feature ideas"];
 export const PREMIUM_TABS: Record<string, string[]> = {
   Calendar: ["Event templates", "Reminders", "Sync"],
   House: ["Overview", "Rewards", "Cleaning"],
   "Personal Health": ["Period tracker"],
   "Sleep Sounds": ["Mixer & my mixes", "Favorites, recents & presets"],
+  "Pregnancy Tracker": ["Journal, photos & documents", "Baby names", "Prepare & birth plan", "Timeline, sharing & handoff"],
 };
