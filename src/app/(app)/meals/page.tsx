@@ -90,7 +90,7 @@ export default async function MealsPage({ searchParams }: PageProps<"/meals">) {
         title={owner ? (own ? "My Meal Plans" : `${space.kind === "private" ? space.memberName : ""}'s Meal Plans`) : "Family Meal Plans"}
         description={owner ? "Your own meal plan, private to you." : "Plan the week. We'll check your pantry and build the shopping list."}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <PrintPdfButtons href={withSpace(`/meals/print?week=${start}`, space)} />
             {canSetStart && <WeekStartPicker key={`${weekStart}`} value={weekStart} privateSpace={own} />}
           </div>

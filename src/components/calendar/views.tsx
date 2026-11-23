@@ -72,7 +72,11 @@ export function MonthView({ month, items, today, weekStartsOn, dayHref, members 
   const first = `${month.slice(0, 7)}-01`;
   const wd = new Date(`${first}T12:00:00Z`).getUTCDay();
   const start = addDays(first, -((wd - weekStartsOn + 7) % 7));
-  const days = Array.from({ length: 42 }, (_, i) => addDays(start, i));
+  // Only as many weeks as the month needs (no row made up entirely of next month).
+  const all = Array.from({ length: 42 }, (_, i) => addDays(start, i));
+  const inThisMonth = all.filter((d) => d.slice(0, 7) === month.slice(0, 7)).length;
+  const lead = (wd - weekStartsOn + 7) % 7;
+  const days = all.slice(0, Math.ceil((lead + inThisMonth) / 7) * 7);
   const byDay = Map.groupBy(items, (i) => i.date);
   const headers = Array.from({ length: 7 }, (_, i) => WD[(i + weekStartsOn) % 7]);
   return (
@@ -88,13 +92,15 @@ export function MonthView({ month, items, today, weekStartsOn, dayHref, members 
         {days.map((d) => {
           const list = byDay.get(d) ?? [];
           const inMonth = d.slice(0, 7) === month.slice(0, 7);
+          // Days from the previous or next month are left blank.
+          if (!inMonth) return <div key={d} aria-hidden className="min-h-24 min-w-0 border-r border-b border-line bg-sunken/40 sm:min-h-28 [&:nth-child(7n)]:border-r-0" />;
           return (
-            <div key={d} className={cn("min-h-24 min-w-0 border-r border-b border-line px-0 pt-0.5 pb-1 sm:min-h-28 sm:p-1.5 [&:nth-child(7n)]:border-r-0", !inMonth && "bg-sunken/40")}>
+            <div key={d} className="min-h-24 min-w-0 border-r border-b border-line px-0 pt-0.5 pb-1 sm:min-h-28 sm:p-1.5 [&:nth-child(7n)]:border-r-0">
               <Link
                 href={dayHref(d)}
                 className={cn(
                   "mb-px ml-0.5 inline-flex size-[18px] items-center justify-center rounded-full text-[11px] sm:mb-1 sm:ml-0 sm:size-7 sm:text-sm",
-                  d === today ? "bg-primary-600 font-semibold text-white" : inMonth ? "text-ink hover:bg-sunken" : "text-muted",
+                  d === today ? "bg-primary-600 font-semibold text-white" : "text-ink hover:bg-sunken",
                 )}
               >
                 {Number(d.slice(8))}

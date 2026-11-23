@@ -69,7 +69,7 @@ export default async function GoalsPage({ searchParams }: PageProps<"/goals">) {
         </Card>
       </div>
       <div className="mb-6">
-        <SegmentLinks
+        <SegmentLinks fit
           active={kind}
           items={[
             { key: "family", href: "/goals", label: "Family" },

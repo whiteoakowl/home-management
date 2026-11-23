@@ -186,7 +186,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
       </div>
 
       <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <div className="flex items-center gap-1.5" aria-label="Filter by person">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5" aria-label="Filter by person">
           <Link href={q({ member: "" })} className={cn("h-9 rounded-full px-3 text-sm leading-9 font-medium", !member ? "bg-ink text-white" : "text-muted hover:bg-sunken")}>
             Everyone
           </Link>
