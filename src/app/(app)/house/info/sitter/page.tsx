@@ -44,6 +44,16 @@ export default async function SitterSheet() {
       </div>
       <p className="mb-4 rounded-xl bg-primary-50 px-4 py-3 text-sm text-primary-800 print:hidden">
         Only items the whole family can see are on this sheet. Private and parents-only details (like auto or home insurance) are left off.
+        {viewer.isParent && (
+          <>
+            {" "}
+            Want each child&apos;s allergies, medicines, routine and a care log too?{" "}
+            <Link href="/family/babysitter" className="font-semibold underline">
+              Make a full babysitter form
+            </Link>
+            .
+          </>
+        )}
       </p>
       <article className="rounded-[var(--radius-card)] border border-line bg-white p-6 text-[#2b1f2a] print:border-0 print:p-0">
         <header className="mb-5 border-b border-line pb-3">

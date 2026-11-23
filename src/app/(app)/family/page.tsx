@@ -8,6 +8,8 @@ import { getViewer } from "@/lib/dal";
 import { memberColor } from "@/lib/colors";
 import { fileUrl } from "@/lib/files";
 import { AddMemberButton } from "./add-member-button";
+import { Printer } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Family" };
 
@@ -22,7 +24,16 @@ export default async function FamilyPage({ searchParams }: PageProps<"/family">)
         eyebrow={`The ${viewer.family.name} Family`}
         title="Family"
         description="Everyone in your household. Open someone's home to see their chores, events and goals."
-        actions={viewer.isParent ? <AddMemberButton defaultOpen={openNew === "1"} /> : undefined}
+        actions={
+          viewer.isParent ? (
+            <>
+              <ButtonLink href="/family/babysitter" variant="secondary" icon={<Printer className="size-4" />}>
+                Babysitter form
+              </ButtonLink>
+              <AddMemberButton defaultOpen={openNew === "1"} />
+            </>
+          ) : undefined
+        }
       />
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {members.map((m) => {

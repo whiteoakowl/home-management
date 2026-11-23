@@ -60,6 +60,11 @@ export default async function BabyFamilyPage({ params }: { params: Promise<{ id:
             <li>Turn off the areas they don&apos;t need, so they only see what helps.</li>
           </ol>
           <p className="text-sm text-muted">Each person&apos;s logs show their name, so you always know who did what. Remove access anytime.</p>
+          {viewer.isParent && (
+            <Link href="/family/babysitter" className="text-sm font-semibold text-primary-700 hover:underline">
+              🖨️ Print a babysitter form (routine, feeding, allergies, care log) →
+            </Link>
+          )}
         </Card>
       </div>
 
